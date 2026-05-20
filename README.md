@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.0](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.1](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -91,6 +91,10 @@ bgbgone subject.jpg --bg image:./beach.jpg --bg-fit contain      -o letterboxed.
 bgbgone subject.jpg --bg image:./tile.png  --bg-fit tile         -o tiled.png
 ```
 
+Six places Mona Lisa has never been — each panel is one CLI invocation:
+
+![Mona Lisa world tour](docs/images/mona-lisa-tour.png)
+
 ### Replace with an AI-generated background
 
 Uses Apple's on-device Image Playground (Apple Intelligence must be enabled in System Settings).
@@ -120,6 +124,14 @@ bgbgone in.jpg --crop                    # tight-crop to subject bbox
 bgbgone in.jpg --mask-only -o mask.png   # output just the alpha matte
 ```
 
+Under the hood — input → grayscale matte → final transparent cutout:
+
+![mask breakdown](docs/images/mask-breakdown.png)
+
+Edge softening with `--feather` (close-up around the subject's outline):
+
+![feather zoom](docs/images/feather-zoom.png)
+
 ### Multi-instance: one cutout per detected subject
 
 ```bash
@@ -141,6 +153,10 @@ bgbgone in.jpg --algo sky        # CISkySegmentation (subject = sky)
 bgbgone in.jpg --algo saliency   # attention saliency (fallback)
 ```
 
+Same input, every `--algo`:
+
+![algorithm comparison](docs/images/algorithms.png)
+
 ### Structured output (`--json`)
 
 ```bash
@@ -156,6 +172,54 @@ NDJSON for streams:
 ```bash
 ls *.jpg | xargs -I{} bgbgone {} --ndjson --out-dir ./out/ \
   | jq -s 'group_by(.algo) | map({algo: .[0].algo, n: length})'
+```
+
+### Real-world workflows
+
+**Background removal makes downstream AI more accurate.** Pipe a cutout into [auge](https://github.com/Arthur-Ficial/auge) for cleaner classification:
+
+```bash
+$ auge --classify photo-with-busy-bg.jpg --top 3
+67%  scene
+21%  room
+15%  furniture
+
+$ bgbgone photo-with-busy-bg.jpg --bg color:black --to jpg -o /tmp/cut.jpg \
+    && auge --classify /tmp/cut.jpg --top 3
+71%  people
+71%  adult
+17%  helmet
+```
+
+**Catalogue a photo library on white background:**
+
+```bash
+for f in ~/products/*.heic; do
+    bgbgone "$f" --bg color:white --to jpg --quality 92 \
+        --out-dir ~/catalogue/ --json
+done | jq -s 'group_by(.algo) | map({algo: .[0].algo, count: length})'
+```
+
+**Build a sticker pack from a group photo** (one PNG per detected person):
+
+```bash
+bgbgone team-portrait.jpg --multi \
+    --instance-naming "{base}-sticker-{n:02}.{ext}" \
+    --out-dir ./stickers/
+```
+
+**Generate a profile picture with a brand-coloured background:**
+
+```bash
+bgbgone selfie.jpg --bg color:#0066cc --crop --feather 2 \
+    --to jpg --quality 95 -o linkedin-avatar.jpg
+```
+
+**Headless screenshot recipe** for a doc site (subject on white, exact dims):
+
+```bash
+bgbgone product.heic --bg color:white --feather 1 \
+    --to jpg --quality 92 -o ./docs/product-shot.jpg
 ```
 
 ### Pipeline composition (with sibling tools)
