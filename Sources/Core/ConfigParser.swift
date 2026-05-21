@@ -4,7 +4,12 @@ public enum ConfigParser {
 
     /// Parse argv (excluding argv[0]) into a Config, with explicit stdin/stdout TTY signals so
     /// the parser stays pure (tests don't need to spawn processes to flip those bits).
-    public static func parse(args: [String], isStdinTTY: Bool, isStdoutTTY: Bool) throws -> Config {
+    public static func parse(
+        args: [String],
+        isStdinTTY: Bool,
+        isStdoutTTY: Bool,
+        stdoutPath: String? = nil
+    ) throws -> Config {
         var cfg = Config()
 
         // Walk args. Anything starting with `-` is a flag; anything else is a positional input.
@@ -13,6 +18,7 @@ public enum ConfigParser {
 
         // Track whether the user explicitly asked for a non-process mode.
         var explicitMode: Config.Mode?
+        var explicitOutputFormat = false
 
         while i < args.count {
             let a = args[i]
@@ -32,10 +38,11 @@ public enum ConfigParser {
                 cfg.outputDir = try takeValue(args, &i, flag: a)
             case "--to":
                 let v = try takeValue(args, &i, flag: a)
-                guard let f = OutputFormat(rawValue: v) else {
-                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg, webp, heic, avif, tiff)")
+                guard let f = OutputFormat.parse(v) else {
+                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, webp, heic, avif, tiff)")
                 }
                 cfg.outputFormat = f
+                explicitOutputFormat = true
             case "--quality":
                 let v = try takeValue(args, &i, flag: a)
                 guard let n = Int(v), (1...100).contains(n) else {
@@ -73,7 +80,9 @@ public enum ConfigParser {
                 cfg.threshold = n
             case "--padding":
                 let v = try takeValue(args, &i, flag: a)
-                cfg.padding = try parsePadding(v)
+                let parsed = try parsePadding(v)
+                cfg.padding = parsed.value
+                cfg.paddingIsPercent = parsed.isPercent
             case "--crop":
                 cfg.cropToSubject = true
                 i += 1
@@ -127,13 +136,37 @@ public enum ConfigParser {
             cfg.mode = .process
         }
 
-        // Refuse to write binary to a terminal
-        if cfg.mode == .process,
-           cfg.output == nil,
-           cfg.outputDir == nil,
-           cfg.outputMode == .standard,
-           isStdoutTTY {
-            throw BgBgOneError.userError("refusing to write binary image data to a terminal. Use -o <file>, --out-dir <dir>, or pipe to a file.")
+        if !explicitOutputFormat {
+            if let output = cfg.output, let inferred = OutputFormat.fromFileExtension(output) {
+                cfg.outputFormat = inferred
+            } else if cfg.output == nil,
+                      cfg.outputDir == nil,
+                      cfg.outputMode == .standard,
+                      !isStdoutTTY,
+                      cfg.inputs.count == 1,
+                      let stdoutPath,
+                      let inferred = OutputFormat.fromFileExtension(stdoutPath) {
+                cfg.outputFormat = inferred
+            }
+        }
+
+        if cfg.mode == .process, cfg.output == nil, cfg.outputDir == nil {
+            let canDeriveFileOutput = !cfg.inputs.isEmpty && cfg.inputs.allSatisfy { $0 != "-" }
+            if cfg.outputMode != .standard {
+                if canDeriveFileOutput {
+                    cfg.autoFileOutput = true
+                } else {
+                    throw BgBgOneError.userError("--json/--ndjson requires -o or --out-dir when reading image data from stdin")
+                }
+            } else if isStdoutTTY {
+                if canDeriveFileOutput {
+                    cfg.autoFileOutput = true
+                } else {
+                    throw BgBgOneError.userError("refusing to write binary image data to a terminal. Use -o <file>, --out-dir <dir>, or pipe to a file.")
+                }
+            } else if cfg.inputs.count > 1 && canDeriveFileOutput {
+                cfg.autoFileOutput = true
+            }
         }
 
         _ = sawAnyFlagThatMandatesProcessing
@@ -158,18 +191,18 @@ public enum ConfigParser {
         throw BgBgOneError.parser("--bg must be color:<spec> or image:<path>, got: \(spec)")
     }
 
-    private static func parsePadding(_ raw: String) throws -> Double {
+    private static func parsePadding(_ raw: String) throws -> (value: Double, isPercent: Bool) {
         if raw.hasSuffix("%") {
             let body = String(raw.dropLast())
             guard let n = Double(body), n >= 0 else {
                 throw BgBgOneError.parser("invalid --padding percent: \(raw)")
             }
-            return n / 100.0
+            return (n / 100.0, true)
         }
         guard let n = Double(raw), n >= 0 else {
             throw BgBgOneError.parser("invalid --padding: \(raw)")
         }
-        return n
+        return (n, false)
     }
 }
 

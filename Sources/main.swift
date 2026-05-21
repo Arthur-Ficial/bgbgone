@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import BgBgOneCore
 
 NetworkGuard.install()
@@ -9,7 +10,12 @@ let isStdoutTTY = isatty(fileno(stdout)) != 0
 
 let cfg: Config
 do {
-    cfg = try ConfigParser.parse(args: args, isStdinTTY: isStdinTTY, isStdoutTTY: isStdoutTTY)
+    cfg = try ConfigParser.parse(
+        args: args,
+        isStdinTTY: isStdinTTY,
+        isStdoutTTY: isStdoutTTY,
+        stdoutPath: stdoutFilePath()
+    )
 } catch let e as BgBgOneError {
     FileHandle.standardError.write(Data("bgbgone: \(e.message)\n".utf8))
     exit(e.exitCode)
@@ -70,3 +76,19 @@ for input in cfg.inputs {
     }
 }
 exit(hadFailure ? 1 : 0)
+
+private func stdoutFilePath() -> String? {
+    guard isatty(fileno(stdout)) == 0 else { return nil }
+
+    var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+    let rc = path.withUnsafeMutableBufferPointer { buffer in
+        guard let base = buffer.baseAddress else { return Int32(-1) }
+        return fcntl(fileno(stdout), F_GETPATH, UnsafeMutableRawPointer(base))
+    }
+    guard rc != -1 else { return nil }
+
+    let resolved = path.withUnsafeBufferPointer { buffer in
+        String(cString: buffer.baseAddress!)
+    }
+    return resolved.isEmpty ? nil : resolved
+}

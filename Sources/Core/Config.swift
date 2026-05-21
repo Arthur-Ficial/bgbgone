@@ -58,11 +58,13 @@ public struct Config: Sendable, Equatable {
     public var feather: Double
     public var threshold: Double?
     public var padding: Double?           // px; percentage stored as 0..1
+    public var paddingIsPercent: Bool
     public var cropToSubject: Bool
     public var dropShadow: Bool
     public var multiInstance: Bool
     public var instanceNamingTemplate: String
     public var outputMode: OutputMode
+    public var autoFileOutput: Bool
     public var quiet: Bool
     public var verbose: Bool
 
@@ -80,11 +82,13 @@ public struct Config: Sendable, Equatable {
         self.feather = 1.0
         self.threshold = nil
         self.padding = nil
+        self.paddingIsPercent = false
         self.cropToSubject = false
         self.dropShadow = false
         self.multiInstance = false
         self.instanceNamingTemplate = "{base}-{n}.{ext}"
         self.outputMode = .standard
+        self.autoFileOutput = false
         self.quiet = false
         self.verbose = false
     }

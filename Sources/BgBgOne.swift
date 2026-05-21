@@ -28,19 +28,21 @@ enum BgBgOne {
         let baseStem = (((input as NSString).lastPathComponent) as NSString).deletingPathExtension
         var outputs: [RunResult] = []
         for (i, r) in results.enumerated() {
-            var maskedImg = r.maskedImage
-            if cfg.feather > 0.001 {
-                maskedImg = MaskPostProcess.feather(maskedImg, radius: cfg.feather)
-            }
+            let processedMask = try MaskPostProcess.process(mask: r.mask, threshold: cfg.threshold, feather: cfg.feather)
+            let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
             var final = try Compositor.compose(
                 masked: maskedImg,
-                mask: r.mask,
-                background: cfg.background,
+                background: effectiveBackground(cfg),
                 bgFit: cfg.bgFit,
-                originalSize: CGSize(width: cgImage.width, height: cgImage.height)
+                dropShadow: cfg.dropShadow
             )
-            if cfg.cropToSubject {
-                let bbox = MaskPostProcess.subjectBoundingBox(r.maskedImage)
+            if cfg.cropToSubject || cfg.padding != nil {
+                let bbox = MaskPostProcess.paddedRect(
+                    MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
+                    in: CGSize(width: final.width, height: final.height),
+                    padding: cfg.padding,
+                    isPercent: cfg.paddingIsPercent
+                )
                 final = MaskPostProcess.crop(final, to: bbox)
             }
             let filename = InstanceNaming.expand(
@@ -93,36 +95,39 @@ enum BgBgOne {
         let maskedResult = try ForegroundMask.maskedImage(from: cgImage, algo: cfg.algo)
 
         // 1a. optional --mask-only short-circuit (emit the grayscale matte as the output)
+        let processedMask = try MaskPostProcess.process(mask: maskedResult.mask, threshold: cfg.threshold, feather: cfg.feather)
+
         if cfg.maskOnly {
-            let outputPath = try Output.write(cgImage: maskedResult.mask, cfg: cfg, inputPath: input)
+            let outputPath = try Output.write(cgImage: processedMask, cfg: cfg, inputPath: input)
             return RunResult(
                 input: input,
                 output: outputPath,
                 algo: maskedResult.algoUsed + "+mask-only",
                 format: cfg.outputFormat,
-                width: maskedResult.mask.width,
-                height: maskedResult.mask.height
+                width: processedMask.width,
+                height: processedMask.height
             )
         }
 
-        // 1b. optional --feather (Gaussian blur on the masked image so edges soften)
-        var maskedImg = maskedResult.maskedImage
-        if cfg.feather > 0.001 {
-            maskedImg = MaskPostProcess.feather(maskedImg, radius: cfg.feather)
-        }
+        // 1b. Apply the matte as alpha. Feathering changes only this mask, not foreground RGB.
+        let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
 
         // 2. compose with background (transparent = just emit the masked image)
         var final = try Compositor.compose(
             masked: maskedImg,
-            mask: maskedResult.mask,
-            background: cfg.background,
+            background: effectiveBackground(cfg),
             bgFit: cfg.bgFit,
-            originalSize: CGSize(width: cgImage.width, height: cgImage.height)
+            dropShadow: cfg.dropShadow
         )
 
-        // 2a. optional --crop (tight-crop to subject bbox)
-        if cfg.cropToSubject {
-            let bbox = MaskPostProcess.subjectBoundingBox(maskedResult.maskedImage)
+        // 2a. optional --crop / --padding (tight-crop to subject bbox, then expand)
+        if cfg.cropToSubject || cfg.padding != nil {
+            let bbox = MaskPostProcess.paddedRect(
+                MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
+                in: CGSize(width: final.width, height: final.height),
+                padding: cfg.padding,
+                isPercent: cfg.paddingIsPercent
+            )
             final = MaskPostProcess.crop(final, to: bbox)
         }
 
@@ -141,6 +146,13 @@ enum BgBgOne {
             width: final.width,
             height: final.height
         )
+    }
+
+    private static func effectiveBackground(_ cfg: Config) -> Background {
+        if case .transparent = cfg.background, !cfg.outputFormat.supportsTransparency {
+            return .solidColor(RGBA(r: 1, g: 1, b: 1, a: 1))
+        }
+        return cfg.background
     }
 }
 

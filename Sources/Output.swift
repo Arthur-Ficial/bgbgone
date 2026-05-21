@@ -32,6 +32,13 @@ enum Output {
             try writeToFile(cgImage: cgImage, path: outPath, utType: utType, opts: opts)
             return outPath
         }
+        if cfg.autoFileOutput {
+            guard let outPath = OutputNaming.defaultOutputPath(inputPath: inputPath, format: format) else {
+                throw BgBgOneError.userError("cannot derive an output filename for stdin; use -o <file> or --out-dir <dir>")
+            }
+            try writeToFile(cgImage: cgImage, path: outPath, utType: utType, opts: opts)
+            return outPath
+        }
         // stdout
         try writeToStdout(cgImage: cgImage, utType: utType, opts: opts)
         return "-"
@@ -82,16 +89,6 @@ extension OutputFormat {
         case .heic: return .heic
         case .avif: return UTType(filenameExtension: "avif") ?? .image
         case .tiff: return .tiff
-        }
-    }
-    var extensionForFile: String {
-        switch self {
-        case .png:  return "png"
-        case .jpeg: return "jpg"
-        case .webp: return "webp"
-        case .heic: return "heic"
-        case .avif: return "avif"
-        case .tiff: return "tiff"
         }
     }
 }

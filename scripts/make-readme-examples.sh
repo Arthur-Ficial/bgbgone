@@ -315,6 +315,50 @@ stack "$OUT/showcase-edges.png" \
     "$WORK/edge/row-misc.png"
 echo "    -> $OUT/showcase-edges.png"
 
+# Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
+ZOOM_SUB="$FX/02-nasa-mccandless-eva.jpg"
+bgbgone "$ZOOM_SUB" --feather 0 -o "$WORK/edge/zoom-f0.png" --quiet
+bgbgone "$ZOOM_SUB" --feather 8 -o "$WORK/edge/zoom-f8.png" --quiet
+
+zoom_panel() {
+    local src="$1" label="$2" dst="$3"
+    local crop="${4:-360x360+710+265}"
+
+    magick "$CB_TILE" -write mpr:cb +delete \
+        -size 360x360 tile:mpr:cb PNG24:"$WORK/edge/zoom-cb.png"
+    magick "$src" -crop "$crop" +repage -resize 360x360! \
+        -background none -gravity center -extent 360x360 PNG32:"$WORK/edge/zoom-cut.png"
+    magick PNG24:"$WORK/edge/zoom-cb.png" PNG32:"$WORK/edge/zoom-cut.png" \
+        -composite PNG24:"$WORK/edge/zoom-img.png"
+    magick -size 360x56 canvas:white \
+        -gravity center -pointsize 18 -font "$FONT_SANS" -fill '#222' \
+        -annotate +0+0 "$label" PNG24:"$WORK/edge/zoom-cap.png"
+    magick PNG24:"$WORK/edge/zoom-img.png" PNG24:"$WORK/edge/zoom-cap.png" \
+        -append PNG24:"$dst"
+}
+
+zoom_panel "$WORK/edge/zoom-f0.png" "--feather 0 (hard edge)" "$WORK/edge/zoom-f0-p.png"
+zoom_panel "$WORK/edge/zoom-f8.png" "--feather 8 (soft matte)" "$WORK/edge/zoom-f8-p.png"
+row "$WORK/edge/feather-zoom-row.png" "Edge refinement — --feather close-up around the subject outline" \
+    "$WORK/edge/zoom-f0-p.png" \
+    "$WORK/edge/zoom-f8-p.png"
+cp "$WORK/edge/feather-zoom-row.png" "$OUT/feather-zoom.png"
+echo "    -> $OUT/feather-zoom.png"
+
+# Mask breakdown: source → alpha matte → final transparent cutout.
+MB_SUB="$FX/02-nasa-mccandless-eva.jpg"
+bgbgone "$MB_SUB" --mask-only -o "$WORK/edge/mb-mask.png" --quiet
+bgbgone "$MB_SUB" -o "$WORK/edge/mb-cutout.png" --quiet
+panel "$MB_SUB" "src" "$WORK/edge/mb-src-p.png" 360 320
+panel "$WORK/edge/mb-mask.png" "--mask-only" "$WORK/edge/mb-mask-p.png" 360 320
+panel "$WORK/edge/mb-cutout.png" "cutout" "$WORK/edge/mb-cutout-p.png" 360 320
+row "$WORK/edge/mask-breakdown-row.png" "input → grayscale matte → transparent cutout" \
+    "$WORK/edge/mb-src-p.png" \
+    "$WORK/edge/mb-mask-p.png" \
+    "$WORK/edge/mb-cutout-p.png"
+cp "$WORK/edge/mask-breakdown-row.png" "$OUT/mask-breakdown.png"
+echo "    -> $OUT/mask-breakdown.png"
+
 # ---- 6) Algorithm comparison ------------------------------------------------
 
 echo "==> algorithm-comparison"

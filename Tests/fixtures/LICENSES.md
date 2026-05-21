@@ -32,7 +32,7 @@ The 16 images were chosen to cover the algorithmic range bgbgone must handle:
 - **Hard / edge cases**: 03 (Earth as subject + lunar surface), 04 (diffuse subject, no clear foreground — nebula), 05 (group of 3 subjects), 10 (painted figure with painted bg), 11 (no single foreground subject — abstract).
 - **Product photography**: 13 (Singer poster — colour litho with multi-panel composition), 14 (Underwood typewriter advertisement — isolated product graphic on text page), 15 (Edison + phonograph — real photograph, single subject), 16 (Pierce-Arrow ad — full-colour magazine illustration of an automobile).
 
-This range stress-tests the `auto` algorithm picker (`VNRemoveBackgroundRequest` → `VNGenerateForegroundInstanceMaskRequest` → saliency fallback) and validates that bgbgone fails gracefully on inputs where there is no meaningful foreground.
+This range stress-tests the default `auto` path (`VNGenerateForegroundInstanceMaskRequest`) plus explicit alternate modes such as `person` and `saliency`, and validates that bgbgone fails gracefully on inputs where there is no meaningful foreground.
 
 ## Fetching
 

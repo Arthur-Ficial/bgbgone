@@ -14,8 +14,11 @@ Ultimate UNIX-style background remover for macOS. Image in, transformed image ou
 bgbgone [OPTIONS] [INPUT...]
 
 # zero-config defaults
-bgbgone in.jpg                          # transparent PNG to stdout (refuses TTY)
+bgbgone in.jpg                          # creates in_bgbgone.png when stdout is a TTY
+bgbgone in.jpg > out.png                # transparent PNG to stdout
+bgbgone in.jpg > out.jpg                # JPEG if macOS exposes the stdout path
 bgbgone in.jpg -o out.png               # to file
+bgbgone in.jpg -o out.jpg               # infer JPEG from extension
 bgbgone *.jpg --out-dir ./cutouts       # batch
 cat in.png | bgbgone > out.png          # pipe
 
@@ -33,14 +36,14 @@ cat in.png | bgbgone > out.png          # pipe
 --shadow                                # drop shadow under cutout
 
 # algorithm
---algo auto|vn-remove|vn-mask|person|sky|saliency  (default: auto)
+--algo auto|vn-mask|person|saliency|vn-remove|sky  (default: auto)
 
 # multi-instance
 --multi                                 # one output per detected subject
 --instance-naming "{base}-{n}.{ext}"
 
 # output
---to png|jpg|webp|heic|avif|tiff       (default: png)
+--to png|jpg|jpeg|webp|heic|avif|tiff  (default: png)
 --quality 1..100                        (default: 92 for lossy)
 -o, --output <path>
 --out-dir <dir>
@@ -53,8 +56,9 @@ cat in.png | bgbgone > out.png          # pipe
 
 ## Defaults
 
-- Output: PNG with alpha to stdout. Refuse if stdout is a TTY (with helpful error).
-- Algorithm `auto`: `VNRemoveBackgroundRequest` on macOS 15.1+; `VNGenerateForegroundInstanceMaskRequest` fallback on macOS 14.x.
+- Output: PNG with alpha to stdout when stdout is redirected; `<stem>_bgbgone.png` when stdout is a terminal and input is a file.
+- Output path inference: `-o out.jpg` selects JPEG; `> out.jpg` selects JPEG when macOS exposes the stdout file path. Opaque-only formats use white unless `--bg` is set.
+- Algorithm `auto`: `VNGenerateForegroundInstanceMaskRequest`. No hidden fallback after a user explicitly chooses an unavailable algorithm.
 - Single instance: cutout = union of all detected subjects (use `--multi` for one-per-instance).
 - Format: PNG (only lossless option that preserves alpha out of the box).
 - Quality: 92 for JPEG / WebP / AVIF.
@@ -110,13 +114,13 @@ cat in.png | bgbgone > out.png          # pipe
 
 | Algo | API | macOS floor | Best for |
 | ---- | --- | ----------- | -------- |
-| `vn-remove` | `VNRemoveBackgroundRequest` | 15.1+ | General purpose, highest quality |
-| `vn-mask` | `VNGenerateForegroundInstanceMaskRequest` | 14+ | Fallback when 15.1 not available |
-| `person` | `CIPersonSegmentation` | 12+ | Portraits, talking-head video frames |
-| `sky` | `CISkySegmentation` | 12+ | Sky replacement (keep ground) |
-| `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ | Last-resort weak supervision |
+| `vn-mask` | `VNGenerateForegroundInstanceMaskRequest` | 14+ | General purpose foreground subjects |
+| `person` | `VNGeneratePersonSegmentationRequest` | 12+ | Portraits, people, talking-head frames |
+| `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ | Objectness heat-map matte |
+| `vn-remove` | unavailable in current public SDK | n/a | Reserved spelling; fails explicitly |
+| `sky` | unavailable in current public SDK | n/a | Reserved spelling; fails explicitly |
 
-`--algo auto` picks the best available based on `ProcessInfo.processInfo.operatingSystemVersion` and `Bundle.main`-loadable framework presence.
+`--algo auto` uses the public foreground-instance mask API. Explicit unavailable algorithms return a framework error instead of silently using another implementation.
 
 ## Backgrounds
 
@@ -134,9 +138,12 @@ it via `--bg image:<path>`.
 
 Three layers, all green-or-fail in `make test`:
 
-1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, naming, threshold math, fit-mode math, NetworkGuard registration.
+1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, output naming, format inference, threshold/padding config, NetworkGuard registration.
 2. **Algorithm** (in unit runner, with `import Vision` allowed) — each algorithm exercised against fixture images; per-pixel assertions (corner alpha == 0, subject alpha > 0).
 3. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; exit codes; JSON shape; capability gating.
+4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs one batch process, verifies 100 outputs, and reports throughput.
+
+Current local v0.1.16 measurement: 100 images in 8.616s, 11.61 images/s, 86.2 ms/image.
 
 **Fixtures:** `Tests/fixtures/` holds 16 strict public-domain images from Wikimedia (PD-NASA, PD-USGov, PD-old, PD-self, PD-Art, and pre-1929 American advertisements — never CC). The 16 break down as: 6 NASA spaceflight, 3 19th-c paintings, 3 19th/early-20th-c studio portraits, and 4 vintage product ads. `LICENSES.md` documents every fixture with source URL, PD tag, and attribution. Fixtures are checked into git for reproducible offline tests.
 

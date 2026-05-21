@@ -17,13 +17,16 @@ enum CLI {
           \(appName) [OPTIONS] [INPUT...]
 
         DEFAULTS:
-          • zero-config: writes a transparent PNG cutout to stdout (refuses TTY)
-          • picks the best available algorithm for your macOS version
-          • passes through colour space
+          • \(appName) photo.jpg writes photo_bgbgone.png when stdout is a terminal
+          • \(appName) photo.jpg > out.png writes image bytes to stdout
+          • -o out.jpg or > out.jpg selects JPEG when macOS exposes the stdout file path
+          • opaque-only formats use a white background unless --bg is set
 
         EXAMPLES:
-          \(appName) in.jpg > out.png                   # transparent cutout
+          \(appName) in.jpg                             # creates in_bgbgone.png
+          \(appName) in.jpg > out.png                   # transparent PNG cutout
           \(appName) in.jpg -o out.png                  # to file
+          \(appName) in.jpg -o out.jpg                  # JPEG on white
           \(appName) in.jpg --bg color:#fff -o w.png    # white background
           \(appName) in.jpg --bg image:bg.jpg           # image background
           \(appName) *.jpg --out-dir ./cutouts          # batch
@@ -43,14 +46,15 @@ enum CLI {
           --shadow                              drop shadow under cutout
 
         ALGORITHM:
-          --algo auto|vn-remove|vn-mask|person|sky|saliency   (default: auto)
+          --algo auto|vn-mask|person|saliency|vn-remove|sky   (default: auto)
+          auto uses the public foreground-instance mask API when available
 
         MULTI-INSTANCE:
           --multi                               one file per detected instance
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
-          --to png|jpg|webp|heic|avif|tiff      output format (default: png)
+          --to png|jpg|jpeg|webp|heic|avif|tiff output format (default: png)
           --quality 1..100                      for lossy formats (default: 92)
           -o, --output <path>                   explicit output file
           --out-dir <dir>                       batch output directory
@@ -78,6 +82,9 @@ enum CLI {
         let os = "macOS \(osv.majorVersion).\(osv.minorVersion).\(osv.patchVersion)"
         let bgbgoneAvailable = CapabilityProbe.isVNRemoveBackgroundAvailable()
         let foregroundMaskAvailable = CapabilityProbe.isVNForegroundInstanceMaskAvailable()
+        let personAvailable = CapabilityProbe.isVNPersonSegmentationAvailable()
+        let saliencyAvailable = CapabilityProbe.isVNSaliencyAvailable()
+        let skyAvailable = CapabilityProbe.isSkySegmentationAvailable()
         print("""
         bgbgone v\(buildVersion) capability report
           OS:                  \(os)
@@ -88,9 +95,9 @@ enum CLI {
         Algorithms:
           vn-remove            \(bgbgoneAvailable ? "available" : "unavailable")
           vn-mask              \(foregroundMaskAvailable ? "available" : "unavailable")
-          person               available (CIPersonSegmentation, macOS 12+)
-          sky                  available (CISkySegmentation, macOS 12+)
-          saliency             available (Vision, macOS 10.15+)
+          person               \(personAvailable ? "available" : "unavailable") (Vision person segmentation, macOS 12+)
+          sky                  \(skyAvailable ? "available" : "unavailable") (not public in this SDK)
+          saliency             \(saliencyAvailable ? "available" : "unavailable") (Vision objectness saliency, macOS 10.15+)
 
         Backgrounds:
           color                always available

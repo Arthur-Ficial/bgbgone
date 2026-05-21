@@ -5,40 +5,85 @@ import BgBgOneCore
 
 /// Post-mask transformations applied between mask generation and final compositing.
 enum MaskPostProcess {
+    private static let ciContext = CIContext(options: [.cacheIntermediates: false])
 
-    /// Soften the alpha matte edges. Operates on the alpha channel of a CGImage.
-    static func feather(_ image: CGImage, radius: Double) -> CGImage {
-        if radius <= 0 { return image }
-        let ci = CIImage(cgImage: image)
-        guard let filter = CIFilter(name: "CIGaussianBlur") else { return image }
-        filter.setValue(ci, forKey: kCIInputImageKey)
-        filter.setValue(NSNumber(value: radius), forKey: kCIInputRadiusKey)
-        guard let blurred = filter.outputImage else { return image }
-        // Clamp back to the original extent so the canvas size doesn't drift due to blur halo
-        let cropped = blurred.cropped(to: ci.extent)
-        let ctx = CIContext()
-        return ctx.createCGImage(cropped, from: ci.extent) ?? image
+    static func process(mask: CGImage, threshold: Double?, feather: Double) throws -> CGImage {
+        var out = mask
+        if feather > 0.001 {
+            out = featherMask(out, radius: feather)
+        }
+        if let threshold {
+            out = try thresholdMask(out, threshold: threshold)
+        }
+        return out
     }
 
-    /// Compute the smallest rect that contains all non-transparent pixels.
-    /// Returns the input rect if the image has no alpha or no opaque pixels.
-    static func subjectBoundingBox(_ image: CGImage) -> CGRect {
+    /// Soften only the matte, not the foreground RGB pixels.
+    static func featherMask(_ mask: CGImage, radius: Double) -> CGImage {
+        if radius <= 0 { return mask }
+        let ci = CIImage(cgImage: mask)
+        guard let filter = CIFilter(name: "CIGaussianBlur") else { return mask }
+        filter.setValue(ci, forKey: kCIInputImageKey)
+        filter.setValue(NSNumber(value: radius), forKey: kCIInputRadiusKey)
+        guard let blurred = filter.outputImage else { return mask }
+        let cropped = blurred.cropped(to: ci.extent)
+        return ciContext.createCGImage(cropped, from: ci.extent) ?? mask
+    }
+
+    static func thresholdMask(_ mask: CGImage, threshold: Double) throws -> CGImage {
+        let normalizedThreshold = UInt8((max(0, min(1, threshold)) * 255.0).rounded())
+        var bytes = try grayscaleBytes(mask)
+        for i in bytes.indices {
+            bytes[i] = bytes[i] >= normalizedThreshold ? 255 : 0
+        }
+        return try makeGrayImage(width: mask.width, height: mask.height, bytes: bytes)
+    }
+
+    /// Apply a grayscale mask as alpha to the original image, preserving sharp foreground pixels.
+    static func apply(mask: CGImage, to image: CGImage) throws -> CGImage {
         let w = image.width
         let h = image.height
-        guard let data = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(data),
-              image.bitsPerPixel == 32,
-              image.bitsPerComponent == 8 else {
+        let cs = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width: w,
+            height: h,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: cs,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw BgBgOneError.frameworkError("cannot create masked foreground context")
+        }
+
+        let rect = CGRect(x: 0, y: 0, width: w, height: h)
+        ctx.clear(rect)
+        ctx.saveGState()
+        ctx.clip(to: rect, mask: mask)
+        ctx.draw(image, in: rect)
+        ctx.restoreGState()
+
+        guard let out = ctx.makeImage() else {
+            throw BgBgOneError.frameworkError("cannot apply alpha mask")
+        }
+        return out
+    }
+
+    static func subjectBoundingBox(fromMask mask: CGImage) -> CGRect {
+        let w = mask.width
+        let h = mask.height
+        guard let bytes = try? grayscaleBytes(mask) else {
             return CGRect(x: 0, y: 0, width: w, height: h)
         }
-        let bpr = image.bytesPerRow
-        // RGBA premultipliedLast: alpha at byte offset 3 per pixel.
-        var minX = w, minY = h, maxX = -1, maxY = -1
+
+        var minX = w
+        var minY = h
+        var maxX = -1
+        var maxY = -1
         for y in 0..<h {
-            let row = bytes.advanced(by: y * bpr)
+            let row = y * w
             for x in 0..<w {
-                let alpha = row[x * 4 + 3]
-                if alpha > 8 {
+                if bytes[row + x] > 8 {
                     if x < minX { minX = x }
                     if x > maxX { maxX = x }
                     if y < minY { minY = y }
@@ -50,19 +95,72 @@ enum MaskPostProcess {
         return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
     }
 
-    /// Crop a CGImage to the given rect (in pixel coordinates from top-left).
+    static func paddedRect(_ rect: CGRect, in imageSize: CGSize, padding: Double?, isPercent: Bool) -> CGRect {
+        guard let padding else { return rect }
+        let padPixels: CGFloat
+        if isPercent {
+            padPixels = max(rect.width, rect.height) * CGFloat(padding)
+        } else {
+            padPixels = CGFloat(padding)
+        }
+
+        let expanded = rect.insetBy(dx: -padPixels, dy: -padPixels)
+        return expanded.intersection(CGRect(origin: .zero, size: imageSize))
+    }
+
+    /// Crop a CGImage to the given rect in top-left pixel coordinates.
     static func crop(_ image: CGImage, to rect: CGRect) -> CGImage {
         let w = image.width
         let h = image.height
-        // Convert top-left rect to CoreGraphics' bottom-left rect.
-        let cgRect = CGRect(
-            x: rect.origin.x,
-            y: CGFloat(h) - rect.origin.y - rect.size.height,
-            width: rect.size.width,
-            height: rect.size.height
-        )
-        let safeRect = cgRect.intersection(CGRect(x: 0, y: 0, width: w, height: h))
+        let safeRect = rect.integral.intersection(CGRect(x: 0, y: 0, width: w, height: h))
         if safeRect.isNull || safeRect.isEmpty { return image }
         return image.cropping(to: safeRect) ?? image
+    }
+
+    private static func grayscaleBytes(_ image: CGImage) throws -> [UInt8] {
+        let w = image.width
+        let h = image.height
+        var bytes = [UInt8](repeating: 0, count: w * h)
+        let cs = CGColorSpaceCreateDeviceGray()
+        try bytes.withUnsafeMutableBytes { raw in
+            guard let base = raw.baseAddress,
+                  let ctx = CGContext(
+                    data: base,
+                    width: w,
+                    height: h,
+                    bitsPerComponent: 8,
+                    bytesPerRow: w,
+                    space: cs,
+                    bitmapInfo: CGImageAlphaInfo.none.rawValue
+                  ) else {
+                throw BgBgOneError.frameworkError("cannot create grayscale mask context")
+            }
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        }
+        return bytes
+    }
+
+    private static func makeGrayImage(width: Int, height: Int, bytes: [UInt8]) throws -> CGImage {
+        let data = Data(bytes)
+        guard let provider = CGDataProvider(data: data as CFData) else {
+            throw BgBgOneError.frameworkError("cannot create mask data provider")
+        }
+        let cs = CGColorSpaceCreateDeviceGray()
+        guard let image = CGImage(
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 8,
+            bytesPerRow: width,
+            space: cs,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
+        ) else {
+            throw BgBgOneError.frameworkError("cannot create thresholded mask image")
+        }
+        return image
     }
 }

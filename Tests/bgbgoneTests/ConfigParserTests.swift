@@ -45,6 +45,32 @@ func runConfigParserTests() {
         try assertEqual(cfg.output, "out.png")
     }
 
+    test("-o infers jpg format from output extension") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.jpg"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.output, "out.jpg")
+        try assertEqual(cfg.outputFormat, .jpeg)
+    }
+
+    test("-o infers jpeg format from long extension") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.jpeg"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.outputFormat, .jpeg)
+    }
+
+    test("explicit --to wins over output extension") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.jpg", "--to", "png"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.outputFormat, .png)
+    }
+
+    test("stdout redirection path infers output format when shell exposes it") {
+        let cfg = try ConfigParser.parse(
+            args: ["in.jpg"],
+            isStdinTTY: true,
+            isStdoutTTY: false,
+            stdoutPath: "/tmp/cutout.jpg"
+        )
+        try assertEqual(cfg.outputFormat, .jpeg)
+    }
+
     test("--output sets output path") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "--output", "out.png"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.output, "out.png")
@@ -175,6 +201,18 @@ func runConfigParserTests() {
         try assertEqual(cfg.threshold, 0.5)
     }
 
+    test("--padding percent: 10% -> 0.10 percent mode") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", "10%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.padding, 0.10)
+        try assertTrue(cfg.paddingIsPercent)
+    }
+
+    test("--padding pixels: 24 -> 24px mode") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", "24"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.padding, 24.0)
+        try assertFalse(cfg.paddingIsPercent)
+    }
+
     test("--crop sets crop true") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.cropToSubject)
@@ -225,10 +263,29 @@ func runConfigParserTests() {
         }
     }
 
-    test("stdout TTY with no -o and process mode is rejected") {
-        // bgbgone in.jpg with stdout TTY and no -o → user error (refuse binary to terminal)
+    test("terminal stdout with one file input auto-selects friendly output file") {
+        let cfg = try ConfigParser.parse(args: ["photo.jpg"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.mode, .process)
+        try assertTrue(cfg.autoFileOutput)
+        try assertNil(cfg.output)
+        try assertNil(cfg.outputDir)
+    }
+
+    test("redirected stdout keeps binary stdout by default") {
+        let cfg = try ConfigParser.parse(args: ["photo.jpg"], isStdinTTY: true, isStdoutTTY: false)
+        try assertFalse(cfg.autoFileOutput)
+        try assertNil(cfg.output)
+    }
+
+    test("--json with file input auto-selects file output so stdout remains JSON") {
+        let cfg = try ConfigParser.parse(args: ["photo.jpg", "--json"], isStdinTTY: true, isStdoutTTY: false)
+        try assertTrue(cfg.autoFileOutput)
+        try assertEqual(cfg.outputMode, .json)
+    }
+
+    test("stdin to terminal without output is rejected because no filename can be derived") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg"], isStdinTTY: true, isStdoutTTY: true)
+            _ = try ConfigParser.parse(args: [], isStdinTTY: false, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
             if case .userError = e { } else { throw TestFailure("wrong error: \(e)") }
@@ -240,5 +297,24 @@ func runConfigParserTests() {
         try assertEqual(cfg.mode, .process)
         try assertEqual(cfg.inputs.count, 1)
         try assertEqual(cfg.inputs[0], "-")
+    }
+
+    test("--to jpeg is accepted as a user-friendly alias for jpg") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "jpeg"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.outputFormat, .jpeg)
+    }
+
+    test("png format reports alpha support and jpg reports opaque-only") {
+        try assertTrue(OutputFormat.png.supportsTransparency)
+        try assertFalse(OutputFormat.jpeg.supportsTransparency)
+    }
+
+    test("default auto output path uses _bgbgone suffix") {
+        let path = OutputNaming.defaultOutputPath(inputPath: "/tmp/my.photo.jpg", format: .png)
+        try assertEqual(path, "/tmp/my.photo_bgbgone.png")
+    }
+
+    test("stdin has no default auto output path") {
+        try assertNil(OutputNaming.defaultOutputPath(inputPath: "-", format: .png))
     }
 }

@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration fixtures package-release-asset print-release-asset print-release-sha256
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256
 
 # --- Environment ---
 
@@ -16,7 +16,10 @@ check-toolchain:
 
 # --- Build (auto-bumps patch) ---
 
-build: check-toolchain bump-patch generate-build-info update-readme
+build: check-toolchain
+	$(MAKE) bump-patch
+	$(MAKE) generate-build-info
+	$(MAKE) update-readme
 	swift build -c release
 
 install: build
@@ -36,6 +39,9 @@ test-unit: check-toolchain generate-build-info
 
 test-integration: build
 	bash Tests/integration/run.sh .build/release/$(BINARY)
+
+test-performance-100 perf-100: build
+	bash Tests/performance/run-100.sh .build/release/$(BINARY)
 
 fixtures:
 	bash scripts/fetch-fixtures.sh

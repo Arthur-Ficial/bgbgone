@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.11](https://img.shields.io/badge/version-0.1.11-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.16](https://img.shields.io/badge/version-0.1.16-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -12,6 +12,7 @@ The ultimate UNIX-style background remover for macOS. AI-driven via Apple's on-d
 ![bgbgone hero](docs/images/hero.png)
 
 ```bash
+bgbgone in.jpg                                    # creates in_bgbgone.png
 bgbgone in.jpg > out.png                          # transparent PNG cutout
 bgbgone in.jpg --bg color:white -o on-white.png   # on a colour
 bgbgone in.jpg --bg image:beach.jpg -o beach.png  # on an image
@@ -37,14 +38,16 @@ Or from source (`make install` builds the release and installs into `/usr/local/
 ## Quick start
 
 ```bash
+bgbgone photo.jpg                                           # creates photo_bgbgone.png
 bgbgone photo.jpg > cutout.png                              # to stdout
 bgbgone photo.jpg -o cutout.png                             # to a file
+bgbgone photo.jpg -o cutout.jpg                             # JPEG, white bg by default
 bgbgone ~/photos/*.heic --out-dir ./cutouts                 # batch a folder
 curl -L https://example.com/photo.jpg | bgbgone > out.png   # pipe in
 cat photo.jpg | bgbgone --bg color:white > on-white.png     # pipe through
 ```
 
-bgbgone refuses to write binary image bytes to a terminal — exactly like `curl`. Use `-o file`, `--out-dir dir`, or redirect to a file or pipe.
+When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgone.<ext>` next to the input instead of dumping binary bytes into the terminal. When stdout is redirected, bgbgone writes image bytes to stdout. On macOS file redirections such as `> cutout.jpg`, bgbgone infers the redirected path when the system exposes it; for portable scripts, prefer `-o cutout.jpg`.
 
 ---
 
@@ -98,6 +101,7 @@ bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 
 ```bash
 bgbgone in.jpg --bg color:white --feather 8    -o soft.png
+bgbgone in.jpg --threshold 0.55                -o crisper.png
 bgbgone in.jpg --crop                          -o tight.png
 bgbgone in.jpg --crop --padding 10%            -o tight-padded.png
 bgbgone in.jpg --bg color:white --shadow       -o dropshadow.png
@@ -115,25 +119,24 @@ Pixel-level zoom on the edge for `--feather 0` vs `--feather 8`:
 ### Algorithm selection
 
 ```bash
-bgbgone in.jpg --algo auto       # picks best for your macOS (default)
-bgbgone in.jpg --algo vn-remove  # VNRemoveBackgroundRequest (macOS 15.1+)
+bgbgone in.jpg --algo auto       # same quality path as vn-mask (default)
 bgbgone in.jpg --algo vn-mask    # VNGenerateForegroundInstanceMaskRequest (macOS 14+)
-bgbgone in.jpg --algo person     # CIPersonSegmentation
-bgbgone in.jpg --algo sky        # CISkySegmentation (subject = sky)
-bgbgone in.jpg --algo saliency   # attention saliency (fallback)
+bgbgone in.jpg --algo person     # VNGeneratePersonSegmentationRequest
+bgbgone in.jpg --algo saliency   # objectness saliency heat map
 ```
 
-Three subjects where the algorithms visibly diverge — a Mars rover with sky + ground, two people in a meadow, and a painted figure with no real sky:
+`vn-remove` and `sky` are reserved CLI spellings but fail explicitly on the current public macOS SDK because the corresponding public APIs are not exposed there. bgbgone does not silently route those names through another algorithm.
+
+Three subjects where the available algorithms visibly diverge — a Mars rover with sky + ground, two people in a meadow, and a painted figure:
 
 ![--algo across vn-remove / vn-mask / person / sky / saliency on three subjects](docs/images/showcase-algos.png)
-
-`vn-remove` and `vn-mask` produce the same result on most subjects (they share the underlying foreground extractor). The `sky` row demonstrates the inversion case — `--algo sky` keeps the sky and discards everything else.
 
 ### Output formats
 
 ```bash
 bgbgone in.jpg --to png                              # transparent PNG (default)
-bgbgone in.jpg --to jpg --bg color:white --quality 92
+bgbgone in.jpg --to jpg --quality 92                 # white bg unless --bg is set
+bgbgone in.jpg -o out.jpg                            # extension infers JPEG
 bgbgone in.jpg --to heic
 bgbgone in.jpg --to tiff
 bgbgone in.jpg --to webp                             # if ImageIO supports it
@@ -262,11 +265,11 @@ bgbgone --check
 bgbgone v0.1.11 capability report
   OS:                  macOS 26.3.1
   Algorithms:
-    vn-remove          available
+    vn-remove          unavailable
     vn-mask            available
-    person             available (CIPersonSegmentation, macOS 12+)
-    sky                available (CISkySegmentation, macOS 12+)
-    saliency           available (Vision, macOS 10.15+)
+    person             available (Vision person segmentation, macOS 12+)
+    sky                unavailable (not public in this SDK)
+    saliency           available (Vision objectness saliency, macOS 10.15+)
   Backgrounds:
     color              always available
     image              always available
@@ -279,6 +282,11 @@ bgbgone v0.1.11 capability report
 ```
 USAGE:
   bgbgone [OPTIONS] [INPUT...]
+
+DEFAULTS:
+  bgbgone photo.jpg                       creates photo_bgbgone.png
+  bgbgone photo.jpg > cutout.png          writes image bytes to stdout
+  bgbgone photo.jpg -o cutout.jpg         infers JPEG; white bg by default
 
 BACKGROUND:
   --bg color:<#hex|named|rgb:r,g,b>     solid colour
@@ -294,14 +302,14 @@ MATTE / EDGE:
   --shadow                              drop shadow under cutout
 
 ALGORITHM:
-  --algo auto|vn-remove|vn-mask|person|sky|saliency   (default: auto)
+  --algo auto|vn-mask|person|saliency|vn-remove|sky   (default: auto)
 
 MULTI-INSTANCE:
   --multi                               one file per detected instance
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
-  --to png|jpg|webp|heic|avif|tiff      output format (default: png)
+  --to png|jpg|jpeg|webp|heic|avif|tiff output format (default: png)
   --quality 1..100                      for lossy formats (default: 92)
   -o, --output <path>                   explicit output file
   --out-dir <dir>                       batch output directory
@@ -328,8 +336,8 @@ CLI args                    main.swift
 Config
    │
    ▼                        BgBgOne pipeline
-   ├─→ ForegroundMask       Algorithms/: VNRemove, VNMask, Person, Sky, Saliency
-   ├─→ MaskPostProcess      feather, crop, --mask-only short-circuit
+   ├─→ ForegroundMask       Algorithms/: VNMask, Person, Saliency
+   ├─→ MaskPostProcess      threshold, feather, crop, padding, --mask-only
    ├─→ Compositor           SolidColor + ImageBg
    └─→ Output               ImageIO: PNG/JPG/WebP/HEIC/AVIF/TIFF
                             NetworkGuard hard-blocks http/https/ws/wss at runtime.
@@ -347,10 +355,13 @@ make build                # bump patch + build release
 make test                 # unit + integration
 make test-unit            # Swift unit tests
 make test-integration     # CLI e2e against strict-PD Wikimedia fixtures
+make test-performance-100 # 100-image local performance scenario
 make fixtures             # fetch the test fixtures (one-time)
 ```
 
-`make test` runs 60 unit tests (argument parsing, colour parsing, instance-naming templating, network-scheme block list) and 48 integration tests (the built binary exercised end-to-end across all 16 fixture images and every flag combination).
+`make test` runs the unit and integration suites. `make test-performance-100` is an explicit performance harness: it stages 100 fixture-backed inputs, runs one batch process, verifies 100 outputs, and reports elapsed time, throughput, and average latency.
+
+Latest local v0.1.16 run on the checked-in fixture set: 100 images in 8.616s, 11.61 images/s, 86.2 ms/image.
 
 ### Test fixtures
 

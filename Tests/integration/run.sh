@@ -8,8 +8,12 @@
 set -uo pipefail
 
 BIN="${1:-bgbgone}"
+if [[ "$BIN" == */* ]]; then
+    BIN="$(cd "$(dirname "$BIN")" && pwd)/$(basename "$BIN")"
+fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$DIR/../.." && pwd)"
 FIX="$ROOT/fixtures"
 OUT="$DIR/_out"
 TMP="$DIR/_tmp"
@@ -33,6 +37,13 @@ check_png_rgba() {
     return 0
 }
 
+check_jpeg() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    head -c 3 "$file" | xxd -p | grep -qi '^ffd8ff$' || return 2
+    return 0
+}
+
 echo ""
 echo "Integration tests for: $BIN"
 echo "================================="
@@ -46,6 +57,10 @@ echo "CLI basics"
 out=$("$BIN" --version 2>&1) ; rc=$?
 [ $rc -eq 0 ] && echo "$out" | grep -q "^bgbgone v" && pass "--version" \
     || fail "--version" "rc=$rc out=$out"
+
+expected_version=$(cat "$PROJECT_ROOT/.version")
+[ $rc -eq 0 ] && [ "$out" = "bgbgone v$expected_version" ] && pass "--version matches .version ($expected_version)" \
+    || fail "--version matches .version" "expected bgbgone v$expected_version, got $out"
 
 out=$("$BIN" --help 2>&1) ; rc=$?
 [ $rc -eq 0 ] && echo "$out" | grep -qi "USAGE:" && pass "--help" \
@@ -127,6 +142,31 @@ dst="$OUT/eva.png"
 out=$("$BIN" "$src" -o "$dst" --json 2>&1) ; rc=$?
 echo "$out" | grep -q '"output"' && pass "--json has output field" || fail "--json" "rc=$rc out=$out"
 echo "$out" | grep -q '"algo"' && pass "--json has algo field" || fail "--json" "no algo field"
+
+AUTO_JSON_DIR="$TMP/auto-json"
+mkdir -p "$AUTO_JSON_DIR"
+cp "$src" "$AUTO_JSON_DIR/eva.jpg"
+out=$(cd "$AUTO_JSON_DIR" && "$BIN" eva.jpg --json --quiet 2>&1) ; rc=$?
+if [ $rc -eq 0 ] && echo "$out" | grep -q '"output":"eva_bgbgone.png"' && check_png_rgba "$AUTO_JSON_DIR/eva_bgbgone.png"; then
+    pass "--json without -o writes eva_bgbgone.png and keeps stdout JSON-only"
+else
+    fail "--json auto output" "rc=$rc out=$out"
+fi
+
+# --- e2e: output format inference ---
+echo ""
+echo "e2e: output format inference"
+
+src="$FIX/07-einstein-1921.jpg"
+dst="$OUT/einstein-inferred.jpg"
+out=$("$BIN" "$src" -o "$dst" --quiet 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "-o out.jpg infers JPEG and opaque background" \
+    || fail "-o jpg inference" "rc=$rc out=$out"
+
+dst="$OUT/einstein-redirect.jpg"
+out=$("$BIN" "$src" --quiet > "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "> out.jpg infers JPEG when macOS exposes stdout path" \
+    || fail "stdout jpg inference" "rc=$rc out=$out"
 
 # --- e2e: --bg image replacement ---
 echo ""
@@ -255,6 +295,23 @@ else
     fail "--feather" "outputs missing"
 fi
 
+# --- e2e: --threshold changes matte decisively ---
+echo ""
+echo "e2e: --threshold"
+
+src="$FIX/02-nasa-mccandless-eva.jpg"
+"$BIN" "$src" --threshold 0.20 -o "$OUT/eva-threshold-020.png" 2>/dev/null
+"$BIN" "$src" --threshold 0.80 -o "$OUT/eva-threshold-080.png" 2>/dev/null
+if [ -s "$OUT/eva-threshold-020.png" ] && [ -s "$OUT/eva-threshold-080.png" ]; then
+    if cmp -s "$OUT/eva-threshold-020.png" "$OUT/eva-threshold-080.png"; then
+        fail "--threshold" "threshold 0.20 and 0.80 produced identical output"
+    else
+        pass "--threshold changes the output matte"
+    fi
+else
+    fail "--threshold" "outputs missing"
+fi
+
 # --- e2e: --crop tightens to subject bbox ---
 echo ""
 echo "e2e: --crop"
@@ -273,6 +330,61 @@ PY
     [ "$cmp" = "ok" ] && pass "--crop reduces canvas to subject" || fail "--crop" "$cmp"
 else
     fail "--crop" "outputs missing"
+fi
+
+# --- e2e: --padding enlarges cropped subject canvas ---
+echo ""
+echo "e2e: --padding"
+
+src="$FIX/02-nasa-mccandless-eva.jpg"
+"$BIN" "$src" --crop -o "$OUT/eva-crop-only.png" 2>/dev/null
+"$BIN" "$src" --crop --padding 10% -o "$OUT/eva-crop-padded.png" 2>/dev/null
+if [ -s "$OUT/eva-crop-only.png" ] && [ -s "$OUT/eva-crop-padded.png" ]; then
+    cmp=$(python3 - <<PY
+from PIL import Image
+a = Image.open("$OUT/eva-crop-only.png").size
+b = Image.open("$OUT/eva-crop-padded.png").size
+print("ok" if b[0] > a[0] and b[1] > a[1] else f"bad crop={a} padded={b}")
+PY
+)
+    [ "$cmp" = "ok" ] && pass "--padding 10% expands --crop canvas" || fail "--padding" "$cmp"
+else
+    fail "--padding" "outputs missing"
+fi
+
+# --- e2e: --shadow adds visible pixels under the cutout ---
+echo ""
+echo "e2e: --shadow"
+
+src="$FIX/07-einstein-1921.jpg"
+"$BIN" "$src" --bg color:white -o "$OUT/einstein-no-shadow.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --shadow -o "$OUT/einstein-shadow.png" 2>/dev/null
+if [ -s "$OUT/einstein-no-shadow.png" ] && [ -s "$OUT/einstein-shadow.png" ]; then
+    if cmp -s "$OUT/einstein-no-shadow.png" "$OUT/einstein-shadow.png"; then
+        fail "--shadow" "shadow and non-shadow output were identical"
+    else
+        pass "--shadow changes composited output"
+    fi
+else
+    fail "--shadow" "outputs missing"
+fi
+
+# --- e2e: --bg-fit tile is distinct from cover ---
+echo ""
+echo "e2e: --bg-fit tile"
+
+src="$FIX/07-einstein-1921.jpg"
+bg="$FIX/03-nasa-earthrise.jpg"
+"$BIN" "$src" --bg "image:$bg" --bg-fit cover -o "$OUT/einstein-cover.png" 2>/dev/null
+"$BIN" "$src" --bg "image:$bg" --bg-fit tile -o "$OUT/einstein-tile.png" 2>/dev/null
+if [ -s "$OUT/einstein-cover.png" ] && [ -s "$OUT/einstein-tile.png" ]; then
+    if cmp -s "$OUT/einstein-cover.png" "$OUT/einstein-tile.png"; then
+        fail "--bg-fit tile" "tile and cover produced identical output"
+    else
+        pass "--bg-fit tile uses distinct tiling behavior"
+    fi
+else
+    fail "--bg-fit tile" "outputs missing"
 fi
 
 # --- e2e: --multi multi-instance output ---
