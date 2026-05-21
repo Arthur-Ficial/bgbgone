@@ -19,6 +19,14 @@ enum MaskPostProcess {
     }
 
     /// Soften only the matte, not the foreground RGB pixels.
+    ///
+    /// Two correctness traps to be careful of:
+    ///   1. CIGaussianBlur's output extent is infinite; we crop back to the source.
+    ///   2. `CGContext.clip(to:mask:)` only treats the input as an alpha mask when
+    ///      it is in DeviceGray colour space with no alpha channel. CIImage round-trips
+    ///      default to sRGB, which silently breaks downstream clipping (the bg never
+    ///      gets removed). Rasterise into an explicit DeviceGray context to lock the
+    ///      colour space.
     static func featherMask(_ mask: CGImage, radius: Double) -> CGImage {
         if radius <= 0 { return mask }
         let ci = CIImage(cgImage: mask)
@@ -27,7 +35,31 @@ enum MaskPostProcess {
         filter.setValue(NSNumber(value: radius), forKey: kCIInputRadiusKey)
         guard let blurred = filter.outputImage else { return mask }
         let cropped = blurred.cropped(to: ci.extent)
-        return ciContext.createCGImage(cropped, from: ci.extent) ?? mask
+        guard let blurredCG = ciContext.createCGImage(cropped, from: ci.extent) else {
+            return mask
+        }
+        return forceGrayscale(blurredCG) ?? blurredCG
+    }
+
+    /// Re-draw `image` into an 8-bit DeviceGray context. Returns nil if the redraw fails.
+    /// This is the colour-space normalisation the clip-as-alpha-mask path requires.
+    private static func forceGrayscale(_ image: CGImage) -> CGImage? {
+        let w = image.width
+        let h = image.height
+        let cs = CGColorSpaceCreateDeviceGray()
+        guard let ctx = CGContext(
+            data: nil,
+            width: w,
+            height: h,
+            bitsPerComponent: 8,
+            bytesPerRow: w,
+            space: cs,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else {
+            return nil
+        }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage()
     }
 
     static func thresholdMask(_ mask: CGImage, threshold: Double) throws -> CGImage {

@@ -36,15 +36,15 @@ cat in.png | bgbgone > out.png          # pipe
 --shadow                                # drop shadow under cutout
 
 # algorithm
---algo auto|vn-mask|person|saliency|vn-remove|sky  (default: auto)
+--algo auto|vn-mask|person|saliency  (default: auto)
 
 # multi-instance
 --multi                                 # one output per detected subject
 --instance-naming "{base}-{n}.{ext}"
 
 # output
---to png|jpg|jpeg|webp|heic|avif|tiff  (default: png)
---quality 1..100                        (default: 92 for lossy)
+--to png|jpg|heic|avif|tiff  (default: png)
+--quality 1..100             (default: 92 for lossy)
 -o, --output <path>
 --out-dir <dir>
 
@@ -61,7 +61,7 @@ cat in.png | bgbgone > out.png          # pipe
 - Algorithm `auto`: `VNGenerateForegroundInstanceMaskRequest`. No hidden fallback after a user explicitly chooses an unavailable algorithm.
 - Single instance: cutout = union of all detected subjects (use `--multi` for one-per-instance).
 - Format: PNG (only lossless option that preserves alpha out of the box).
-- Quality: 92 for JPEG / WebP / AVIF.
+- Quality: 92 for lossy formats (JPEG, HEIC, AVIF).
 - Feather: 1px.
 - Colour space: pass through input.
 - Shadow / padding / crop: off.
@@ -117,10 +117,10 @@ cat in.png | bgbgone > out.png          # pipe
 | `vn-mask` | `VNGenerateForegroundInstanceMaskRequest` | 14+ | General purpose foreground subjects |
 | `person` | `VNGeneratePersonSegmentationRequest` | 12+ | Portraits, people, talking-head frames |
 | `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ | Objectness heat-map matte |
-| `vn-remove` | unavailable in current public SDK | n/a | Reserved spelling; fails explicitly |
-| `sky` | unavailable in current public SDK | n/a | Reserved spelling; fails explicitly |
 
-`--algo auto` uses the public foreground-instance mask API. Explicit unavailable algorithms return a framework error instead of silently using another implementation.
+`--algo auto` uses the public foreground-instance mask API (`vn-mask`).
+Any other algorithm name is rejected by the parser with exit code 2 — there
+is no hidden fallback.
 
 ## Backgrounds
 

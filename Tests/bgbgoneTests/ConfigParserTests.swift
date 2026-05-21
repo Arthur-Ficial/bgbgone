@@ -91,11 +91,7 @@ func runConfigParserTests() {
         try assertEqual(cfg.outputFormat, .jpeg)
     }
 
-    test("--to webp / heic / avif / tiff") {
-        try assertEqual(
-            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
-            .webp
-        )
+    test("--to heic / avif / tiff") {
         try assertEqual(
             try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "heic"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
             .heic
@@ -108,6 +104,15 @@ func runConfigParserTests() {
             try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "tiff"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
             .tiff
         )
+    }
+
+    test("--to webp is rejected (not supported by ImageIO on this SDK)") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw — webp is not supported")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
     }
 
     test("--to bogus throws parser error") {
@@ -170,10 +175,21 @@ func runConfigParserTests() {
         }
     }
 
-    test("--algo auto / vn-remove / vn-mask / person / sky / saliency") {
-        for raw in ["auto", "vn-remove", "vn-mask", "person", "sky", "saliency"] {
+    test("--algo auto / vn-mask / person / saliency parses") {
+        for raw in ["auto", "vn-mask", "person", "saliency"] {
             let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", raw], isStdinTTY: true, isStdoutTTY: true)
             try assertEqual(cfg.algo.rawValue, raw)
+        }
+    }
+
+    test("--algo vn-remove and --algo sky are rejected (not in public SDK)") {
+        for raw in ["vn-remove", "sky"] {
+            do {
+                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", raw], isStdinTTY: true, isStdoutTTY: true)
+                throw TestFailure("expected throw for --algo \(raw)")
+            } catch let e as BgBgOneError {
+                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+            }
         }
     }
 

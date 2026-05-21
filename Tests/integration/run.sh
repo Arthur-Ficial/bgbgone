@@ -191,7 +191,7 @@ echo ""
 echo "e2e: --to format conversions"
 
 src="$FIX/07-einstein-1921.jpg"
-for fmt in png jpg heic tiff; do
+for fmt in png jpg heic avif tiff; do
     dst="$OUT/einstein.$fmt"
     out=$("$BIN" "$src" --bg "color:white" --to "$fmt" -o "$dst" 2>&1) ; rc=$?
     if [ $rc -eq 0 ] && [ -s "$dst" ]; then
@@ -201,17 +201,17 @@ for fmt in png jpg heic tiff; do
     fi
 done
 
-# webp / avif depend on the OS's ImageIO support — accept either success or a clean framework error.
-for fmt in webp avif; do
-    dst="$OUT/einstein.$fmt"
-    out=$("$BIN" "$src" --bg "color:white" --to "$fmt" -o "$dst" 2>&1) ; rc=$?
-    if [ $rc -eq 0 ] && [ -s "$dst" ]; then
-        pass "--to $fmt (supported)"
-    elif [ $rc -eq 3 ]; then
-        pass "--to $fmt (gracefully unsupported, exit 3)"
-    else
-        fail "--to $fmt" "rc=$rc out=$out"
-    fi
+# Removed formats and algorithms must be rejected with a parser error, not silently
+# accepted then failed at framework level. They never existed for the user.
+for fmt in webp bmp gif; do
+    out=$("$BIN" "$src" --to "$fmt" -o "$OUT/dummy.$fmt" 2>&1) ; rc=$?
+    [ $rc -eq 2 ] && pass "--to $fmt rejected at parse (rc=2)" \
+        || fail "--to $fmt rejection" "expected rc=2, got rc=$rc out=$out"
+done
+for algo in vn-remove sky bogus; do
+    out=$("$BIN" "$src" --algo "$algo" -o "$OUT/dummy.png" 2>&1) ; rc=$?
+    [ $rc -eq 2 ] && pass "--algo $algo rejected at parse (rc=2)" \
+        || fail "--algo $algo rejection" "expected rc=2, got rc=$rc out=$out"
 done
 
 # --- e2e: --quality knob honored for jpg ---
@@ -286,6 +286,7 @@ echo "e2e: --feather"
 src="$FIX/02-nasa-mccandless-eva.jpg"
 "$BIN" "$src" --feather 0 -o "$OUT/eva-f0.png" 2>/dev/null
 "$BIN" "$src" --feather 8 -o "$OUT/eva-f8.png" 2>/dev/null
+"$BIN" "$src" --feather 16 -o "$OUT/eva-f16.png" 2>/dev/null
 if [ -s "$OUT/eva-f0.png" ] && [ -s "$OUT/eva-f8.png" ]; then
     sz0=$(stat -f '%z' "$OUT/eva-f0.png")
     sz8=$(stat -f '%z' "$OUT/eva-f8.png")
@@ -294,6 +295,22 @@ if [ -s "$OUT/eva-f0.png" ] && [ -s "$OUT/eva-f8.png" ]; then
 else
     fail "--feather" "outputs missing"
 fi
+
+# Regression: feather > 0 used to silently disable background removal because the
+# Gaussian-blurred mask came back in sRGB rather than DeviceGray. The corner pixel
+# of a cutout against space must be fully transparent regardless of feather radius.
+for r in 0 8 16; do
+    out=$("$BIN" "$src" --feather "$r" -o "$OUT/eva-f$r.png" 2>&1) ; rc=$?
+    if [ $rc -ne 0 ] || [ ! -s "$OUT/eva-f$r.png" ]; then
+        fail "--feather $r corner alpha" "no output (rc=$rc out=$out)"
+        continue
+    fi
+    corner=$(magick "$OUT/eva-f$r.png" -format '%[pixel:p{5,5}]' info: 2>/dev/null)
+    case "$corner" in
+        *",0)"|*"a=0)"|*"none"*) pass "--feather $r corner alpha == 0 (bg removed)" ;;
+        *) fail "--feather $r corner alpha" "expected transparent corner, got $corner" ;;
+    esac
+done
 
 # --- e2e: --threshold changes matte decisively ---
 echo ""

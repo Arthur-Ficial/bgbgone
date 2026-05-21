@@ -22,7 +22,6 @@ public extension OutputFormat {
         switch raw.lowercased() {
         case "png": return .png
         case "jpg", "jpeg": return .jpeg
-        case "webp": return .webp
         case "heic", "heif": return .heic
         case "avif": return .avif
         case "tif", "tiff": return .tiff
@@ -40,7 +39,6 @@ public extension OutputFormat {
         switch self {
         case .png: return "png"
         case .jpeg: return "jpg"
-        case .webp: return "webp"
         case .heic: return "heic"
         case .avif: return "avif"
         case .tiff: return "tiff"
@@ -51,7 +49,7 @@ public extension OutputFormat {
         switch self {
         case .jpeg:
             return false
-        case .png, .webp, .heic, .avif, .tiff:
+        case .png, .heic, .avif, .tiff:
             return true
         }
     }

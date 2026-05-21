@@ -39,7 +39,7 @@ public enum ConfigParser {
             case "--to":
                 let v = try takeValue(args, &i, flag: a)
                 guard let f = OutputFormat.parse(v) else {
-                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, webp, heic, avif, tiff)")
+                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, heic, avif, tiff)")
                 }
                 cfg.outputFormat = f
                 explicitOutputFormat = true
@@ -60,7 +60,7 @@ public enum ConfigParser {
             case "--algo":
                 let v = try takeValue(args, &i, flag: a)
                 guard let f = Algo(rawValue: v) else {
-                    throw BgBgOneError.parser("unknown --algo value: \(v) (allowed: auto, vn-remove, vn-mask, person, sky, saliency)")
+                    throw BgBgOneError.parser("unknown --algo value: \(v) (allowed: auto, vn-mask, person, saliency)")
                 }
                 cfg.algo = f
             case "--mask-only":

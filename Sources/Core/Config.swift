@@ -3,7 +3,6 @@ import Foundation
 public enum OutputFormat: String, Sendable, Equatable {
     case png
     case jpeg = "jpg"
-    case webp
     case heic
     case avif
     case tiff
@@ -23,10 +22,8 @@ public enum Background: Sendable, Equatable {
 
 public enum Algo: String, Sendable, Equatable {
     case auto
-    case vnRemove = "vn-remove"
     case vnMask = "vn-mask"
     case person
-    case sky
     case saliency
 }
 

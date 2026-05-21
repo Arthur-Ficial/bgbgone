@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
 
 # --- Environment ---
 
@@ -134,3 +134,20 @@ print-release-sha256:
 		exit 1; \
 	fi; \
 	shasum -a 256 "$$asset" | awk '{print $$1}'
+
+# Regenerate every showcase image in docs/images/ from the installed binary.
+# Release MUST run this so the README always matches the shipped behaviour —
+# regressions like the v0.1.16 feather/colour-space bug ship visibly otherwise.
+readme-images: install
+	bash scripts/make-readme-examples.sh
+
+# Full release gate: bump → test → install → regenerate README images →
+# package. Use this for every public release; never tag without it.
+release: test install readme-images package-release-asset
+	@v=$$(cat $(VERSION_FILE)); \
+	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
+	echo ""; \
+	echo "release ready:"; \
+	echo "  version : $$v"; \
+	echo "  binary  : $(PREFIX)/bin/$(BINARY) ($$($(PREFIX)/bin/$(BINARY) --version))"; \
+	echo "  tarball : $$asset ($$(shasum -a 256 $$asset | awk '{print $$1}'))"

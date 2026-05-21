@@ -14,7 +14,7 @@ enum Output {
         let opts: [CFString: Any] = {
             var d: [CFString: Any] = [:]
             switch format {
-            case .jpeg, .webp, .heic, .avif:
+            case .jpeg, .heic, .avif:
                 d[kCGImageDestinationLossyCompressionQuality] = CGFloat(cfg.quality) / 100.0
             case .png, .tiff:
                 break
@@ -85,7 +85,6 @@ extension OutputFormat {
         switch self {
         case .png:  return .png
         case .jpeg: return .jpeg
-        case .webp: return UTType(filenameExtension: "webp") ?? .image
         case .heic: return .heic
         case .avif: return UTType(filenameExtension: "avif") ?? .image
         case .tiff: return .tiff

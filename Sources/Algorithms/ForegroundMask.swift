@@ -29,10 +29,6 @@ enum ForegroundMask {
             return try runPersonSegmentation(on: image)
         case .saliency:
             return try runObjectnessSaliency(on: image)
-        case .vnRemove:
-            throw BgBgOneError.frameworkError("vn-remove is not available in the public macOS Vision SDK; use --algo auto or --algo vn-mask")
-        case .sky:
-            throw BgBgOneError.frameworkError("sky segmentation is not available in the public macOS SDK used by bgbgone")
         }
     }
 
@@ -44,10 +40,6 @@ enum ForegroundMask {
             return try runForegroundInstanceMaskPerInstance(on: image, algoLabel: Algo.vnMask.rawValue)
         case .person, .saliency:
             return [try maskedImage(from: image, algo: resolved)]
-        case .vnRemove:
-            throw BgBgOneError.frameworkError("vn-remove is not available in the public macOS Vision SDK; use --algo auto or --algo vn-mask")
-        case .sky:
-            throw BgBgOneError.frameworkError("sky segmentation is not available in the public macOS SDK used by bgbgone")
         }
     }
 

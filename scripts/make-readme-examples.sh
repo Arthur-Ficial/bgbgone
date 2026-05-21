@@ -13,6 +13,19 @@ OUT="$ROOT/docs/images"
 WORK="$(mktemp -d -t bgbgone-readme.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 
+# Pin to the freshly-built release binary if one exists, otherwise fall back to
+# `bgbgone` on PATH. Required because `bgbgone` on PATH can resolve to an older
+# installed binary (e.g. /opt/homebrew/bin/bgbgone), which silently makes the
+# README assets reflect the wrong release.
+if [ -x "$ROOT/.build/release/bgbgone" ]; then
+    BGBGONE="$ROOT/.build/release/bgbgone"
+elif [ -x "/usr/local/bin/bgbgone" ]; then
+    BGBGONE="/usr/local/bin/bgbgone"
+else
+    BGBGONE="$(command -v bgbgone)"
+fi
+echo "make-readme-examples: using $BGBGONE ($("$BGBGONE" --version 2>/dev/null || echo unknown))"
+
 # macOS fonts (ImageMagick can't auto-discover them on macOS without a font-cache).
 FONT_SANS="/System/Library/Fonts/HelveticaNeue.ttc"
 FONT_BOLD="/System/Library/Fonts/Helvetica.ttc"
@@ -88,7 +101,7 @@ stack() {
 bg() {
     local src="$1" tag="$2"; shift 2
     local dst="$WORK/$(basename "$src" .jpg)-$tag.png"
-    bgbgone "$src" "$@" -o "$dst" --quiet
+    "$BGBGONE" "$src" "$@" -o "$dst" --quiet
     echo "$dst"
 }
 
@@ -100,7 +113,7 @@ for f in "$FX"/[0-9][0-9]-*.jpg; do
     base=$(basename "$f" .jpg)
     label_src=$(echo "$base" | sed -E 's/^[0-9]+-//; s/-/ /g')
     cut="$WORK/$base-cut.png"
-    bgbgone "$f" -o "$cut" --quiet
+    "$BGBGONE" "$f" -o "$cut" --quiet
     panel "$f"  "src · $label_src"  "$WORK/panels/grid-$i-a.png" 360 300
     panel "$cut" "cutout"           "$WORK/panels/grid-$i-b.png" 360 300
     i=$((i + 1))
@@ -148,19 +161,19 @@ color_strip() {
     local base=$(basename "$src" .jpg)
     panel "$src" "src" "$WORK/colors/$base-src.png" 320 320
 
-    bgbgone "$src" --bg color:white -o "$WORK/colors/$base-white.png" --quiet
+    "$BGBGONE" "$src" --bg color:white -o "$WORK/colors/$base-white.png" --quiet
     panel "$WORK/colors/$base-white.png" "--bg color:white" \
           "$WORK/colors/$base-white-p.png" 320 320
 
-    bgbgone "$src" --bg color:black -o "$WORK/colors/$base-black.png" --quiet
+    "$BGBGONE" "$src" --bg color:black -o "$WORK/colors/$base-black.png" --quiet
     panel "$WORK/colors/$base-black.png" "--bg color:black" \
           "$WORK/colors/$base-black-p.png" 320 320
 
-    bgbgone "$src" --bg color:#0066cc -o "$WORK/colors/$base-brand.png" --quiet
+    "$BGBGONE" "$src" --bg color:#0066cc -o "$WORK/colors/$base-brand.png" --quiet
     panel "$WORK/colors/$base-brand.png" "--bg color:#0066cc" \
           "$WORK/colors/$base-brand-p.png" 320 320
 
-    bgbgone "$src" --bg color:rgb:0,200,0 -o "$WORK/colors/$base-green.png" --quiet
+    "$BGBGONE" "$src" --bg color:rgb:0,200,0 -o "$WORK/colors/$base-green.png" --quiet
     panel "$WORK/colors/$base-green.png" "--bg color:rgb:0,200,0" \
           "$WORK/colors/$base-green-p.png" 320 320
 
@@ -203,7 +216,7 @@ panel "$SUB" "src" "$WORK/imgbg/0-src.png" 360 320
 panel "$BG_BEACH" "bg image" "$WORK/imgbg/0-bg.png" 360 320
 
 for mode in cover contain tile center; do
-    bgbgone "$SUB" --bg "image:$BG_BEACH" --bg-fit "$mode" \
+    "$BGBGONE" "$SUB" --bg "image:$BG_BEACH" --bg-fit "$mode" \
         -o "$WORK/imgbg/einstein-$mode.png" --quiet
     panel "$WORK/imgbg/einstein-$mode.png" "--bg-fit $mode" \
           "$WORK/imgbg/einstein-$mode-p.png" 360 320
@@ -221,11 +234,11 @@ row "$WORK/imgbg/row1.png" "" \
 SUB2="$FX/02-nasa-mccandless-eva.jpg"
 panel "$SUB2" "src" "$WORK/imgbg/2-src.png" 360 320
 
-bgbgone "$SUB2" --bg "image:$BG_NEBULA" -o "$WORK/imgbg/eva-nebula.png" --quiet
+"$BGBGONE" "$SUB2" --bg "image:$BG_NEBULA" -o "$WORK/imgbg/eva-nebula.png" --quiet
 panel "$BG_NEBULA" "bg: hubble nebula" "$WORK/imgbg/2-bg-a.png" 360 320
 panel "$WORK/imgbg/eva-nebula.png" "result" "$WORK/imgbg/eva-nebula-p.png" 360 320
 
-bgbgone "$SUB2" --bg "image:$BG_WAVE" -o "$WORK/imgbg/eva-wave.png" --quiet
+"$BGBGONE" "$SUB2" --bg "image:$BG_WAVE" -o "$WORK/imgbg/eva-wave.png" --quiet
 panel "$BG_WAVE" "bg: hokusai wave" "$WORK/imgbg/2-bg-b.png" 360 320
 panel "$WORK/imgbg/eva-wave.png" "result" "$WORK/imgbg/eva-wave-p.png" 360 320
 
@@ -263,7 +276,7 @@ ESUB="$FX/07-einstein-1921.jpg"
 
 # Feather progression on white bg so edges are visible.
 for fpx in 0 1 4 8 16; do
-    bgbgone "$ESUB" --bg color:white --feather "$fpx" \
+    "$BGBGONE" "$ESUB" --bg color:white --feather "$fpx" \
         -o "$WORK/edge/feather-$fpx.png" --quiet
     panel "$WORK/edge/feather-$fpx.png" "--feather $fpx" \
           "$WORK/edge/feather-$fpx-p.png" 320 320
@@ -279,16 +292,16 @@ row "$WORK/edge/row-feather.png" "" \
 # crop / padding / shadow / mask-only
 panel "$ESUB" "src" "$WORK/edge/src.png" 320 320
 
-bgbgone "$ESUB" --crop -o "$WORK/edge/crop.png" --quiet
+"$BGBGONE" "$ESUB" --crop -o "$WORK/edge/crop.png" --quiet
 panel "$WORK/edge/crop.png" "--crop" "$WORK/edge/crop-p.png" 320 320
 
-bgbgone "$ESUB" --crop --padding 10% -o "$WORK/edge/pad.png" --quiet
+"$BGBGONE" "$ESUB" --crop --padding 10% -o "$WORK/edge/pad.png" --quiet
 panel "$WORK/edge/pad.png" "--crop --padding 10%" "$WORK/edge/pad-p.png" 320 320
 
-bgbgone "$ESUB" --bg color:white --shadow -o "$WORK/edge/shadow.png" --quiet
+"$BGBGONE" "$ESUB" --bg color:white --shadow -o "$WORK/edge/shadow.png" --quiet
 panel "$WORK/edge/shadow.png" "--bg color:white --shadow" "$WORK/edge/shadow-p.png" 320 320
 
-bgbgone "$ESUB" --mask-only -o "$WORK/edge/mask.png" --quiet
+"$BGBGONE" "$ESUB" --mask-only -o "$WORK/edge/mask.png" --quiet
 panel "$WORK/edge/mask.png" "--mask-only (alpha matte)" "$WORK/edge/mask-p.png" 320 320
 
 row "$WORK/edge/row-misc.png" "" \
@@ -317,8 +330,8 @@ echo "    -> $OUT/showcase-edges.png"
 
 # Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
 ZOOM_SUB="$FX/02-nasa-mccandless-eva.jpg"
-bgbgone "$ZOOM_SUB" --feather 0 -o "$WORK/edge/zoom-f0.png" --quiet
-bgbgone "$ZOOM_SUB" --feather 8 -o "$WORK/edge/zoom-f8.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" --feather 0 -o "$WORK/edge/zoom-f0.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" --feather 8 -o "$WORK/edge/zoom-f8.png" --quiet
 
 zoom_panel() {
     local src="$1" label="$2" dst="$3"
@@ -347,8 +360,8 @@ echo "    -> $OUT/feather-zoom.png"
 
 # Mask breakdown: source → alpha matte → final transparent cutout.
 MB_SUB="$FX/02-nasa-mccandless-eva.jpg"
-bgbgone "$MB_SUB" --mask-only -o "$WORK/edge/mb-mask.png" --quiet
-bgbgone "$MB_SUB" -o "$WORK/edge/mb-cutout.png" --quiet
+"$BGBGONE" "$MB_SUB" --mask-only -o "$WORK/edge/mb-mask.png" --quiet
+"$BGBGONE" "$MB_SUB" -o "$WORK/edge/mb-cutout.png" --quiet
 panel "$MB_SUB" "src" "$WORK/edge/mb-src-p.png" 360 320
 panel "$WORK/edge/mb-mask.png" "--mask-only" "$WORK/edge/mb-mask-p.png" 360 320
 panel "$WORK/edge/mb-cutout.png" "cutout" "$WORK/edge/mb-cutout-p.png" 360 320
@@ -372,21 +385,15 @@ algo_row() {
     local src="$1" out="$2"
     local base=$(basename "$src" .jpg)
     panel "$src" "src" "$WORK/algo/$base-src.png" 320 320
-    for a in vn-remove vn-mask person sky saliency; do
-        bgbgone "$src" --algo "$a" -o "$WORK/algo/$base-$a.png" --quiet 2>/dev/null || {
-            magick -size 320x264 canvas:'#2a2a30' \
-                -gravity center -pointsize 18 -font "$FONT_SANS" -fill '#888' \
-                -annotate +0+0 "n/a on this subject" PNG24:"$WORK/algo/$base-$a.png"
-        }
+    for a in vn-mask person saliency; do
+        "$BGBGONE" "$src" --algo "$a" -o "$WORK/algo/$base-$a.png" --quiet
         panel "$WORK/algo/$base-$a.png" "--algo $a" \
               "$WORK/algo/$base-$a-p.png" 320 320
     done
     row "$out" "" \
         "$WORK/algo/$base-src.png" \
-        "$WORK/algo/$base-vn-remove-p.png" \
         "$WORK/algo/$base-vn-mask-p.png" \
         "$WORK/algo/$base-person-p.png" \
-        "$WORK/algo/$base-sky-p.png" \
         "$WORK/algo/$base-saliency-p.png"
 }
 
@@ -397,7 +404,7 @@ algo_row "$FX/10-mona-lisa.jpg"                  "$WORK/algo/row-mona.png"
 W=$(magick identify -format '%w' "$WORK/algo/row-mars.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--algo: rover + sky + ground · two people + sky · painted figure" \
+    -annotate +0+0 "--algo: rover · two people · painted figure (every supported algorithm side by side)" \
     PNG24:"$WORK/algo/title.png"
 stack "$OUT/showcase-algos.png" \
     "$WORK/algo/title.png" \
@@ -415,26 +422,26 @@ ML="$FX/10-mona-lisa.jpg"
 
 panel "$ML" "src · mona lisa (da vinci, c.1503)" "$WORK/ml/src.png" 360 320
 
-bgbgone "$ML" --bg color:white -o "$WORK/ml/white.png" --quiet
+"$BGBGONE" "$ML" --bg color:white -o "$WORK/ml/white.png" --quiet
 panel "$WORK/ml/white.png" "--bg color:white" "$WORK/ml/p1.png" 360 320
 
-bgbgone "$ML" --bg color:black -o "$WORK/ml/black.png" --quiet
+"$BGBGONE" "$ML" --bg color:black -o "$WORK/ml/black.png" --quiet
 panel "$WORK/ml/black.png" "--bg color:black" "$WORK/ml/p2.png" 360 320
 
 # Real PD bg images, each labelled with source fixture so claims are verifiable.
-bgbgone "$ML" --bg "image:$FX/04-nasa-hubble-ngc1300.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/04-nasa-hubble-ngc1300.jpg" \
     -o "$WORK/ml/galaxy.png" --quiet
 panel "$WORK/ml/galaxy.png" "--bg image:hubble-ngc1300 (NASA, PD)" "$WORK/ml/p3.png" 360 320
 
-bgbgone "$ML" --bg "image:$FX/01-nasa-aldrin-moon.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/01-nasa-aldrin-moon.jpg" \
     -o "$WORK/ml/moon.png" --quiet
 panel "$WORK/ml/moon.png" "--bg image:aldrin-moon (NASA, PD)" "$WORK/ml/p4.png" 360 320
 
-bgbgone "$ML" --bg "image:$FX/11-great-wave-hokusai.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/11-great-wave-hokusai.jpg" \
     -o "$WORK/ml/wave.png" --quiet
 panel "$WORK/ml/wave.png" "--bg image:great-wave (Hokusai, PD-old)" "$WORK/ml/p5.png" 360 320
 
-bgbgone "$ML" --bg "image:$FX/06-nasa-mars-curiosity-selfie.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/06-nasa-mars-curiosity-selfie.jpg" \
     -o "$WORK/ml/mars.png" --quiet
 panel "$WORK/ml/mars.png" "--bg image:mars-curiosity (NASA, PD)" "$WORK/ml/p6.png" 360 320
 
@@ -461,8 +468,8 @@ echo "    -> $OUT/mona-lisa-tour.png"
 echo "==> pipeline (real auge classify output)"
 mkdir -p "$WORK/pipe"
 PSRC="$FX/06-nasa-mars-curiosity-selfie.jpg"
-bgbgone "$PSRC" -o "$WORK/pipe/cut.png" --quiet
-bgbgone "$PSRC" --bg color:black --to jpg -o "$WORK/pipe/black.jpg" --quiet
+"$BGBGONE" "$PSRC" -o "$WORK/pipe/cut.png" --quiet
+"$BGBGONE" "$PSRC" --bg color:black --to jpg -o "$WORK/pipe/black.jpg" --quiet
 panel "$PSRC" "1. src · curiosity selfie" "$WORK/pipe/p1.png" 360 320
 panel "$WORK/pipe/cut.png" "2. bgbgone (cutout)" "$WORK/pipe/p2.png" 360 320
 panel "$WORK/pipe/black.jpg" "3. bgbgone --bg color:black --to jpg" "$WORK/pipe/p3.png" 360 320
@@ -507,13 +514,13 @@ product_row() {
 
     panel "$src" "src · $base" "$WORK/prod/$base-src.png" 320 360
 
-    bgbgone "$src" --mask-only -o "$WORK/prod/$base-mask.png" --quiet
+    "$BGBGONE" "$src" --mask-only -o "$WORK/prod/$base-mask.png" --quiet
     panel "$WORK/prod/$base-mask.png" "--mask-only (alpha matte)" "$WORK/prod/$base-mask-p.png" 320 360
 
-    bgbgone "$src" -o "$WORK/prod/$base-cut.png" --quiet
+    "$BGBGONE" "$src" -o "$WORK/prod/$base-cut.png" --quiet
     panel "$WORK/prod/$base-cut.png" "cutout (transparent)" "$WORK/prod/$base-cut-p.png" 320 360
 
-    bgbgone "$src" --bg "image:$bgfx" -o "$WORK/prod/$base-new.png" --quiet
+    "$BGBGONE" "$src" --bg "image:$bgfx" -o "$WORK/prod/$base-new.png" --quiet
     panel "$WORK/prod/$base-new.png" "$newcap" "$WORK/prod/$base-new-p.png" 320 360
 
     row "$out" "" \

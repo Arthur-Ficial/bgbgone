@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.16](https://img.shields.io/badge/version-0.1.16-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.20](https://img.shields.io/badge/version-0.1.20-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -119,17 +119,15 @@ Pixel-level zoom on the edge for `--feather 0` vs `--feather 8`:
 ### Algorithm selection
 
 ```bash
-bgbgone in.jpg --algo auto       # same quality path as vn-mask (default)
+bgbgone in.jpg --algo auto       # public foreground-instance mask (default)
 bgbgone in.jpg --algo vn-mask    # VNGenerateForegroundInstanceMaskRequest (macOS 14+)
-bgbgone in.jpg --algo person     # VNGeneratePersonSegmentationRequest
-bgbgone in.jpg --algo saliency   # objectness saliency heat map
+bgbgone in.jpg --algo person     # VNGeneratePersonSegmentationRequest (macOS 12+)
+bgbgone in.jpg --algo saliency   # VNGenerateObjectnessBasedSaliencyImageRequest
 ```
 
-`vn-remove` and `sky` are reserved CLI spellings but fail explicitly on the current public macOS SDK because the corresponding public APIs are not exposed there. bgbgone does not silently route those names through another algorithm.
+Three subjects with every supported algorithm side by side — a Mars rover, two figures in a meadow, and a painted Renaissance figure:
 
-Three subjects where the available algorithms visibly diverge — a Mars rover with sky + ground, two people in a meadow, and a painted figure:
-
-![--algo across vn-remove / vn-mask / person / sky / saliency on three subjects](docs/images/showcase-algos.png)
+![--algo vn-mask / person / saliency on three subjects](docs/images/showcase-algos.png)
 
 ### Output formats
 
@@ -138,9 +136,8 @@ bgbgone in.jpg --to png                              # transparent PNG (default)
 bgbgone in.jpg --to jpg --quality 92                 # white bg unless --bg is set
 bgbgone in.jpg -o out.jpg                            # extension infers JPEG
 bgbgone in.jpg --to heic
+bgbgone in.jpg --to avif
 bgbgone in.jpg --to tiff
-bgbgone in.jpg --to webp                             # if ImageIO supports it
-bgbgone in.jpg --to avif                             # if ImageIO supports it
 ```
 
 ### Multi-instance
@@ -162,7 +159,7 @@ bgbgone in.jpg --json -o out.png
 ```
 
 ```json
-{"input":"in.jpg","output":"out.png","algo":"vn-remove","format":"png","width":1280,"height":960}
+{"input":"in.jpg","output":"out.png","algo":"vn-mask","format":"png","width":1280,"height":960}
 ```
 
 NDJSON streams through `jq`:
@@ -262,14 +259,13 @@ bgbgone --check
 ```
 
 ```
-bgbgone v0.1.11 capability report
+bgbgone v0.1.20 capability report
   OS:                  macOS 26.3.1
   Algorithms:
-    vn-remove          unavailable
-    vn-mask            available
+    vn-mask            available (foreground-instance mask, macOS 14+)
     person             available (Vision person segmentation, macOS 12+)
-    sky                unavailable (not public in this SDK)
     saliency           available (Vision objectness saliency, macOS 10.15+)
+  Output formats:      png, jpg, heic, avif, tiff
   Backgrounds:
     color              always available
     image              always available
@@ -302,14 +298,14 @@ MATTE / EDGE:
   --shadow                              drop shadow under cutout
 
 ALGORITHM:
-  --algo auto|vn-mask|person|saliency|vn-remove|sky   (default: auto)
+  --algo auto|vn-mask|person|saliency   (default: auto)
 
 MULTI-INSTANCE:
   --multi                               one file per detected instance
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
-  --to png|jpg|jpeg|webp|heic|avif|tiff output format (default: png)
+  --to png|jpg|heic|avif|tiff           output format (default: png)
   --quality 1..100                      for lossy formats (default: 92)
   -o, --output <path>                   explicit output file
   --out-dir <dir>                       batch output directory

@@ -1,10 +1,6 @@
 import Foundation
 
 enum CapabilityProbe {
-    static func isVNRemoveBackgroundAvailable() -> Bool {
-        return false
-    }
-
     static func isVNForegroundInstanceMaskAvailable() -> Bool {
         if #available(macOS 14, *) { return true }
         return false
@@ -17,10 +13,6 @@ enum CapabilityProbe {
 
     static func isVNSaliencyAvailable() -> Bool {
         if #available(macOS 10.15, *) { return true }
-        return false
-    }
-
-    static func isSkySegmentationAvailable() -> Bool {
         return false
     }
 }

@@ -46,15 +46,15 @@ enum CLI {
           --shadow                              drop shadow under cutout
 
         ALGORITHM:
-          --algo auto|vn-mask|person|saliency|vn-remove|sky   (default: auto)
-          auto uses the public foreground-instance mask API when available
+          --algo auto|vn-mask|person|saliency   (default: auto)
+          auto uses the public foreground-instance mask API.
 
         MULTI-INSTANCE:
           --multi                               one file per detected instance
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
-          --to png|jpg|jpeg|webp|heic|avif|tiff output format (default: png)
+          --to png|jpg|heic|avif|tiff           output format (default: png)
           --quality 1..100                      for lossy formats (default: 92)
           -o, --output <path>                   explicit output file
           --out-dir <dir>                       batch output directory
@@ -80,11 +80,9 @@ enum CLI {
         let proc = ProcessInfo.processInfo
         let osv = proc.operatingSystemVersion
         let os = "macOS \(osv.majorVersion).\(osv.minorVersion).\(osv.patchVersion)"
-        let bgbgoneAvailable = CapabilityProbe.isVNRemoveBackgroundAvailable()
         let foregroundMaskAvailable = CapabilityProbe.isVNForegroundInstanceMaskAvailable()
         let personAvailable = CapabilityProbe.isVNPersonSegmentationAvailable()
         let saliencyAvailable = CapabilityProbe.isVNSaliencyAvailable()
-        let skyAvailable = CapabilityProbe.isSkySegmentationAvailable()
         print("""
         bgbgone v\(buildVersion) capability report
           OS:                  \(os)
@@ -93,11 +91,11 @@ enum CLI {
           Commit:              \(buildCommit) (\(buildBranch))
 
         Algorithms:
-          vn-remove            \(bgbgoneAvailable ? "available" : "unavailable")
-          vn-mask              \(foregroundMaskAvailable ? "available" : "unavailable")
+          vn-mask              \(foregroundMaskAvailable ? "available" : "unavailable") (foreground-instance mask, macOS 14+)
           person               \(personAvailable ? "available" : "unavailable") (Vision person segmentation, macOS 12+)
-          sky                  \(skyAvailable ? "available" : "unavailable") (not public in this SDK)
           saliency             \(saliencyAvailable ? "available" : "unavailable") (Vision objectness saliency, macOS 10.15+)
+
+        Output formats:        png, jpg, heic, avif, tiff
 
         Backgrounds:
           color                always available
