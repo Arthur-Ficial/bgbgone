@@ -28,6 +28,10 @@ func assertNil<T>(_ v: T?, _ msg: String = "") throws {
 func assertNotNil<T>(_ v: T?, _ msg: String = "") throws {
     guard v != nil else { throw TestFailure("Expected non-nil\(msg.isEmpty ? "" : " — \(msg)")") }
 }
+func assertNotNilAndUnwrap<T>(_ v: T?, _ msg: String = "") throws -> T {
+    guard let v else { throw TestFailure("Expected non-nil\(msg.isEmpty ? "" : " — \(msg)")") }
+    return v
+}
 func assertTrue(_ v: Bool, _ msg: String = "") throws {
     guard v else { throw TestFailure("Expected true\(msg.isEmpty ? "" : " — \(msg)")") }
 }
@@ -62,6 +66,9 @@ suite("ConfigParserTests") { runConfigParserTests() }
 suite("JSONEscaperTests") { runJSONEscaperTests() }
 suite("NetworkGuardTests") { runNetworkGuardTests() }
 suite("NamingTests") { runNamingTests() }
+suite("ServerConfigTests") { runServerConfigTests() }
+suite("ServerParsingTests") { runServerParsingTests() }
+suite("ServerSecurityTests") { runServerSecurityTests() }
 
 // MARK: - Summary
 

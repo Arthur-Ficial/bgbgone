@@ -31,6 +31,7 @@ enum CLI {
           \(appName) in.jpg --bg image:bg.jpg           # image background
           \(appName) *.jpg --out-dir ./cutouts          # batch
           cat in.png | \(appName) > out.png             # pipe in / pipe out
+          \(appName) --server                           # local HTTP API on 127.0.0.1:8787
 
         BACKGROUND:
           --bg color:<#hex|named|rgb:r,g,b>     solid colour
@@ -63,6 +64,17 @@ enum CLI {
           -o and --out-dir are mutually exclusive
           stdin input requires stdout or -o; --out-dir needs file inputs
           --multi writes files; it cannot combine with -o or --mask-only
+
+        SERVER:
+          --server                             run local HTTP API
+          --host <addr>                        bind address (default: 127.0.0.1)
+          --port <n>                           bind port (default: 8787)
+          --cors                               enable CORS headers for allowed origins
+          --allowed-origins <csv>              add allowed browser origins
+          --no-origin-check | --footgun        disable browser origin checks
+          --token <secret> | --token-auto      require Bearer token
+          --public-health                      keep /health public on non-loopback binds
+          --max-body-mb <n>                    request body limit (default: 32)
 
         META:
           --json | --ndjson                     structured output

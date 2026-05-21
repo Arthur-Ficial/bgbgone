@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.23](https://img.shields.io/badge/version-0.1.23-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.29](https://img.shields.io/badge/version-0.1.29-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -29,6 +29,7 @@ bgbgone in.jpg --bg color:white -o on-white.png   # on a colour
 bgbgone in.jpg --bg image:beach.jpg -o beach.png  # on an image
 cat in.png | bgbgone > out.png                    # pipe
 bgbgone *.jpg --out-dir ./out/                    # batch
+bgbgone --server                                  # local HTTP API
 ```
 
 ## Why
@@ -52,6 +53,21 @@ cat photo.jpg | bgbgone --bg color:white > on-white.png     # pipe through
 ```
 
 When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgone.<ext>` next to the input instead of dumping binary into the terminal. When stdout is redirected, bgbgone writes image bytes to stdout. For portable scripts, prefer `-o cutout.jpg` over `> cutout.jpg`.
+
+### Local HTTP API
+
+```bash
+bgbgone --server
+```
+
+```bash
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -F image_file=@photo.jpg \
+    -F format=png \
+    -o cutout.png
+```
+
+The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth, CORS for trusted local browser apps, origin checks, and a request body limit. Full details: [`docs/server/`](docs/server/).
 
 ---
 
@@ -321,6 +337,17 @@ ROUTING RULES:
   stdin input requires stdout or -o; --out-dir needs file inputs
   --multi writes files; it cannot combine with -o or --mask-only
 
+SERVER:
+  --server                             run local HTTP API
+  --host <addr>                        bind address (default: 127.0.0.1)
+  --port <n>                           bind port (default: 8787)
+  --cors                               enable CORS headers for allowed origins
+  --allowed-origins <csv>              add allowed browser origins
+  --no-origin-check | --footgun        disable browser origin checks
+  --token <secret> | --token-auto      require Bearer token
+  --public-health                      keep /health public on non-loopback binds
+  --max-body-mb <n>                    request body limit (default: 32)
+
 META:
   --json | --ndjson                     structured output
   --quiet | --verbose
@@ -347,7 +374,8 @@ Config
    ├─→ MaskPostProcess      threshold, feather, crop, padding, --mask-only
    ├─→ Compositor           SolidColor + ImageBg
    └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF
-                            NetworkGuard hard-blocks http/https/ws/wss at runtime.
+HTTP server ───────────────→ same pipeline, multipart uploads, JSON/base64 option
+                            NetworkGuard hard-blocks outbound http/https/ws/wss at runtime.
 ```
 
 - `BgBgOneCore` library: pure Swift, no Vision dep, unit-testable.

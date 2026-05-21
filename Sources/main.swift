@@ -34,6 +34,16 @@ case .versionRequested:
 case .capabilityCheckRequested:
     CLI.printCheck()
     exit(0)
+case .serverRequested:
+    do {
+        try BgBgOneHTTPServer(config: cfg.server, quiet: cfg.quiet).start()
+    } catch let e as BgBgOneError {
+        FileHandle.standardError.write(Data("bgbgone: \(e.message)\n".utf8))
+        exit(e.exitCode)
+    } catch {
+        FileHandle.standardError.write(Data("bgbgone: \(error.localizedDescription)\n".utf8))
+        exit(3)
+    }
 case .process:
     break
 }

@@ -24,9 +24,20 @@ mkdir -p "$OUT" "$TMP"
 PASSED=0
 FAILED=0
 FAILS=()
+SERVER_PID=""
 
 pass() { echo "  OK   $1"; PASSED=$((PASSED + 1)); }
 fail() { echo "  FAIL $1: $2"; FAILED=$((FAILED + 1)); FAILS+=("$1: $2"); }
+
+stop_server() {
+    if [ -n "${SERVER_PID:-}" ]; then
+        kill "$SERVER_PID" >/dev/null 2>&1 || true
+        wait "$SERVER_PID" >/dev/null 2>&1 || true
+        SERVER_PID=""
+    fi
+}
+
+trap stop_server EXIT
 
 # Verify a path is a PNG with alpha (RGBA).
 check_png_rgba() {
@@ -42,6 +53,19 @@ check_jpeg() {
     [ -f "$file" ] || return 1
     head -c 3 "$file" | xxd -p | grep -qi '^ffd8ff$' || return 2
     return 0
+}
+
+wait_for_server() {
+    local url="$1"
+    local tries=80
+    while [ "$tries" -gt 0 ]; do
+        if curl -fsS "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.1
+        tries=$((tries - 1))
+    done
+    return 1
 }
 
 echo ""
@@ -73,6 +97,112 @@ out=$("$BIN" -h 2>&1) ; rc=$?
 out=$("$BIN" --check 2>&1) ; rc=$?
 [ $rc -eq 0 ] && echo "$out" | grep -qi "macOS" && pass "--check" \
     || fail "--check" "rc=$rc out=$out"
+
+# --- Local HTTP server ---
+echo ""
+echo "server: local API"
+
+SERVER_PORT=18787
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server.log"
+"$BIN" --server --port "$SERVER_PORT" --cors --allowed-origins "http://localhost:3000" >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--server starts and /health responds"
+else
+    fail "--server start" "server did not become healthy; log=$(cat "$SERVER_LOG" 2>/dev/null)"
+fi
+
+out=$(curl -fsS "$SERVER_BASE/health" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q '"status":"ok"' && echo "$out" | grep -q '"version"' && pass "/health JSON" \
+    || fail "/health JSON" "rc=$rc out=$out"
+
+code=$(curl -sS -o "$TMP/origin-block.json" -w "%{http_code}" -H "Origin: http://example.com" "$SERVER_BASE/health")
+[ "$code" = "403" ] && grep -q "not allowed" "$TMP/origin-block.json" && pass "foreign Origin rejected" \
+    || fail "foreign Origin rejected" "code=$code body=$(cat "$TMP/origin-block.json" 2>/dev/null)"
+
+headers="$TMP/preflight.headers"
+code=$(curl -sS -o /dev/null -D "$headers" -w "%{http_code}" -X OPTIONS \
+    -H "Origin: http://localhost:3000" \
+    -H "Access-Control-Request-Headers: Content-Type, Authorization" \
+    "$SERVER_BASE/v1.0/bgbgone")
+if [ "$code" = "204" ] && grep -qi "Access-Control-Allow-Origin: http://localhost:3000" "$headers"; then
+    pass "CORS preflight for allowed localhost origin"
+else
+    fail "CORS preflight" "code=$code headers=$(cat "$headers" 2>/dev/null)"
+fi
+
+dst="$OUT/server-einstein.png"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=png" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "POST /v1.0/bgbgone multipart image_file -> PNG" \
+    || fail "server multipart PNG" "rc=$rc out=$out"
+
+dst="$OUT/server-einstein-alpha.png"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "channels=alpha" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server channels=alpha emits matte PNG" \
+    || fail "server alpha" "rc=$rc out=$out"
+
+dst="$OUT/server-einstein-white.jpg"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=jpg" \
+    -F "bg_color=ffffff" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server format=jpg bg_color -> JPEG" \
+    || fail "server jpg bg_color" "rc=$rc out=$out"
+
+json="$OUT/server-json-response.json"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=json" \
+    -o "$json" 2>&1) ; rc=$?
+if [ $rc -eq 0 ]; then
+    decoded="$OUT/server-json-decoded.png"
+    python3 - <<PY
+import base64, json
+from pathlib import Path
+data = json.loads(Path("$json").read_text())
+Path("$decoded").write_bytes(base64.b64decode(data["data"]["result_b64"]))
+PY
+    check_png_rgba "$decoded" && pass "server format=json wraps base64 image" \
+        || fail "server json response" "decoded output is not PNG"
+else
+    fail "server json response" "rc=$rc out=$out"
+fi
+
+code=$(curl -sS -o "$TMP/server-image-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -d "image_url=https://example.com/in.jpg")
+[ "$code" = "400" ] && grep -q "not supported" "$TMP/server-image-url.json" && pass "server rejects network-backed image_url" \
+    || fail "server image_url rejection" "code=$code body=$(cat "$TMP/server-image-url.json" 2>/dev/null)"
+
+stop_server
+
+SERVER_PORT=18788
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server-token.log"
+"$BIN" --server --port "$SERVER_PORT" --token "secret-token" >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--server --token starts"
+else
+    fail "--server --token start" "server did not become healthy; log=$(cat "$SERVER_LOG" 2>/dev/null)"
+fi
+
+code=$(curl -sS -o "$TMP/server-no-token.json" -w "%{http_code}" "$SERVER_BASE/v1.0/account")
+[ "$code" = "401" ] && grep -q "token" "$TMP/server-no-token.json" && pass "server token rejects missing Authorization" \
+    || fail "server token missing" "code=$code body=$(cat "$TMP/server-no-token.json" 2>/dev/null)"
+
+out=$(curl -fsS -H "Authorization: Bearer secret-token" "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q '"api"' && pass "server token accepts Bearer Authorization" \
+    || fail "server token auth" "rc=$rc out=$out"
+
+stop_server
 
 # --- Exit codes ---
 echo ""

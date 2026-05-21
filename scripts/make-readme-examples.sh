@@ -258,7 +258,7 @@ fi
 
 magick -size "${W1}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--bg image:<path>  •  --bg-fit cover|contain|tile|center" \
+    -annotate +0+0 "--bg image:<path>  •  --bg-fit cover / contain / tile / center" \
     "$WORK/imgbg/title.png"
 
 stack "$OUT/showcase-image-bg.png" \
@@ -500,11 +500,11 @@ magick -size "${W}x52" canvas:'#101820' \
 stack "$OUT/showcase-pipeline.png" "$WORK/pipe/title.png" "$WORK/pipe/row.png"
 echo "    -> $OUT/showcase-pipeline.png"
 
-# ---- 9) Products: vintage PD ads → cutout → hilarious new context ----------
+# ---- 9) Products: vintage PD ads → cutout → composited context -------------
 # For each product fixture: src → --mask-only (alpha matte) → cutout → recomposed
-# onto a wildly out-of-context PD background. All steps are real bgbgone calls.
+# onto a PD background. All steps are real bgbgone calls.
 
-echo "==> products (with --mask-only and absurd new contexts)"
+echo "==> products (with --mask-only and composited contexts)"
 mkdir -p "$WORK/prod"
 
 # product_row <fixture> <new-context-fixture> <caption-for-new-context> <out-row>
