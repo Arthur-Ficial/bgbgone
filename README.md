@@ -9,7 +9,7 @@
 
 ## Background, gone.
 
-The AI behind Apple's "Lift Subject" feature, finally callable from your shell. One command. Any image. Transparent cutout in 86 ms. 100% on your Mac. 100% scriptable. Other apps sell this as a subscription. `bgbgone` is a 3 MB binary. `brew install` once. Own it forever.
+One shell command. Any image. Transparent cutout in 86 milliseconds. 100% on your Mac. 100% scriptable. The cutout tool other apps charge $20 a month for, here as a 3 MB binary you `brew install` once and own forever.
 
 ![bgbgone hero](docs/images/hero.png)
 
