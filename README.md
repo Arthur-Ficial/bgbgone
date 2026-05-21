@@ -7,7 +7,9 @@
 [![100% On-Device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
 [![100% Scriptable](https://img.shields.io/badge/scriptable-100%25-green)](#why)
 
-**The ultimate UNIX-style background remover for macOS.** Image in, transparent image out. Powered by Apple's on-device Vision framework. No cloud, no API keys, no network, no GUI — just a binary that behaves like `sips` or `imagemagick` and produces results that look like Photoshop.
+## Background, gone.
+
+The AI behind Apple's "Lift Subject" feature, finally callable from your shell. One command. Any image. Transparent cutout in 86 ms. 100% on your Mac. 100% scriptable. Other apps sell this as a subscription. `bgbgone` is a 3 MB binary. `brew install` once. Own it forever.
 
 ![bgbgone hero](docs/images/hero.png)
 
@@ -31,11 +33,11 @@ bgbgone *.jpg --out-dir ./out/                    # batch
 
 ## Why
 
-Every Mac in 2026 ships with a small render farm of on-device image AI. Apple's [Vision framework](https://developer.apple.com/documentation/vision) exposes `VNGenerateForegroundInstanceMaskRequest` — a foundation-model-class background remover, free, on every Mac, offline. But it is only reachable from Swift. `bgbgone` wraps it as a UNIX CLI so you can use it the way you already use `sips`, `imagemagick`, or `ffmpeg`: from shell scripts, build steps, batch jobs, makefiles, and pipelines.
+Every Mac in 2026 ships with a small render farm of on-device image AI. Apple's [Vision framework](https://developer.apple.com/documentation/vision) exposes `VNGenerateForegroundInstanceMaskRequest`, a foundation-model-class background remover, free, on every Mac, offline. But it is only reachable from Swift. `bgbgone` wraps it as a UNIX CLI so you can use it the way you already use `sips`, `imagemagick`, or `ffmpeg`: from shell scripts, build steps, batch jobs, makefiles, and pipelines.
 
-It works on anything with a foreground subject — photographs, paintings, spacecraft imagery, woodblock prints, vintage product advertisements. One flag, sixteen subjects, no per-image tuning:
+It works on anything with a foreground subject: photographs, paintings, spacecraft imagery, woodblock prints, vintage product advertisements. One flag, sixteen subjects, no per-image tuning:
 
-![cutout grid — 16 PD subjects, one CLI call each](docs/images/showcase-cutouts.png)
+![cutout grid, 16 PD subjects, one CLI call each](docs/images/showcase-cutouts.png)
 
 ## Quick start
 
@@ -66,7 +68,7 @@ bgbgone in.jpg --bg color:#0066cc     -o out.png   # hex
 bgbgone in.jpg --bg color:rgb:0,200,0 -o out.png   # rgb triple
 ```
 
-![--bg color: across three subjects, four colour syntaxes](docs/images/showcase-colors.png)
+![--bg color across three subjects, four colour syntaxes](docs/images/showcase-colors.png)
 
 ### Image backgrounds
 
@@ -78,13 +80,13 @@ bgbgone in.jpg --bg image:./bg.jpg --bg-fit tile     -o out.png
 bgbgone in.jpg --bg image:./bg.jpg --bg-fit center   -o out.png
 ```
 
-Row 1 — same subject, every `--bg-fit` mode. Row 2 — same subject on two different PD backgrounds:
+Row 1: same subject, every `--bg-fit` mode. Row 2: same subject on two different PD backgrounds.
 
-![--bg image:<path> with each --bg-fit mode and two distinct backgrounds](docs/images/showcase-image-bg.png)
+![--bg image with each --bg-fit mode and two distinct backgrounds](docs/images/showcase-image-bg.png)
 
 The same Mona Lisa onto six different public-domain backgrounds, one invocation each:
 
-![Mona Lisa — six PD backgrounds, one CLI call each](docs/images/mona-lisa-tour.png)
+![Mona Lisa, six PD backgrounds, one CLI call each](docs/images/mona-lisa-tour.png)
 
 ```bash
 bgbgone mona-lisa.jpg --bg color:white                       -o studio.jpg
@@ -97,9 +99,9 @@ bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 
 ### Edge refinement
 
-`--feather <px>` softens the matte edge, `--crop` tight-crops to the subject's bounding box, `--padding` adds breathing room, `--shadow` drops a shadow under the cutout, `--mask-only` emits the grayscale alpha matte:
+`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` adds breathing room. `--shadow` drops a shadow under the cutout. `--mask-only` emits the grayscale alpha matte.
 
-![feather progression (0 → 16 px), --crop / --padding / --shadow / --mask-only](docs/images/showcase-edges.png)
+![feather progression (0 to 16 px), --crop, --padding, --shadow, --mask-only](docs/images/showcase-edges.png)
 
 ```bash
 bgbgone in.jpg --bg color:white --feather 8    -o soft.png
@@ -110,9 +112,9 @@ bgbgone in.jpg --bg color:white --shadow       -o dropshadow.png
 bgbgone in.jpg --mask-only                     -o matte.png
 ```
 
-Closer look at the matte itself — `--mask-only` writes the grayscale alpha; the compositor blends with that:
+Closer look at the matte itself. `--mask-only` writes the grayscale alpha, and the compositor blends with that:
 
-![input → grayscale matte → composite](docs/images/mask-breakdown.png)
+![input, grayscale matte, composite](docs/images/mask-breakdown.png)
 
 Pixel-level zoom on the edge for `--feather 0` vs `--feather 8`:
 
@@ -127,9 +129,9 @@ bgbgone in.jpg --algo person     # VNGeneratePersonSegmentationRequest (macOS 12
 bgbgone in.jpg --algo saliency   # VNGenerateObjectnessBasedSaliencyImageRequest
 ```
 
-Three subjects with every supported algorithm side by side — a Mars rover, two figures in a meadow, and a painted Renaissance figure:
+Three subjects with every supported algorithm side by side: a Mars rover, two figures in a meadow, and a painted Renaissance figure.
 
-![--algo vn-mask / person / saliency on three subjects](docs/images/showcase-algos.png)
+![--algo vn-mask, person, saliency on three subjects](docs/images/showcase-algos.png)
 
 ### Output formats
 
@@ -152,7 +154,7 @@ bgbgone team.jpg --multi --instance-naming "subject_{n:02}.{ext}" --out-dir ./pe
 # people/subject_01.png, people/subject_02.png, ...
 ```
 
-The number of instances is decided by Vision. For tightly-grouped or touching subjects (e.g. an Apollo crew shoulder-to-shoulder) Vision returns one combined instance; for subjects with visible spatial gaps you get one file per subject.
+The number of instances is decided by Vision. For tightly-grouped or touching subjects (e.g. an Apollo crew shoulder-to-shoulder) Vision returns one combined instance. For subjects with visible spatial gaps you get one file per subject.
 
 ### Structured output
 
@@ -175,7 +177,7 @@ ls *.jpg | xargs -I{} bgbgone {} --ndjson --out-dir ./out/ \
 
 A clean cutout makes downstream classifiers, embedders, and OCR more accurate. With [auge](https://github.com/Arthur-Ficial/auge):
 
-![pipeline: bgbgone → auge with real classify output](docs/images/showcase-pipeline.png)
+![pipeline: bgbgone to auge with real classify output](docs/images/showcase-pipeline.png)
 
 ```bash
 bgbgone Tests/fixtures/06-nasa-mars-curiosity-selfie.jpg \
@@ -188,11 +190,11 @@ auge --classify /tmp/cut.jpg --top 5
 # statue: 10%
 ```
 
-### Product photography — every step
+### Product photography: every step
 
-For each vintage product fixture: source → `--mask-only` matte → transparent cutout → composed onto a PD background. Same four-step pipeline, four different products:
+For each vintage product fixture: source, then `--mask-only` matte, then transparent cutout, then composed onto a PD background. Same four-step pipeline, four different products.
 
-![Products — source, mask-only, cutout, composed onto a PD background](docs/images/showcase-products.png)
+![Products: source, mask-only, cutout, composed onto a PD background](docs/images/showcase-products.png)
 
 ```bash
 bgbgone pierce-arrow-1909.jpg --mask-only                          -o matte.png
@@ -237,7 +239,7 @@ bgbgone product.heic --bg color:white --crop --feather 1 \
     --to jpg --quality 92 -o ./docs/product-shot.jpg
 ```
 
-Chain with sibling tools — bg-remove, then classify or embed the cleaner cutout:
+Chain with sibling tools. Remove the background, then classify or embed the cleaner cutout:
 
 ```bash
 bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && auge --classify /tmp/x.jpg
@@ -330,7 +332,7 @@ EXIT CODES:
 ```
 CLI args                    main.swift
    │
-   ▼                        ConfigParser (pure Swift, no Apple framework deps → testable)
+   ▼                        ConfigParser (pure Swift, no Apple framework deps, testable)
 Config
    │
    ▼                        BgBgOne pipeline
@@ -341,9 +343,9 @@ Config
                             NetworkGuard hard-blocks http/https/ws/wss at runtime.
 ```
 
-- `BgBgOneCore` library — pure Swift, no Vision dep, unit-testable.
-- Main `bgbgone` target — Vision + Core Image integration.
-- `bgbgone-tests` — pure-Swift test runner (no XCTest), same pattern as [apfel](https://github.com/Arthur-Ficial/apfel) and [auge](https://github.com/Arthur-Ficial/auge).
+- `BgBgOneCore` library: pure Swift, no Vision dep, unit-testable.
+- Main `bgbgone` target: Vision + Core Image integration.
+- `bgbgone-tests`: pure-Swift test runner (no XCTest), same pattern as [apfel](https://github.com/Arthur-Ficial/apfel) and [auge](https://github.com/Arthur-Ficial/auge).
 
 ## Performance
 
@@ -351,7 +353,7 @@ Config
 make test-performance-100
 ```
 
-100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run on v0.1.16: **100 images in 8.616 s — 11.61 images/s, 86.2 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
+100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run on v0.1.16: **100 images in 8.616 s, 11.61 images/s, 86.2 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 
@@ -367,13 +369,13 @@ make fixtures             # fetch the test fixtures (one-time)
 
 ### Test fixtures
 
-The integration tests run against [16 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md): NASA spaceflight imagery (PD-USGov), 19th-century paintings and woodblock prints (PD-old, PD-Art), 19th/early-20th-century studio portraits (PD-old), and pre-1929 American advertisements for Singer sewing machines, the Underwood typewriter, the Edison phonograph, and the Pierce-Arrow automobile (PD-1929). No Creative Commons. Full provenance per fixture in `Tests/fixtures/LICENSES.md`.
+The integration tests run against [16 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md): NASA spaceflight imagery (PD-USGov), 19th-century paintings and woodblock prints (PD-old, PD-Art), 19th and early-20th-century studio portraits (PD-old), and pre-1929 American advertisements for Singer sewing machines, the Underwood typewriter, the Edison phonograph, and the Pierce-Arrow automobile (PD-1929). No Creative Commons. Full provenance per fixture in `Tests/fixtures/LICENSES.md`.
 
 Every example image in this README is regenerated by `scripts/make-readme-examples.sh` against a freshly-installed binary on every release. The script is the audit trail for "every README image is real."
 
 ## Design
 
-See [`docs/design.md`](docs/design.md) — CLI surface, algorithm selection, exit-code policy, framework version gating, and the UNIX-style contract every capability is held to.
+See [`docs/design.md`](docs/design.md) for the CLI surface, algorithm selection, exit-code policy, framework version gating, and the UNIX-style contract every capability is held to.
 
 ## Privacy
 
@@ -384,4 +386,4 @@ See [`docs/design.md`](docs/design.md) — CLI surface, algorithm selection, exi
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
