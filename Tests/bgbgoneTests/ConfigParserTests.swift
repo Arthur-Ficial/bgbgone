@@ -27,6 +27,19 @@ func runConfigParserTests() {
         try assertEqual(cfg.mode, .capabilityCheckRequested)
     }
 
+    test("processing flags without an input are rejected instead of showing help") {
+        do {
+            _ = try ConfigParser.parse(args: ["-o", "out.png"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("input"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
     test("single positional input becomes inputs[0]") {
         let cfg = try ConfigParser.parse(args: ["in.jpg"], isStdinTTY: true, isStdoutTTY: false)
         try assertEqual(cfg.mode, .process)
@@ -38,6 +51,18 @@ func runConfigParserTests() {
         let cfg = try ConfigParser.parse(args: ["a.jpg", "b.jpg", "c.jpg"], isStdinTTY: true, isStdoutTTY: false)
         try assertEqual(cfg.inputs.count, 3)
         try assertEqual(cfg.inputs[2], "c.jpg")
+    }
+
+    test("-- stops option parsing so dash-prefixed filenames are valid inputs") {
+        let cfg = try ConfigParser.parse(args: ["--", "-portrait.jpg"], isStdinTTY: true, isStdoutTTY: false)
+        try assertEqual(cfg.mode, .process)
+        try assertEqual(cfg.inputs, ["-portrait.jpg"])
+    }
+
+    test("-- can appear after flags before dash-prefixed inputs") {
+        let cfg = try ConfigParser.parse(args: ["--to", "jpg", "--", "-portrait.png"], isStdinTTY: true, isStdoutTTY: false)
+        try assertEqual(cfg.outputFormat, .jpeg)
+        try assertEqual(cfg.inputs, ["-portrait.png"])
     }
 
     test("-o sets output path") {
@@ -79,6 +104,45 @@ func runConfigParserTests() {
     test("--out-dir sets outputDir") {
         let cfg = try ConfigParser.parse(args: ["a.jpg", "b.jpg", "--out-dir", "./out/"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.outputDir, "./out/")
+    }
+
+    test("-o and --out-dir are rejected together because output routing must be unambiguous") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--out-dir", "./out"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("-o") && message.contains("--out-dir"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("multiple file inputs with -o are rejected before processing starts") {
+        do {
+            _ = try ConfigParser.parse(args: ["a.jpg", "b.jpg", "-o", "out.png"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("-o") && message.contains("multiple inputs"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("stdin input with --out-dir is rejected because no output filename can be derived") {
+        do {
+            _ = try ConfigParser.parse(args: ["--out-dir", "./out"], isStdinTTY: false, isStdoutTTY: false)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("stdin") && message.contains("-o"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
     }
 
     test("--to png sets format") {
@@ -240,8 +304,47 @@ func runConfigParserTests() {
     }
 
     test("--multi sets multiInstance true") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--multi"], isStdinTTY: true, isStdoutTTY: true)
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "--multi", "--out-dir", "out"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.multiInstance)
+    }
+
+    test("--multi with -o is rejected because one input can produce multiple files") {
+        do {
+            _ = try ConfigParser.parse(args: ["team.jpg", "--multi", "-o", "person.png"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("--multi") && message.contains("--out-dir"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("--multi with stdin is rejected because instance filenames need a file stem") {
+        do {
+            _ = try ConfigParser.parse(args: ["--multi", "--out-dir", "./people"], isStdinTTY: false, isStdoutTTY: false)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("--multi") && message.contains("stdin"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("--multi and --mask-only are rejected instead of silently ignoring one mode") {
+        do {
+            _ = try ConfigParser.parse(args: ["team.jpg", "--multi", "--mask-only", "--out-dir", "./people"], isStdinTTY: true, isStdoutTTY: false)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("--multi") && message.contains("--mask-only"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
     }
 
     test("--json sets outputMode .json") {
@@ -249,9 +352,35 @@ func runConfigParserTests() {
         try assertEqual(cfg.outputMode, .json)
     }
 
+    test("--json and --ndjson are rejected together") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--json", "--ndjson"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("--json") && message.contains("--ndjson"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
     test("--quiet sets quiet true") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--quiet"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.quiet)
+    }
+
+    test("--quiet and --verbose are rejected together") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--quiet", "--verbose"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .userError(let message) = e {
+                try assertTrue(message.contains("--quiet") && message.contains("--verbose"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
     }
 
     test("--bg-fit cover/contain/tile/center parses") {

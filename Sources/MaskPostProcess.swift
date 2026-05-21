@@ -10,7 +10,7 @@ enum MaskPostProcess {
     static func process(mask: CGImage, threshold: Double?, feather: Double) throws -> CGImage {
         var out = mask
         if feather > 0.001 {
-            out = featherMask(out, radius: feather)
+            out = try featherMask(out, radius: feather)
         }
         if let threshold {
             out = try thresholdMask(out, threshold: threshold)
@@ -27,23 +27,27 @@ enum MaskPostProcess {
     ///      default to sRGB, which silently breaks downstream clipping (the bg never
     ///      gets removed). Rasterise into an explicit DeviceGray context to lock the
     ///      colour space.
-    static func featherMask(_ mask: CGImage, radius: Double) -> CGImage {
+    static func featherMask(_ mask: CGImage, radius: Double) throws -> CGImage {
         if radius <= 0 { return mask }
         let ci = CIImage(cgImage: mask)
-        guard let filter = CIFilter(name: "CIGaussianBlur") else { return mask }
+        guard let filter = CIFilter(name: "CIGaussianBlur") else {
+            throw BgBgOneError.frameworkError("Core Image Gaussian blur filter is unavailable")
+        }
         filter.setValue(ci, forKey: kCIInputImageKey)
         filter.setValue(NSNumber(value: radius), forKey: kCIInputRadiusKey)
-        guard let blurred = filter.outputImage else { return mask }
+        guard let blurred = filter.outputImage else {
+            throw BgBgOneError.frameworkError("Core Image Gaussian blur produced no mask")
+        }
         let cropped = blurred.cropped(to: ci.extent)
         guard let blurredCG = ciContext.createCGImage(cropped, from: ci.extent) else {
-            return mask
+            throw BgBgOneError.frameworkError("cannot render feathered mask")
         }
-        return forceGrayscale(blurredCG) ?? blurredCG
+        return try forceGrayscale(blurredCG)
     }
 
-    /// Re-draw `image` into an 8-bit DeviceGray context. Returns nil if the redraw fails.
+    /// Re-draw `image` into an 8-bit DeviceGray context.
     /// This is the colour-space normalisation the clip-as-alpha-mask path requires.
-    private static func forceGrayscale(_ image: CGImage) -> CGImage? {
+    private static func forceGrayscale(_ image: CGImage) throws -> CGImage {
         let w = image.width
         let h = image.height
         let cs = CGColorSpaceCreateDeviceGray()
@@ -56,10 +60,13 @@ enum MaskPostProcess {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.none.rawValue
         ) else {
-            return nil
+            throw BgBgOneError.frameworkError("cannot create grayscale mask context")
         }
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-        return ctx.makeImage()
+        guard let out = ctx.makeImage() else {
+            throw BgBgOneError.frameworkError("cannot create grayscale mask image")
+        }
+        return out
     }
 
     static func thresholdMask(_ mask: CGImage, threshold: Double) throws -> CGImage {
@@ -101,12 +108,10 @@ enum MaskPostProcess {
         return out
     }
 
-    static func subjectBoundingBox(fromMask mask: CGImage) -> CGRect {
+    static func subjectBoundingBox(fromMask mask: CGImage) throws -> CGRect {
         let w = mask.width
         let h = mask.height
-        guard let bytes = try? grayscaleBytes(mask) else {
-            return CGRect(x: 0, y: 0, width: w, height: h)
-        }
+        let bytes = try grayscaleBytes(mask)
 
         var minX = w
         var minY = h
@@ -141,12 +146,17 @@ enum MaskPostProcess {
     }
 
     /// Crop a CGImage to the given rect in top-left pixel coordinates.
-    static func crop(_ image: CGImage, to rect: CGRect) -> CGImage {
+    static func crop(_ image: CGImage, to rect: CGRect) throws -> CGImage {
         let w = image.width
         let h = image.height
         let safeRect = rect.integral.intersection(CGRect(x: 0, y: 0, width: w, height: h))
-        if safeRect.isNull || safeRect.isEmpty { return image }
-        return image.cropping(to: safeRect) ?? image
+        if safeRect.isNull || safeRect.isEmpty {
+            throw BgBgOneError.frameworkError("cannot crop image to an empty rectangle")
+        }
+        guard let cropped = image.cropping(to: safeRect) else {
+            throw BgBgOneError.frameworkError("cannot crop image")
+        }
+        return cropped
     }
 
     private static func grayscaleBytes(_ image: CGImage) throws -> [UInt8] {

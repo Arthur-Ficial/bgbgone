@@ -38,12 +38,12 @@ enum BgBgOne {
             )
             if cfg.cropToSubject || cfg.padding != nil {
                 let bbox = MaskPostProcess.paddedRect(
-                    MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
+                    try MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
                     in: CGSize(width: final.width, height: final.height),
                     padding: cfg.padding,
                     isPercent: cfg.paddingIsPercent
                 )
-                final = MaskPostProcess.crop(final, to: bbox)
+                final = try MaskPostProcess.crop(final, to: bbox)
             }
             let filename = InstanceNaming.expand(
                 template: cfg.instanceNamingTemplate,
@@ -55,18 +55,9 @@ enum BgBgOne {
             inst.inputs = [input]
             inst.output = nil
             inst.outputDir = nil
-            // Decide where to write this instance:
-            //  - If user set --out-dir, write under there with the expanded filename.
-            //  - Else if user set -o <file>, ignore -o (multi can't go to a single file)
-            //  - Else write next to the input file.
-            let outDir: String
-            if let d = cfg.outputDir {
-                outDir = d
-            } else if cfg.output != nil {
-                outDir = (input as NSString).deletingLastPathComponent
-            } else {
-                outDir = "."
-            }
+            // Multi-instance always writes files. Without --out-dir, write beside the input.
+            let inputDir = (input as NSString).deletingLastPathComponent
+            let outDir = cfg.outputDir ?? (inputDir.isEmpty ? "." : inputDir)
             inst.outputDir = nil
             inst.output = (outDir as NSString).appendingPathComponent(filename)
             let path = try Output.write(cgImage: final, cfg: inst, inputPath: input)
@@ -123,12 +114,12 @@ enum BgBgOne {
         // 2a. optional --crop / --padding (tight-crop to subject bbox, then expand)
         if cfg.cropToSubject || cfg.padding != nil {
             let bbox = MaskPostProcess.paddedRect(
-                MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
+                try MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
                 in: CGSize(width: final.width, height: final.height),
                 padding: cfg.padding,
                 isPercent: cfg.paddingIsPercent
             )
-            final = MaskPostProcess.crop(final, to: bbox)
+            final = try MaskPostProcess.crop(final, to: bbox)
         }
 
         // 3. encode + write
@@ -165,22 +156,8 @@ struct RunResult {
     let height: Int
 
     func toJSON() -> String {
-        // Hand-rolled to avoid Foundation JSONEncoder ordering ambiguity. Keys quoted, values JSON-escaped where needed.
-        func esc(_ s: String) -> String {
-            var out = ""
-            for c in s {
-                switch c {
-                case "\"": out += "\\\""
-                case "\\": out += "\\\\"
-                case "\n": out += "\\n"
-                case "\t": out += "\\t"
-                default: out.append(c)
-                }
-            }
-            return out
-        }
         return """
-        {"input":"\(esc(input))","output":"\(esc(output))","algo":"\(algo)","format":"\(format.rawValue)","width":\(width),"height":\(height)}
+        {"input":"\(JSONEscaper.escape(input))","output":"\(JSONEscaper.escape(output))","algo":"\(JSONEscaper.escape(algo))","format":"\(format.rawValue)","width":\(width),"height":\(height)}
         """
     }
 }

@@ -26,4 +26,13 @@ func runNamingTests() {
         let s = InstanceNaming.expand(template: "out{n}.{ext}", base: "ignored", n: 42, ext: "jpg")
         try assertEqual(s, "out42.jpg")
     }
+
+    test("batch output path keeps input stem and uses selected format extension") {
+        let path = OutputNaming.batchOutputPath(inputPath: "/tmp/my.photo.png", outDir: "/out", format: .jpeg)
+        try assertEqual(path, "/out/my.photo.jpg")
+    }
+
+    test("batch output path is nil for stdin because stdin has no stable stem") {
+        try assertNil(OutputNaming.batchOutputPath(inputPath: "-", outDir: "/out", format: .png))
+    }
 }

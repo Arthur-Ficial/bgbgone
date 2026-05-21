@@ -84,6 +84,28 @@ echo "Exit codes"
 "$BIN" /nonexistent/path/image.jpg -o /tmp/x.png >/dev/null 2>&1 ; rc=$?
 [ $rc -eq 1 ] && pass "nonexistent input -> exit 1" || fail "nonexistent input" "expected exit 1, got $rc"
 
+out=$("$BIN" "$FIX/07-einstein-1921.jpg" "$FIX/08-tesla-sarony.jpg" -o "$OUT/one.png" 2>&1) ; rc=$?
+[ $rc -eq 1 ] && echo "$out" | grep -q "multiple inputs" && pass "multiple inputs with -o -> exit 1 before processing" \
+    || fail "multiple inputs with -o" "expected exit 1 and multiple-input message, got rc=$rc out=$out"
+
+out=$("$BIN" "$FIX/07-einstein-1921.jpg" -o "$OUT/one.png" --out-dir "$OUT/conflict" 2>&1) ; rc=$?
+[ $rc -eq 1 ] && echo "$out" | grep -q -- "--out-dir" && pass "-o with --out-dir rejected" \
+    || fail "-o with --out-dir" "expected exit 1, got rc=$rc out=$out"
+
+out=$(cat "$FIX/07-einstein-1921.jpg" | "$BIN" --out-dir "$OUT/stdin-outdir" 2>&1 >/dev/null) ; rc=$?
+[ $rc -eq 1 ] && echo "$out" | grep -q "stdin" && pass "stdin with --out-dir rejected" \
+    || fail "stdin with --out-dir" "expected exit 1, got rc=$rc out=$out"
+
+out=$("$BIN" "$FIX/09-wright-brothers-1910.jpg" --multi -o "$OUT/person.png" 2>&1) ; rc=$?
+[ $rc -eq 1 ] && echo "$out" | grep -q -- "--multi" && pass "--multi with -o rejected" \
+    || fail "--multi with -o" "expected exit 1, got rc=$rc out=$out"
+
+bad_parent="$TMP/not-a-directory"
+printf "not a directory" > "$bad_parent"
+out=$("$BIN" "$FIX/07-einstein-1921.jpg" -o "$bad_parent/out.png" 2>&1) ; rc=$?
+[ $rc -eq 1 ] && echo "$out" | grep -q "output parent" && pass "output parent path that is a file -> exit 1" \
+    || fail "output parent path" "expected exit 1, got rc=$rc out=$out"
+
 # Refuse to write binary to a terminal — but only when stdout is a TTY.
 # When this script runs, stdout is piped (not a TTY), so this case can't be
 # tested portably without `script(1)`. Skip — covered by unit test.
@@ -422,6 +444,19 @@ if [ $rc -eq 0 ] && [ "$count" -ge 1 ] && [ "$template_match" -ge 1 ]; then
     pass "--multi produced $count file(s) matching template"
 else
     fail "--multi" "rc=$rc count=$count template_match=$template_match out=$out"
+fi
+
+MULTI_DEFAULT_IN="$TMP/multi-default/input"
+MULTI_DEFAULT_CWD="$TMP/multi-default/cwd"
+mkdir -p "$MULTI_DEFAULT_IN" "$MULTI_DEFAULT_CWD"
+cp "$src" "$MULTI_DEFAULT_IN/team.jpg"
+out=$(cd "$MULTI_DEFAULT_CWD" && "$BIN" "$MULTI_DEFAULT_IN/team.jpg" --multi 2>&1) ; rc=$?
+sidecar_count=$(ls -1 "$MULTI_DEFAULT_IN"/team-*.png 2>/dev/null | wc -l | tr -d ' ')
+cwd_count=$(ls -1 "$MULTI_DEFAULT_CWD"/team-*.png 2>/dev/null | wc -l | tr -d ' ')
+if [ $rc -eq 0 ] && [ "$sidecar_count" -ge 1 ] && [ "$cwd_count" -eq 0 ]; then
+    pass "--multi without --out-dir writes beside input, not cwd"
+else
+    fail "--multi default output dir" "rc=$rc sidecar=$sidecar_count cwd=$cwd_count out=$out"
 fi
 
 # Custom naming template

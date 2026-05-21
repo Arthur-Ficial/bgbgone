@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.20](https://img.shields.io/badge/version-0.1.20-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.23](https://img.shields.io/badge/version-0.1.23-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -156,6 +156,8 @@ bgbgone team.jpg --multi --instance-naming "subject_{n:02}.{ext}" --out-dir ./pe
 
 The number of instances is decided by Vision. For tightly-grouped or touching subjects (e.g. an Apollo crew shoulder-to-shoulder) Vision returns one combined instance. For subjects with visible spatial gaps you get one file per subject.
 
+`--multi` is file-output only: it needs a file input stem for naming, cannot read image data from stdin, and cannot be combined with `-o` or `--mask-only`. If `--out-dir` is omitted, files are written beside the input image.
+
 ### Structured output
 
 ```bash
@@ -305,7 +307,7 @@ ALGORITHM:
   --algo auto|vn-mask|person|saliency   (default: auto)
 
 MULTI-INSTANCE:
-  --multi                               one file per detected instance
+  --multi                               one file per detected instance (file input only)
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
@@ -313,6 +315,11 @@ OUTPUT:
   --quality 1..100                      for lossy formats (default: 92)
   -o, --output <path>                   explicit output file
   --out-dir <dir>                       batch output directory
+
+ROUTING RULES:
+  -o and --out-dir are mutually exclusive
+  stdin input requires stdout or -o; --out-dir needs file inputs
+  --multi writes files; it cannot combine with -o or --mask-only
 
 META:
   --json | --ndjson                     structured output
@@ -339,7 +346,7 @@ Config
    ├─→ ForegroundMask       Algorithms/: VNMask, Person, Saliency
    ├─→ MaskPostProcess      threshold, feather, crop, padding, --mask-only
    ├─→ Compositor           SolidColor + ImageBg
-   └─→ Output               ImageIO: PNG/JPG/WebP/HEIC/AVIF/TIFF
+   └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF
                             NetworkGuard hard-blocks http/https/ws/wss at runtime.
 ```
 
@@ -353,7 +360,7 @@ Config
 make test-performance-100
 ```
 
-100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run on v0.1.16: **100 images in 8.616 s, 11.61 images/s, 86.2 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
+100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run: **100 images in 8.098 s, 12.35 images/s, 81.0 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 

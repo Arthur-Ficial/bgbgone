@@ -43,13 +43,6 @@ var hadFailure = false
 for input in cfg.inputs {
     var perInput = cfg
     perInput.inputs = [input]
-    // Per-input rule: if multiple inputs were given without an explicit -o, force --out-dir
-    // by writing alongside the input. Otherwise -o would be reused across all inputs and
-    // the last write would win.
-    if cfg.inputs.count > 1 && perInput.output != nil && perInput.outputDir == nil {
-        FileHandle.standardError.write(Data("bgbgone: -o cannot be used with multiple inputs; use --out-dir\n".utf8))
-        exit(1)
-    }
     do {
         let results = try MainActor.assumeIsolated {
             try BgBgOne.runMany(perInput)

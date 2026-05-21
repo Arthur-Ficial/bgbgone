@@ -50,7 +50,7 @@ enum CLI {
           auto uses the public foreground-instance mask API.
 
         MULTI-INSTANCE:
-          --multi                               one file per detected instance
+          --multi                               one file per detected instance (file input only)
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
@@ -58,6 +58,11 @@ enum CLI {
           --quality 1..100                      for lossy formats (default: 92)
           -o, --output <path>                   explicit output file
           --out-dir <dir>                       batch output directory
+
+        ROUTING RULES:
+          -o and --out-dir are mutually exclusive
+          stdin input requires stdout or -o; --out-dir needs file inputs
+          --multi writes files; it cannot combine with -o or --mask-only
 
         META:
           --json | --ndjson                     structured output

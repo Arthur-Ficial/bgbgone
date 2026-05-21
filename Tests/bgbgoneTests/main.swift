@@ -59,6 +59,7 @@ func suite(_ name: String, _ block: () -> Void) {
 
 suite("ColourParserTests") { runColourParserTests() }
 suite("ConfigParserTests") { runConfigParserTests() }
+suite("JSONEscaperTests") { runJSONEscaperTests() }
 suite("NetworkGuardTests") { runNetworkGuardTests() }
 suite("NamingTests") { runNamingTests() }
 

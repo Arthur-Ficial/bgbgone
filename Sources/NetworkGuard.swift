@@ -12,8 +12,7 @@ enum NetworkGuard {
 
 final class DenyNetworkURLProtocol: URLProtocol, @unchecked Sendable {
     override class func canInit(with request: URLRequest) -> Bool {
-        guard let scheme = request.url?.scheme?.lowercased() else { return false }
-        return scheme == "http" || scheme == "https" || scheme == "ws" || scheme == "wss"
+        NetworkPolicy.isBlockedNetworkScheme(request.url?.scheme)
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }

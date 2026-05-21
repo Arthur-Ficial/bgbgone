@@ -15,6 +15,18 @@ public enum OutputNaming {
         }
         return (dir as NSString).appendingPathComponent(filename)
     }
+
+    public static func batchOutputPath(inputPath: String, outDir: String, format: OutputFormat) -> String? {
+        guard inputPath != "-" else { return nil }
+
+        let base = (inputPath as NSString).lastPathComponent
+        guard !base.isEmpty else { return nil }
+
+        let stem = (base as NSString).deletingPathExtension
+        let filename = "\(stem).\(format.extensionForFile)"
+        guard !outDir.isEmpty else { return filename }
+        return (outDir as NSString).appendingPathComponent(filename)
+    }
 }
 
 public extension OutputFormat {
