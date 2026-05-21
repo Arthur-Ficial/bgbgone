@@ -7,7 +7,7 @@
 [![100% On-Device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
 [![100% Scriptable](https://img.shields.io/badge/scriptable-100%25-green)](#why)
 
-## Background, gone.
+## Background, be gone!
 
 One shell command. Any image. Transparent cutout in 86 milliseconds. 100% on your Mac. 100% scriptable. The cutout tool other apps charge $20 a month for, here as a 3 MB binary you `brew install` once and own forever.
 
