@@ -23,29 +23,39 @@ mkdir -p "$OUT" "$WORK/panels"
 
 # Render a panel: image (resized + checkerboard for transparency) + caption strip.
 # usage: panel <src-image> <label> <out-path> [panel-width] [panel-height]
+# Build the checkerboard tile once, as a PNG24 (sRGB true-colour) so that any
+# composite inherits an RGB colourspace. pattern:checkerboard is grayscale by
+# default and ImageMagick's auto-detection downcasts gray-only composites to
+# grayscale, which silently kills the colour in every example. PNG24: defeats
+# that auto-detection.
+CB_TILE="$WORK/cb-tile.png"
+{
+    magick \( -size 20x20 xc:'#cccccc' \) \( -size 20x20 xc:'#aaaaaa' \) +append "$WORK/r1.png"
+    magick \( -size 20x20 xc:'#aaaaaa' \) \( -size 20x20 xc:'#cccccc' \) +append "$WORK/r2.png"
+    magick "$WORK/r1.png" "$WORK/r2.png" -append "$CB_TILE"
+}
+
 panel() {
     local src="$1" label="$2" dst="$3"
     local pw="${4:-420}" ph="${5:-360}"
     local ih=$((ph - 56))   # leave 56px for caption
 
-    # checkerboard so transparency is visible
-    magick -size "${pw}x${ih}" pattern:checkerboard \
-        -auto-level -level 60%,100% "$WORK/cb.png"
+    magick "$CB_TILE" -write mpr:cb +delete \
+        -size "${pw}x${ih}" tile:mpr:cb \
+        PNG24:"$WORK/cb.png"
 
-    # fit src into pw x ih, preserving aspect, padded with transparent
     magick "$src" -resize "${pw}x${ih}" -background none -gravity center \
-        -extent "${pw}x${ih}" "$WORK/fit.png"
+        -extent "${pw}x${ih}" PNG32:"$WORK/fit.png"
 
-    # composite onto checkerboard
-    magick "$WORK/cb.png" "$WORK/fit.png" -composite "$WORK/img.png"
+    magick PNG24:"$WORK/cb.png" PNG32:"$WORK/fit.png" -composite \
+        PNG24:"$WORK/img.png"
 
-    # caption strip
     magick -size "${pw}x56" canvas:white \
         -gravity center -pointsize 18 -font "$FONT_SANS" \
-        -fill '#222' -annotate +0+0 "$label" "$WORK/cap.png"
+        -fill '#222' -annotate +0+0 "$label" \
+        PNG24:"$WORK/cap.png"
 
-    # stack
-    magick "$WORK/img.png" "$WORK/cap.png" -append "$dst"
+    magick PNG24:"$WORK/img.png" PNG24:"$WORK/cap.png" -append PNG24:"$dst"
 }
 
 # Concatenate panels into one row, optionally with a top title bar.
@@ -60,7 +70,7 @@ row() {
         done
         magick -size "${total_w}x44" canvas:'#101820' \
             -gravity center -pointsize 20 -font "$FONT_BOLD" \
-            -fill white -annotate +0+0 "$title" "$WORK/title.png"
+            -fill white -annotate +0+0 "$title" PNG24:"$WORK/title.png"
         magick "$@" +append "$WORK/row.png"
         magick "$WORK/title.png" "$WORK/row.png" -append "$out"
     else
@@ -312,16 +322,17 @@ mkdir -p "$WORK/algo"
 
 algo_row() {
     # algo_row <fixture> <out>
+    # Subjects chosen to make algorithms visibly diverge: Mars selfie has a rover,
+    # an orange sky and a rocky ground; Wright Brothers has two people on grass;
+    # Mona Lisa has a painted figure with no real-world sky.
     local src="$1" out="$2"
     local base=$(basename "$src" .jpg)
     panel "$src" "src" "$WORK/algo/$base-src.png" 320 320
     for a in vn-remove vn-mask person sky saliency; do
         bgbgone "$src" --algo "$a" -o "$WORK/algo/$base-$a.png" --quiet 2>/dev/null || {
-            # If algorithm fails on this subject (e.g. person on still life), emit a
-            # gray placeholder rather than aborting the whole strip.
             magick -size 320x264 canvas:'#2a2a30' \
                 -gravity center -pointsize 18 -font "$FONT_SANS" -fill '#888' \
-                -annotate +0+0 "n/a" "$WORK/algo/$base-$a.png"
+                -annotate +0+0 "n/a on this subject" PNG24:"$WORK/algo/$base-$a.png"
         }
         panel "$WORK/algo/$base-$a.png" "--algo $a" \
               "$WORK/algo/$base-$a-p.png" 320 320
@@ -335,20 +346,20 @@ algo_row() {
         "$WORK/algo/$base-saliency-p.png"
 }
 
-algo_row "$FX/02-nasa-mccandless-eva.jpg" "$WORK/algo/row-eva.png"
-algo_row "$FX/07-einstein-1921.jpg"       "$WORK/algo/row-einstein.png"
 algo_row "$FX/06-nasa-mars-curiosity-selfie.jpg" "$WORK/algo/row-mars.png"
+algo_row "$FX/09-wright-brothers-1910.jpg"       "$WORK/algo/row-wright.png"
+algo_row "$FX/10-mona-lisa.jpg"                  "$WORK/algo/row-mona.png"
 
-W=$(magick identify -format '%w' "$WORK/algo/row-eva.png")
+W=$(magick identify -format '%w' "$WORK/algo/row-mars.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--algo: same input, five segmentation algorithms" \
-    "$WORK/algo/title.png"
+    -annotate +0+0 "--algo: rover + sky + ground · two people + sky · painted figure" \
+    PNG24:"$WORK/algo/title.png"
 stack "$OUT/showcase-algos.png" \
     "$WORK/algo/title.png" \
-    "$WORK/algo/row-eva.png" \
-    "$WORK/algo/row-einstein.png" \
-    "$WORK/algo/row-mars.png"
+    "$WORK/algo/row-mars.png" \
+    "$WORK/algo/row-wright.png" \
+    "$WORK/algo/row-mona.png"
 echo "    -> $OUT/showcase-algos.png"
 
 # ---- 7) Mona Lisa world tour (using only documented PD fixtures) -----------
@@ -383,25 +394,20 @@ bgbgone "$ML" --bg "image:$FX/06-nasa-mars-curiosity-selfie.jpg" \
     -o "$WORK/ml/mars.png" --quiet
 panel "$WORK/ml/mars.png" "--bg image:mars-curiosity (NASA, PD)" "$WORK/ml/p6.png" 360 320
 
-# 4 columns x 2 rows
-row "$WORK/ml/row1.png" "" "$WORK/ml/src.png" "$WORK/ml/p1.png" "$WORK/ml/p2.png" "$WORK/ml/p3.png"
-row "$WORK/ml/row2.png" "" "$WORK/ml/p4.png" "$WORK/ml/p5.png" "$WORK/ml/p6.png" "$WORK/ml/p1.png"
-# row 2 last panel is filler — replace with a 'pipe a generated image in here' info card.
-magick -size 360x264 canvas:'#0d1f3a' \
-    -gravity center -pointsize 16 -font "$FONT_SANS" -fill '#cfd6e0' \
-    -annotate +0+0 "to use an Image Playground\nor any other source, save the\ngenerated PNG and pipe via:\n--bg image:./your-image.png" \
-    "$WORK/ml/note-img.png"
-magick -size 360x56 canvas:white \
-    -gravity center -pointsize 16 -font "$FONT_SANS" -fill '#222' \
-    -annotate +0+0 "any generator → --bg image:" "$WORK/ml/note-cap.png"
-magick "$WORK/ml/note-img.png" "$WORK/ml/note-cap.png" -append "$WORK/ml/note.png"
-row "$WORK/ml/row2.png" "" "$WORK/ml/p4.png" "$WORK/ml/p5.png" "$WORK/ml/p6.png" "$WORK/ml/note.png"
+# Three rows × four columns. Seven distinct backgrounds (src + colour:white +
+# colour:black + four PD image:<path> backgrounds), 12 panels total — DRY,
+# no filler, no caveat panels.
+panel "$ML" "src · mona lisa (da vinci, c.1503)"      "$WORK/ml/src2.png" 360 320
+panel "$WORK/ml/white.png" "--bg color:white"          "$WORK/ml/p1b.png" 360 320
+
+row "$WORK/ml/row1.png" "" "$WORK/ml/src.png"  "$WORK/ml/p1.png" "$WORK/ml/p2.png" "$WORK/ml/p3.png"
+row "$WORK/ml/row2.png" "" "$WORK/ml/p4.png"   "$WORK/ml/p5.png" "$WORK/ml/p6.png" "$WORK/ml/src2.png"
 
 W=$(magick identify -format '%w' "$WORK/ml/row1.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "Mona Lisa world tour — every background is a documented PD fixture, one CLI call each" \
-    "$WORK/ml/title.png"
+    -annotate +0+0 "Mona Lisa — six PD backgrounds, one CLI call each" \
+    PNG24:"$WORK/ml/title.png"
 stack "$OUT/mona-lisa-tour.png" "$WORK/ml/title.png" "$WORK/ml/row1.png" "$WORK/ml/row2.png"
 echo "    -> $OUT/mona-lisa-tour.png"
 
@@ -473,37 +479,37 @@ product_row() {
         "$WORK/prod/$base-new-p.png"
 }
 
-product_row "$FX/14-underwood-1909.jpg" \
+product_row "$FX/16-pierce-arrow-1909.jpg" \
             "$FX/01-nasa-aldrin-moon.jpg" \
-            "...now writes on the Moon" \
+            "--bg image:lunar surface" \
+            "$WORK/prod/row-car.png"
+
+product_row "$FX/14-underwood-1909.jpg" \
+            "$FX/03-nasa-earthrise.jpg" \
+            "--bg image:earthrise" \
             "$WORK/prod/row-typewriter.png"
 
 product_row "$FX/15-edison-phonograph.jpg" \
             "$FX/04-nasa-hubble-ngc1300.jpg" \
-            "...spinning records in the Hubble nebula" \
+            "--bg image:hubble-ngc1300" \
             "$WORK/prod/row-edison.png"
 
 product_row "$FX/13-singer-1892.jpg" \
             "$FX/11-great-wave-hokusai.jpg" \
-            "...all nations now also surf" \
+            "--bg image:great-wave" \
             "$WORK/prod/row-singer.png"
-
-product_row "$FX/16-winchester-1909.jpg" \
-            "$FX/06-nasa-mars-curiosity-selfie.jpg" \
-            "...now hunting on Mars" \
-            "$WORK/prod/row-winchester.png"
 
 W=$(magick identify -format '%w' "$WORK/prod/row-typewriter.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "Products: every step — src → --mask-only → cutout → absurd new context" \
-    "$WORK/prod/title.png"
+    -annotate +0+0 "Products — src · --mask-only · cutout · composed onto a new background" \
+    PNG24:"$WORK/prod/title.png"
 stack "$OUT/showcase-products.png" \
     "$WORK/prod/title.png" \
+    "$WORK/prod/row-car.png" \
     "$WORK/prod/row-typewriter.png" \
     "$WORK/prod/row-edison.png" \
-    "$WORK/prod/row-singer.png" \
-    "$WORK/prod/row-winchester.png"
+    "$WORK/prod/row-singer.png"
 echo "    -> $OUT/showcase-products.png"
 
 echo

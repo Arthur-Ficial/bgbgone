@@ -125,14 +125,10 @@ cat in.png | bgbgone > out.png          # pipe
 | Solid colour | `color:#hex`, `color:named`, `color:rgb:r,g,b` | CIConstantColorGenerator |
 | Image | `image:./path.jpg` | Load → fit (cover/contain/tile/centre) → composite |
 
-> **Why no `--bg gen:` (generated background).** v0.1.1 shipped an Image Playground
-> integration that called `ImageCreator`. Removed in v0.1.2 after discovering the API
-> only works when the process was launched as a foreground macOS .app — terminal
-> processes always hit `backgroundCreationForbidden`. The only workaround
-> (synthesized .app + `open --args`) steals the menu bar from the user's frontmost
-> app, flickers the dock, and cannot be scripted silently. That violates the
-> 100%-scriptable goal and the no-fallback rule. Pre-generate via Apple's
-> Image Playground app and pass the file via `--bg image:`.
+Backgrounds are deliberately UNIX-shaped: the spec is a short string the shell
+can construct, and the result is always a single image. To use a generated or
+hand-painted background, run the generator separately, save the PNG, and pass
+it via `--bg image:<path>`.
 
 ## Testing
 

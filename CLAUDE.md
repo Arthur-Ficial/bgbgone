@@ -39,33 +39,6 @@ If the primary path doesn't work, fix the root cause, refactor the design,
 or remove the feature. Fallbacks pretend things work when they don't and rot
 the codebase.
 
-### Removed: `--bg gen:` (Apple Image Playground)
-
-Removed in **v0.1.4**. Reason:
-
-Apple's `ImageCreator` API (`ImagePlayground` framework) throws
-`backgroundCreationForbidden` for any process that wasn't launched as a
-foreground macOS app — terminal-launched CLI processes always fail. The only
-workaround is to re-launch the binary via a synthesized `.app` bundle and
-`open --args`, which:
-
-1. Steals the menu bar (the `.app` becomes the frontmost application),
-2. Briefly flickers the dock,
-3. Cannot be scripted silently — every invocation visibly takes over the user's UI.
-
-That violates the golden goal (100% scriptable, no GUI side-effects) and the
-no-fallback rule (the `.app`-relaunch trick IS a fallback). So the feature was
-removed entirely: `Sources/Backgrounds/GenerativeBg.swift` deleted, `--bg gen:`
-rejected with an explanatory parser error, `--style` flag removed, `GenStyle`
-enum removed, the `gen (Image Playground)` line stripped from `--check`.
-
-Users who need a generated background should pre-generate it (Apple's
-Image Playground app, any other tool) and pass it via `--bg image:<path>`.
-
-If a future Apple API allows on-device image generation from a non-foreground
-process, add it back via a single direct path — never via the `.app`-relaunch
-hack.
-
 ### One mode: UNIX tool
 
 ```bash

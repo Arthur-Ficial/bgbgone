@@ -7,7 +7,7 @@ See `CLAUDE.md` for project conventions. Highlights for any agent working in thi
 - **TDD.** No production code without a failing test first. Write the test, run it, watch it fail, write the minimal code, run it, watch it pass.
 - **100% on-device.** No network calls from `bgbgone` itself ever. `NetworkGuard.swift` enforces this at runtime.
 - **100% scriptable.** No GUI side-effects — no menu-bar steal, no dock flash, no window pop. If a feature requires foreground-app context, it doesn't ship.
-- **No fallbacks. No hacks. No half-features.** One code path per feature. If the primary path doesn't work, fix the root cause or remove the feature (see `CLAUDE.md` → *Removed: --bg gen:*).
+- **No fallbacks. No hacks. No half-features.** One code path per feature. If the primary path doesn't work, fix the root cause or remove the feature.
 - **Test fixtures are strict public domain only.** Wikimedia images tagged PD-NASA, PD-USGov, PD-old, PD-self, PD-Art. **Never Creative Commons.** `Tests/fixtures/LICENSES.md` documents every fixture's source URL and PD tag.
 - **No Xcode required.** Swift Package Manager via Command Line Tools.
 - **`make install` after every meaningful change** to verify the release build still works.

@@ -38,7 +38,7 @@ FIXTURES=(
   "13-singer-1892.jpg|Singer sewing machines poster 1892.jpg|800"
   "14-underwood-1909.jpg|PSM V75 D640 Underwood typewriter advertisement 1909.jpg|800"
   "15-edison-phonograph.jpg|Edison and phonograph edit2.jpg|800"
-  "16-winchester-1909.jpg|Winchester advertisement, Rod and Gun in Canada November 1909, p1.jpg|800"
+  "16-pierce-arrow-1909.jpg|Pierce Arrow advertisement (1909).jpg|800"
 )
 
 echo "fetching ${#FIXTURES[@]} PD fixtures into $OUT"

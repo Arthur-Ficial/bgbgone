@@ -6,7 +6,7 @@ let package = Package(
     name: "bgbgone",
     platforms: [.macOS(.v26)],
     targets: [
-        // Pure-logic library — no Vision/CoreImage/ImagePlayground deps. Testable.
+        // Pure-logic library — no Vision/CoreImage deps. Testable in isolation.
         .target(
             name: "BgBgOneCore",
             dependencies: [],

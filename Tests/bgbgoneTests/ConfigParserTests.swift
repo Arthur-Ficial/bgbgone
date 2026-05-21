@@ -124,13 +124,13 @@ func runConfigParserTests() {
         }
     }
 
-    test("--bg gen:<prompt> rejected with explanatory error (removed in v0.1.2)") {
+    test("--bg with unknown scheme is rejected as a parser error") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "gen:sunset over mountains"], isStdinTTY: true, isStdoutTTY: true)
-            throw TestFailure("expected throw — gen: should be rejected")
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "magic:sunset"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
             if case .parser(let m) = e {
-                try assertTrue(m.contains("gen:") || m.contains("removed"))
+                try assertTrue(m.contains("--bg") && m.contains("color:") && m.contains("image:"))
             } else {
                 throw TestFailure("wrong error: \(e)")
             }
@@ -207,10 +207,10 @@ func runConfigParserTests() {
         }
     }
 
-    test("--style is no longer a known flag (removed with gen:)") {
+    test("--style is not a known flag") {
         do {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--style", "sketch"], isStdinTTY: true, isStdoutTTY: true)
-            throw TestFailure("expected throw — --style should be unknown")
+            throw TestFailure("expected throw — --style is not a recognised flag")
         } catch let e as BgBgOneError {
             if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
         }
