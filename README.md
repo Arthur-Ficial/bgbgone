@@ -9,7 +9,7 @@
 
 ## Background, be gone!
 
-One shell command. Any image. Transparent cutout in 86 milliseconds. 100% on your Mac. 100% scriptable. 100% free. 100% open source. A 3 MB binary you `brew install` once and own forever.
+One shell command. Any image. Transparent cutout in 86 milliseconds. 100% on your Mac. 100% scriptable. Others sell this as a subscription, but free and open source also has its upsides. A 3 MB binary you `brew install` once and own forever.
 
 ![bgbgone hero](docs/images/hero.png)
 
