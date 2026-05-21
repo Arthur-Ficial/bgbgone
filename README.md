@@ -7,24 +7,9 @@
 [![100% On-Device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
 [![100% Scriptable](https://img.shields.io/badge/scriptable-100%25-green)](#why)
 
-The ultimate UNIX-style background remover for macOS. AI-driven via Apple's on-device Vision framework. No API keys, no cloud, no network, no subscriptions, no GUI side-effects. Pipe-friendly, scriptable, silent.
+**The ultimate UNIX-style background remover for macOS.** Image in, transparent image out. Powered by Apple's on-device Vision framework. No cloud, no API keys, no network, no GUI — just a binary that behaves like `sips` or `imagemagick` and produces results that look like Photoshop.
 
 ![bgbgone hero](docs/images/hero.png)
-
-```bash
-bgbgone in.jpg                                    # creates in_bgbgone.png
-bgbgone in.jpg > out.png                          # transparent PNG cutout
-bgbgone in.jpg --bg color:white -o on-white.png   # on a colour
-bgbgone in.jpg --bg image:beach.jpg -o beach.png  # on an image
-```
-
-## Why
-
-Every Mac in 2026 ships with a small render farm of on-device image AI. Apple's [Vision framework](https://developer.apple.com/documentation/vision) gives you `VNGenerateForegroundInstanceMaskRequest` — a foundation-model-class background remover, free, on every Mac, no internet required. But it's only callable from Swift. `bgbgone` wraps it as a UNIX CLI so you can use it from scripts, pipelines, batch jobs, build steps — anywhere you'd use `sips` or `imagemagick`.
-
-It works on anything with a foreground subject — photographs, paintings, spacecraft imagery, woodblock prints, vintage product advertisements. One flag, sixteen different subjects, no per-image tuning:
-
-![cutout grid — 16 PD subjects, one CLI call each](docs/images/showcase-cutouts.png)
 
 ## Install
 
@@ -33,7 +18,24 @@ brew tap Arthur-Ficial/tap
 brew install Arthur-Ficial/tap/bgbgone
 ```
 
-Or from source (`make install` builds the release and installs into `/usr/local/bin`). Requires macOS 26+ and Command Line Tools. No Xcode needed.
+Or from source: `make install` (builds release, installs to `/usr/local/bin`). Requires macOS 26+ and Command Line Tools. **No Xcode needed. Zero dependencies. ~3 MB binary.**
+
+```bash
+bgbgone in.jpg                                    # creates in_bgbgone.png
+bgbgone in.jpg > out.png                          # transparent PNG cutout
+bgbgone in.jpg --bg color:white -o on-white.png   # on a colour
+bgbgone in.jpg --bg image:beach.jpg -o beach.png  # on an image
+cat in.png | bgbgone > out.png                    # pipe
+bgbgone *.jpg --out-dir ./out/                    # batch
+```
+
+## Why
+
+Every Mac in 2026 ships with a small render farm of on-device image AI. Apple's [Vision framework](https://developer.apple.com/documentation/vision) exposes `VNGenerateForegroundInstanceMaskRequest` — a foundation-model-class background remover, free, on every Mac, offline. But it is only reachable from Swift. `bgbgone` wraps it as a UNIX CLI so you can use it the way you already use `sips`, `imagemagick`, or `ffmpeg`: from shell scripts, build steps, batch jobs, makefiles, and pipelines.
+
+It works on anything with a foreground subject — photographs, paintings, spacecraft imagery, woodblock prints, vintage product advertisements. One flag, sixteen subjects, no per-image tuning:
+
+![cutout grid — 16 PD subjects, one CLI call each](docs/images/showcase-cutouts.png)
 
 ## Quick start
 
@@ -47,13 +49,13 @@ curl -L https://example.com/photo.jpg | bgbgone > out.png   # pipe in
 cat photo.jpg | bgbgone --bg color:white > on-white.png     # pipe through
 ```
 
-When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgone.<ext>` next to the input instead of dumping binary bytes into the terminal. When stdout is redirected, bgbgone writes image bytes to stdout. On macOS file redirections such as `> cutout.jpg`, bgbgone infers the redirected path when the system exposes it; for portable scripts, prefer `-o cutout.jpg`.
+When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgone.<ext>` next to the input instead of dumping binary into the terminal. When stdout is redirected, bgbgone writes image bytes to stdout. For portable scripts, prefer `-o cutout.jpg` over `> cutout.jpg`.
 
 ---
 
 ## Examples
 
-Every image in this section is produced by `bash scripts/make-readme-examples.sh` from real bgbgone invocations against the documented [strict-PD Wikimedia fixtures](Tests/fixtures/LICENSES.md).
+Every image below is produced by `bash scripts/make-readme-examples.sh` from real bgbgone invocations against the documented [strict-PD Wikimedia fixtures](Tests/fixtures/LICENSES.md). The script is the audit trail.
 
 ### Solid colour backgrounds
 
@@ -80,7 +82,7 @@ Row 1 — same subject, every `--bg-fit` mode. Row 2 — same subject on two dif
 
 ![--bg image:<path> with each --bg-fit mode and two distinct backgrounds](docs/images/showcase-image-bg.png)
 
-Same subject (Mona Lisa) onto six different PD backgrounds, one invocation each:
+The same Mona Lisa onto six different public-domain backgrounds, one invocation each:
 
 ![Mona Lisa — six PD backgrounds, one CLI call each](docs/images/mona-lisa-tour.png)
 
@@ -198,7 +200,7 @@ bgbgone pierce-arrow-1909.jpg                                      -o cutout.png
 bgbgone pierce-arrow-1909.jpg --bg image:nasa-aldrin-moon.jpg      -o on-moon.png
 ```
 
-Drop the new-background line and use `--bg color:white` instead and you have a white-bg product catalogue pipeline.
+Swap the new-background line for `--bg color:white` and you have a white-bg product-catalogue pipeline.
 
 ---
 
@@ -343,6 +345,14 @@ Config
 - Main `bgbgone` target — Vision + Core Image integration.
 - `bgbgone-tests` — pure-Swift test runner (no XCTest), same pattern as [apfel](https://github.com/Arthur-Ficial/apfel) and [auge](https://github.com/Arthur-Ficial/auge).
 
+## Performance
+
+```bash
+make test-performance-100
+```
+
+100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run on v0.1.16: **100 images in 8.616 s — 11.61 images/s, 86.2 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
+
 ## Build & test
 
 ```bash
@@ -355,15 +365,11 @@ make test-performance-100 # 100-image local performance scenario
 make fixtures             # fetch the test fixtures (one-time)
 ```
 
-`make test` runs the unit and integration suites. `make test-performance-100` is an explicit performance harness: it stages 100 fixture-backed inputs, runs one batch process, verifies 100 outputs, and reports elapsed time, throughput, and average latency.
-
-Latest local v0.1.16 run on the checked-in fixture set: 100 images in 8.616s, 11.61 images/s, 86.2 ms/image.
-
 ### Test fixtures
 
-The integration tests run against [16 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md): NASA spaceflight imagery (PD-USGov), 19th-century paintings and woodblock prints (PD-old by age, PD-Art), 19th/early-20th-century studio portraits (PD-old), and pre-1929 American advertisements for Singer sewing machines, the Underwood typewriter, the Edison phonograph, and the Pierce-Arrow automobile (PD-1929). No Creative Commons. Full provenance per fixture in `Tests/fixtures/LICENSES.md`.
+The integration tests run against [16 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md): NASA spaceflight imagery (PD-USGov), 19th-century paintings and woodblock prints (PD-old, PD-Art), 19th/early-20th-century studio portraits (PD-old), and pre-1929 American advertisements for Singer sewing machines, the Underwood typewriter, the Edison phonograph, and the Pierce-Arrow automobile (PD-1929). No Creative Commons. Full provenance per fixture in `Tests/fixtures/LICENSES.md`.
 
-Every example image in this README is regenerated by `scripts/make-readme-examples.sh` — the script is the audit trail for "every README image is real."
+Every example image in this README is regenerated by `scripts/make-readme-examples.sh` against a freshly-installed binary on every release. The script is the audit trail for "every README image is real."
 
 ## Design
 
@@ -374,7 +380,7 @@ See [`docs/design.md`](docs/design.md) — CLI surface, algorithm selection, exi
 - **No network.** `NetworkGuard.swift` registers a `URLProtocol` that intercepts any `http`, `https`, `ws`, or `wss` request inside the process and exits with code 3.
 - **No telemetry.** No analytics, no crash reporting, no usage stats.
 - **No API keys, no accounts, no subscriptions.**
-- **Your images never leave your Mac.** Verifiable: try `bgbgone in.jpg` with the Wi-Fi off.
+- **Your images never leave your Mac.** Verifiable: run `bgbgone in.jpg` with Wi-Fi off.
 
 ## License
 
