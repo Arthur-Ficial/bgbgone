@@ -1,12 +1,13 @@
 # bgbgone
 
-[![Version 0.1.1](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.8](https://img.shields.io/badge/version-0.1.8-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![100% On-Device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
+[![100% Scriptable](https://img.shields.io/badge/scriptable-100%25-green)](#why)
 
-The ultimate UNIX-style background remover for macOS. AI-driven via Apple's on-device Vision framework and Image Playground. No API keys. No cloud. No network. No subscriptions. Pipe-friendly. Scriptable.
+The ultimate UNIX-style background remover for macOS. AI-driven via Apple's on-device Vision framework. No API keys. No cloud. No network. No subscriptions. **No GUI side-effects ever** — pipe-friendly, scriptable, silent.
 
 ![bgbgone hero](docs/images/hero.png)
 
@@ -14,16 +15,25 @@ The ultimate UNIX-style background remover for macOS. AI-driven via Apple's on-d
 bgbgone in.jpg > out.png                          # transparent PNG cutout
 bgbgone in.jpg --bg color:white -o on-white.png   # on a colour
 bgbgone in.jpg --bg image:beach.jpg -o beach.png  # on an image
-bgbgone in.jpg --bg gen:"sunset over mountains"   # on a generated background (Image Playground)
 ```
+
+> **What about AI-generated backgrounds?** Apple's `ImageCreator` API
+> (Image Playground) cannot be invoked from a UNIX CLI without launching a
+> foreground `.app` that steals the menu bar — so `--bg gen:` was **removed in
+> v0.1.2**. The honest workflow: generate the background once in any tool
+> (Apple Image Playground, your favourite image model), save the file, and
+> compose it with `--bg image:<file>`. See [docs/design.md](docs/design.md) for
+> the full reasoning.
 
 ## Why
 
 Every Mac in 2026 ships with a small render farm of on-device image AI. Apple's [Vision framework](https://developer.apple.com/documentation/vision) gives you `VNGenerateForegroundInstanceMaskRequest` — a foundation-model-class background remover, free, on every Mac, no internet required. But it's only callable from Swift. `bgbgone` wraps it as a UNIX CLI so you can use it from scripts, pipelines, batch jobs, build steps — anywhere you'd use `sips` or `imagemagick`.
 
-It works on photos and paintings — anything with a subject:
+It works on **anything with a foreground subject** — photos, paintings, lunar landscapes, spectroscopy, woodblock prints:
 
-![diverse subjects](docs/images/diversity.png)
+![cutout grid — 16 different PD subjects (people, paintings, spacecraft, vintage products), one CLI call each](docs/images/showcase-cutouts.png)
+
+Every panel above is a real `bgbgone in.jpg > out.png` invocation against a documented public-domain Wikimedia image — same flag, sixteen very different subjects, no per-image tuning.
 
 ## Install
 
@@ -63,19 +73,41 @@ cat photo.jpg | bgbgone --bg color:white > on-white.png
 
 bgbgone refuses to write binary image bytes to a terminal — exactly like `curl`. Use `-o file`, `--out-dir dir`, or redirect to a file or pipe.
 
-## Examples
+---
 
-### Just remove the background
+## Examples (show, don't tell)
 
-The default: `bgbgone in.jpg` writes a transparent PNG to stdout. With `-o`, it writes to a file.
+Every image below is a real bgbgone invocation against a [strict-PD Wikimedia fixture](Tests/fixtures/LICENSES.md). The command above each grid is the exact CLI used. Everything is reproducible with `bash scripts/make-readme-examples.sh`.
 
-![before / after](docs/images/before-after.png)
+### 1) Just remove the background
+
+The default: `bgbgone in.jpg` writes a transparent PNG to stdout. With `-o`, it writes to a file. Same input, same flag, sixteen subjects — works across photography, painting, spacecraft imagery, woodblock prints, and vintage product advertisements with no per-image tuning:
 
 ```bash
-bgbgone einstein-1921.jpg -o einstein-cutout.png
+bgbgone in.jpg > out.png
+bgbgone in.jpg -o out.png
 ```
 
-### Replace with a colour
+![source → cutout for all 16 PD fixtures](docs/images/showcase-cutouts.png)
+
+A closer look at one subject — Einstein's 1921 studio portrait, source → transparent PNG:
+
+![before / after — Einstein 1921](docs/images/before-after.png)
+
+### 2) Drop in a solid colour
+
+One flag, any colour. Three different subjects, four colours each:
+
+```bash
+bgbgone in.jpg --bg color:white       -o out.png      # named colour
+bgbgone in.jpg --bg color:black       -o out.png      # named colour
+bgbgone in.jpg --bg color:#0066cc     -o out.png      # hex
+bgbgone in.jpg --bg color:rgb:0,200,0 -o out.png      # rgb triple
+```
+
+![--bg color: across three subjects, four colour syntaxes](docs/images/showcase-colors.png)
+
+Common knobs:
 
 ```bash
 bgbgone product.jpg --bg color:white       -o catalogue.jpg --to jpg
@@ -83,56 +115,94 @@ bgbgone selfie.jpg  --bg color:#101a3a     -o passport.jpg --to jpg
 bgbgone selfie.jpg  --bg color:rgb:0,200,0 -o greenscreen.png
 ```
 
-### Replace with an image
+### 3) Composite onto an image background
+
+Pass any image as the background. The fit mode controls how it's placed:
 
 ```bash
-bgbgone subject.jpg --bg image:./beach.jpg                       -o on-beach.png
-bgbgone subject.jpg --bg image:./beach.jpg --bg-fit contain      -o letterboxed.png
-bgbgone subject.jpg --bg image:./tile.png  --bg-fit tile         -o tiled.png
+bgbgone subject.jpg --bg image:./bg.jpg                   -o out.png
+bgbgone subject.jpg --bg image:./bg.jpg --bg-fit cover    -o cover.png     # default
+bgbgone subject.jpg --bg image:./bg.jpg --bg-fit contain  -o contain.png
+bgbgone subject.jpg --bg image:./bg.jpg --bg-fit tile     -o tiled.png
+bgbgone subject.jpg --bg image:./bg.jpg --bg-fit center   -o center.png
 ```
 
-Six places Mona Lisa has never been — each panel is one CLI invocation:
+Row 1: same subject (Einstein) on Earthrise, every `--bg-fit` mode side by side.
+Row 2: same subject (astronaut EVA) on two different PD backgrounds (Hubble nebula, Hokusai wave):
 
-![Mona Lisa world tour](docs/images/mona-lisa-tour.png)
+![--bg image:<path> with cover/contain/tile/center, plus subject + bg variations](docs/images/showcase-image-bg.png)
 
-### Replace with an AI-generated background
+Same subject (Mona Lisa), seven different backgrounds — every one is a verifiable PD fixture (the eighth panel is the workflow tip for using outputs from any other tool, including Apple's standalone Image Playground app):
 
-Uses Apple's on-device Image Playground (Apple Intelligence must be enabled in System Settings).
+![Mona Lisa world tour — PD backgrounds + workflow note](docs/images/mona-lisa-tour.png)
 
 ```bash
-bgbgone subject.jpg --bg gen:"sunset over a desert"                       -o out.png
-bgbgone subject.jpg --bg gen:"moody studio backdrop" --style illustration -o studio.png
-bgbgone subject.jpg --bg gen:"$(apfel 'describe a peaceful background, vienna autumn')" -o autumn.png
+bgbgone mona-lisa.jpg --bg color:white                                    -o studio.jpg
+bgbgone mona-lisa.jpg --bg color:black                                    -o dark.jpg
+bgbgone mona-lisa.jpg --bg image:./hubble-ngc1300.jpg                     -o galaxy.jpg
+bgbgone mona-lisa.jpg --bg image:./nasa-aldrin-moon.jpg                   -o moon.jpg
+bgbgone mona-lisa.jpg --bg image:./hokusai-great-wave.jpg                 -o wave.jpg
+bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg                     -o mars.jpg
 ```
 
-### Output formats
+### 4) Edge refinement — feather, crop, padding, shadow, mask-only
+
+`--feather <px>` softens the matte edge. Effect is visible at 0/1/4/8/16 px on the same subject:
+
+![--feather progression 0 → 16 px, plus --crop --padding --shadow --mask-only](docs/images/showcase-edges.png)
 
 ```bash
-bgbgone in.jpg --to png        # transparent (default)
+bgbgone in.jpg --bg color:white --feather 0    -o hard.png
+bgbgone in.jpg --bg color:white --feather 4    -o soft.png
+bgbgone in.jpg --bg color:white --feather 16   -o very-soft.png
+
+bgbgone in.jpg --crop                          -o tight.png
+bgbgone in.jpg --crop --padding 10%            -o tight-with-margin.png
+bgbgone in.jpg --bg color:white --shadow       -o with-shadow.png
+bgbgone in.jpg --mask-only                     -o matte.png
+```
+
+A closer look at the matte itself — `--mask-only` emits the grayscale alpha, which the compositor then uses to blend the subject:
+
+![Under the hood — mask → composite (Vermeer's Girl with a Pearl Earring)](docs/images/mask-breakdown.png)
+
+And a pixel-level zoom on the actual edge for `--feather 0` vs `--feather 8`:
+
+![feather close-up](docs/images/feather-zoom.png)
+
+### 5) Algorithm selection (`--algo`)
+
+bgbgone exposes the five Vision / Core Image segmentation primitives directly. `auto` picks the best available for your macOS version. Same input, every algorithm, three different subjects:
+
+```bash
+bgbgone in.jpg --algo auto       # picks best (default)
+bgbgone in.jpg --algo vn-remove  # VNRemoveBackgroundRequest (macOS 15.1+)
+bgbgone in.jpg --algo vn-mask    # VNGenerateForegroundInstanceMaskRequest (macOS 14+)
+bgbgone in.jpg --algo person     # CIPersonSegmentation
+bgbgone in.jpg --algo sky        # CISkySegmentation (subject = sky)
+bgbgone in.jpg --algo saliency   # attention saliency (fallback)
+```
+
+![--algo across vn-remove, vn-mask, person, sky, saliency on three subjects](docs/images/showcase-algos.png)
+
+A single isolated subject (untethered astronaut) where every algorithm has plenty to lock onto:
+
+![one subject, six --algo flags](docs/images/algorithms.png)
+
+### 6) Output formats
+
+bgbgone writes any format ImageIO supports on your macOS:
+
+```bash
+bgbgone in.jpg --to png                              # transparent (default)
 bgbgone in.jpg --to jpg --bg color:white --quality 92
 bgbgone in.jpg --to heic
 bgbgone in.jpg --to tiff
-bgbgone in.jpg --to webp       # if supported by your macOS ImageIO
-bgbgone in.jpg --to avif       # if supported
+bgbgone in.jpg --to webp                             # if supported by your macOS ImageIO
+bgbgone in.jpg --to avif                             # if supported
 ```
 
-### Edge refinement
-
-```bash
-bgbgone in.jpg --feather 4               # softer matte edges
-bgbgone in.jpg --crop                    # tight-crop to subject bbox
-bgbgone in.jpg --mask-only -o mask.png   # output just the alpha matte
-```
-
-Under the hood — input → grayscale matte → final transparent cutout:
-
-![mask breakdown](docs/images/mask-breakdown.png)
-
-Edge softening with `--feather` (close-up around the subject's outline):
-
-![feather zoom](docs/images/feather-zoom.png)
-
-### Multi-instance: one cutout per detected subject
+### 7) Multi-instance (`--multi`)
 
 ```bash
 bgbgone team-photo.jpg --multi --out-dir ./people/
@@ -142,22 +212,9 @@ bgbgone team.jpg --multi --instance-naming "subject_{n:02}.{ext}" --out-dir ./pe
 # people/subject_01.png, people/subject_02.png, ...
 ```
 
-### Algorithm selection
+Each detected instance is written as its own file using `--instance-naming`. The number of instances is decided by Vision — for **tightly-grouped or touching subjects** (every PD-fixture group photo we tested: Apollo 11 crew, Wright Brothers) Vision returns one combined instance. For subjects with visible spatial gaps you'll get one file per subject.
 
-```bash
-bgbgone in.jpg --algo auto       # picks best for your macOS (default)
-bgbgone in.jpg --algo vn-remove  # VNRemoveBackgroundRequest (macOS 15+)
-bgbgone in.jpg --algo vn-mask    # VNGenerateForegroundInstanceMaskRequest (macOS 14+)
-bgbgone in.jpg --algo person     # CIPersonSegmentation
-bgbgone in.jpg --algo sky        # CISkySegmentation (subject = sky)
-bgbgone in.jpg --algo saliency   # attention saliency (fallback)
-```
-
-Same input, every `--algo`:
-
-![algorithm comparison](docs/images/algorithms.png)
-
-### Structured output (`--json`)
+### 8) Structured output (`--json`, `--ndjson`)
 
 ```bash
 bgbgone in.jpg --json -o out.png
@@ -174,22 +231,56 @@ ls *.jpg | xargs -I{} bgbgone {} --ndjson --out-dir ./out/ \
   | jq -s 'group_by(.algo) | map({algo: .[0].algo, n: length})'
 ```
 
-### Real-world workflows
+### 9) Pipe into downstream AI
 
-**Background removal makes downstream AI more accurate.** Pipe a cutout into [auge](https://github.com/Arthur-Ficial/auge) for cleaner classification:
+A clean cutout makes downstream classifiers, embedders, and OCR much more accurate. With [auge](https://github.com/Arthur-Ficial/auge):
+
+![pipeline: bgbgone → auge with real classify output](docs/images/showcase-pipeline.png)
+
+The fourth panel shows the **actual** `auge --classify` output on the curiosity-rover cutout — not a fabricated label. Reproducible:
 
 ```bash
-$ auge --classify photo-with-busy-bg.jpg --top 3
-67%  scene
-21%  room
-15%  furniture
-
-$ bgbgone photo-with-busy-bg.jpg --bg color:black --to jpg -o /tmp/cut.jpg \
-    && auge --classify /tmp/cut.jpg --top 3
-71%  people
-71%  adult
-17%  helmet
+bgbgone Tests/fixtures/06-nasa-mars-curiosity-selfie.jpg \
+    --bg color:black --to jpg -o /tmp/cut.jpg
+auge --classify /tmp/cut.jpg --top 5
+# machine: 52%
+# toy: 12%
+# figurine: 12%
+# art: 10%
+# statue: 10%
 ```
+
+### 10) Product photography — every step, then re-cast into a hilarious new context
+
+Vintage public-domain ads make great product-cutout demos. For each item, here's the full pipeline: source → `--mask-only` alpha matte → transparent cutout → recomposed onto a wildly out-of-context PD background. Every panel is a real bgbgone invocation:
+
+![Products: Underwood typewriter on the Moon, Edison phonograph in a nebula, Singer poster riding the Great Wave, Winchester ad on Mars](docs/images/showcase-products.png)
+
+```bash
+# Row 1 — Underwood Standard Typewriter (PSM 1909) now writes on the Moon
+bgbgone underwood-1909.jpg --mask-only                       -o matte.png
+bgbgone underwood-1909.jpg                                   -o cutout.png
+bgbgone underwood-1909.jpg --bg image:nasa-aldrin-moon.jpg   -o lunar-typewriter.png
+
+# Row 2 — Edison + phonograph (c.1877) now spinning records in the Hubble nebula
+bgbgone edison-phonograph.jpg --mask-only                    -o matte.png
+bgbgone edison-phonograph.jpg                                -o cutout.png
+bgbgone edison-phonograph.jpg --bg image:hubble-ngc1300.jpg  -o galactic-dj.png
+
+# Row 3 — Singer "All Nations" poster (1892) now also surfs
+bgbgone singer-1892.jpg --mask-only                          -o matte.png
+bgbgone singer-1892.jpg                                      -o cutout.png
+bgbgone singer-1892.jpg --bg image:hokusai-great-wave.jpg    -o singer-surfs.png
+
+# Row 4 — Winchester rifle ad (1909) now hunting on Mars
+bgbgone winchester-1909.jpg --mask-only                      -o matte.png
+bgbgone winchester-1909.jpg                                  -o cutout.png
+bgbgone winchester-1909.jpg --bg image:mars-curiosity.jpg    -o mars-hunter.png
+```
+
+Useful in production: drop the absurd-context lines, use `--bg color:white` instead, and you have an instant white-bg catalogue pipeline for any product photo.
+
+### 11) Real-world recipes
 
 **Catalogue a photo library on white background:**
 
@@ -200,14 +291,6 @@ for f in ~/products/*.heic; do
 done | jq -s 'group_by(.algo) | map({algo: .[0].algo, count: length})'
 ```
 
-**Build a sticker pack from a group photo** (one PNG per detected person):
-
-```bash
-bgbgone team-portrait.jpg --multi \
-    --instance-naming "{base}-sticker-{n:02}.{ext}" \
-    --out-dir ./stickers/
-```
-
 **Generate a profile picture with a brand-coloured background:**
 
 ```bash
@@ -215,26 +298,22 @@ bgbgone selfie.jpg --bg color:#0066cc --crop --feather 2 \
     --to jpg --quality 95 -o linkedin-avatar.jpg
 ```
 
-**Headless screenshot recipe** for a doc site (subject on white, exact dims):
+**Sticker pack from a group photo** (one PNG per detected instance):
 
 ```bash
-bgbgone product.heic --bg color:white --feather 1 \
+bgbgone team-portrait.jpg --multi \
+    --instance-naming "{base}-sticker-{n:02}.{ext}" \
+    --out-dir ./stickers/
+```
+
+**Headless screenshot recipe** for a doc site (subject on white, tight crop, soft edge):
+
+```bash
+bgbgone product.heic --bg color:white --crop --feather 1 \
     --to jpg --quality 92 -o ./docs/product-shot.jpg
 ```
 
-### Pipeline composition (with sibling tools)
-
-bgbgone is part of the apfel ecosystem of on-device CLI tools:
-
-| Tool                                              | What                        | Apple framework        |
-| ------------------------------------------------- | --------------------------- | ---------------------- |
-| [apfel](https://github.com/Arthur-Ficial/apfel)   | LLM (text generation)       | FoundationModels       |
-| [auge](https://github.com/Arthur-Ficial/auge)     | Vision / OCR (see)          | Vision                 |
-| **bgbgone** (this)                                | Background removal (do)     | Vision + ImagePlayground |
-| [ohr](https://github.com/Arthur-Ficial/ohr)       | Speech-to-text              | SpeechAnalyzer         |
-| [kern](https://github.com/Arthur-Ficial/kern)     | Embeddings                  | NLContextualEmbedding  |
-
-They pipe together:
+**Pipeline composition with sibling tools:**
 
 ```bash
 # bg-remove, then classify the cleaner cutout
@@ -242,15 +321,17 @@ bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && auge --classify /tm
 
 # bg-remove, then embed for similarity search
 bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && kern --embed-image /tmp/x.jpg
-
-# LLM-composed background prompt
-bgbgone subject.jpg --bg gen:"$(apfel 'one-line description of a peaceful background')"
-
-# Batch a folder, summarise what's in each cutout
-for f in ~/photos/*.jpg; do
-    bgbgone "$f" --bg color:black --to jpg -o /tmp/cut.jpg && auge --classify /tmp/cut.jpg --top 3
-done
 ```
+
+bgbgone is part of the apfel ecosystem of on-device CLI tools:
+
+| Tool                                              | What                        | Apple framework        |
+| ------------------------------------------------- | --------------------------- | ---------------------- |
+| [apfel](https://github.com/Arthur-Ficial/apfel)   | LLM (text generation)       | FoundationModels       |
+| [auge](https://github.com/Arthur-Ficial/auge)     | Vision / OCR (see)          | Vision                 |
+| **bgbgone** (this)                                | Background removal (do)     | Vision masks + Core Image |
+| [ohr](https://github.com/Arthur-Ficial/ohr)       | Speech-to-text              | SpeechAnalyzer         |
+| [kern](https://github.com/Arthur-Ficial/kern)     | Embeddings                  | NLContextualEmbedding  |
 
 ## Capabilities
 
@@ -259,7 +340,7 @@ bgbgone --check
 ```
 
 ```
-bgbgone v0.0.11 capability report
+bgbgone v0.1.8 capability report
   OS:                  macOS 26.3.1
   Algorithms:
     vn-remove          available
@@ -270,7 +351,6 @@ bgbgone v0.0.11 capability report
   Backgrounds:
     color              always available
     image              always available
-    gen (Image Playground)  available
   Pipeline:
     network            hard-blocked at runtime
 ```
@@ -284,9 +364,7 @@ USAGE:
 BACKGROUND:
   --bg color:<#hex|named|rgb:r,g,b>     solid colour
   --bg image:<path>                     image file
-  --bg gen:<prompt>                     Image Playground generation
   --bg-fit cover|contain|tile|center    fit mode for image backgrounds
-  --style auto|illustration|sketch|animation   Image Playground style
 
 MATTE / EDGE:
   --mask-only                           output the alpha mask only
@@ -319,7 +397,7 @@ EXIT CODES:
   0  success
   1  user error (bad input, refusing TTY)
   2  parser error or no result
-  3  framework error (Vision / Image Playground unavailable)
+  3  framework error (Vision unavailable)
 ```
 
 ## Architecture
@@ -333,13 +411,13 @@ Config
    ▼                        BgBgOne pipeline
    ├─→ ForegroundMask       Algorithms/: VNRemove, VNMask, Person, Sky, Saliency
    ├─→ MaskPostProcess      feather, crop, --mask-only short-circuit
-   ├─→ Compositor           Backgrounds/: SolidColor, ImageBg, GenerativeBg
+   ├─→ Compositor           SolidColor + ImageBg
    └─→ Output               ImageIO: PNG/JPG/WebP/HEIC/AVIF/TIFF
                             NetworkGuard hard-blocks http/https/ws/wss at runtime.
 ```
 
 - `BgBgOneCore` library — pure Swift, no Vision dep, unit-testable.
-- Main `bgbgone` target — Vision + Core Image + ImagePlayground integration.
+- Main `bgbgone` target — Vision + Core Image integration.
 - `bgbgone-tests` — pure-Swift test runner (no XCTest), same pattern as [apfel](https://github.com/Arthur-Ficial/apfel) and [auge](https://github.com/Arthur-Ficial/auge).
 
 ## Build & test
@@ -357,20 +435,27 @@ make fixtures             # fetch the test fixtures (one-time)
 
 `make test` runs:
 
-- **Unit tests** — argument parsing, colour parsing, instance-naming templating, network-scheme block list. 60+ cases, all in pure Swift (no XCTest).
-- **Integration tests** — spawn the built binary and exercise every flag end-to-end across all 12 fixture images. 44+ cases.
+- **Unit tests** — argument parsing, colour parsing, instance-naming templating, network-scheme block list. 60 cases, all in pure Swift (no XCTest).
+- **Integration tests** — spawn the built binary and exercise every flag end-to-end across all 16 fixture images. 48 cases.
 
 ### Test fixtures: strict public domain
 
-The integration tests run against [12 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md) — PD-NASA federal-government work and PD-old by age (Hokusai, Vermeer, da Vinci, Schmutzer's Einstein, Sarony's Tesla, etc.). **No Creative Commons.** The full provenance and PD justification for every fixture is in `Tests/fixtures/LICENSES.md`.
+The integration tests run against [16 squarely-public-domain Wikimedia images](Tests/fixtures/LICENSES.md) — PD-NASA federal-government work, PD-old by age (Hokusai, Vermeer, da Vinci, Schmutzer's Einstein, Sarony's Tesla, etc.), and pre-1929 American advertisements (Singer, Underwood, Edison + phonograph, Winchester). **No Creative Commons.** The full provenance and PD justification for every fixture is in `Tests/fixtures/LICENSES.md`.
+
+Every example image in this README was generated by `scripts/make-readme-examples.sh` — re-runnable, so claims are reproducible.
 
 ## Design
 
 See [`docs/design.md`](docs/design.md) for the design document — CLI surface, algorithm selection, exit-code policy, framework version gating, and the UNIX-style contract every capability is held to.
 
+## Removed in v0.1.2
+
+- **`--bg gen:<prompt>` (Apple Image Playground).** Apple's `ImageCreator` API throws `backgroundCreationForbidden` for any process not launched as a foreground `.app`. The only workaround is to wrap bgbgone in a temporary `.app` and `open --args`, which steals the menu bar from the user's frontmost app and is therefore incompatible with the 100%-scriptable goal. See [docs/design.md](docs/design.md) and [CLAUDE.md](CLAUDE.md) for the full reasoning. If you need a generated background, save the generator's output to disk and use `--bg image:<path>`.
+- **`--style` flag.** Only meaningful in combination with `--bg gen:`, removed alongside it.
+
 ## Privacy
 
-- **No network.** `NetworkGuard.swift` registers a `URLProtocol` that intercepts any `http`, `https`, `ws`, or `wss` request inside the process and exits with code 3. The Vision and Image Playground APIs we use are all on-device.
+- **No network.** `NetworkGuard.swift` registers a `URLProtocol` that intercepts any `http`, `https`, `ws`, or `wss` request inside the process and exits with code 3. The Vision APIs we use are all on-device.
 - **No telemetry.** No analytics, no crash reporting, no usage stats.
 - **No API keys, no accounts, no subscriptions.**
 - **Your images never leave your Mac.** Verifiable: try `bgbgone in.jpg` with the Wi-Fi off.

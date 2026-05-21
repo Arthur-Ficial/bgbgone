@@ -37,7 +37,6 @@ enum BgBgOne {
                 mask: r.mask,
                 background: cfg.background,
                 bgFit: cfg.bgFit,
-                genStyle: cfg.genStyle,
                 originalSize: CGSize(width: cgImage.width, height: cgImage.height)
             )
             if cfg.cropToSubject {
@@ -118,7 +117,6 @@ enum BgBgOne {
             mask: maskedResult.mask,
             background: cfg.background,
             bgFit: cfg.bgFit,
-            genStyle: cfg.genStyle,
             originalSize: CGSize(width: cgImage.width, height: cgImage.height)
         )
 

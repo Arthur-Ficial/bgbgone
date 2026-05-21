@@ -124,12 +124,16 @@ func runConfigParserTests() {
         }
     }
 
-    test("--bg gen:'sunset' parses generative bg") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "gen:sunset over mountains"], isStdinTTY: true, isStdoutTTY: true)
-        if case .generative(let prompt) = cfg.background {
-            try assertEqual(prompt, "sunset over mountains")
-        } else {
-            throw TestFailure("expected .generative, got \(String(describing: cfg.background))")
+    test("--bg gen:<prompt> rejected with explanatory error (removed in v0.1.2)") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "gen:sunset over mountains"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw — gen: should be rejected")
+        } catch let e as BgBgOneError {
+            if case .parser(let m) = e {
+                try assertTrue(m.contains("gen:") || m.contains("removed"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
         }
     }
 
@@ -203,10 +207,12 @@ func runConfigParserTests() {
         }
     }
 
-    test("--style auto/illustration/sketch/animation parses") {
-        for raw in ["auto", "illustration", "sketch", "animation"] {
-            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "gen:dog", "--style", raw], isStdinTTY: true, isStdoutTTY: true)
-            try assertEqual(cfg.genStyle.rawValue, raw)
+    test("--style is no longer a known flag (removed with gen:)") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--style", "sketch"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw — --style should be unknown")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
         }
     }
 

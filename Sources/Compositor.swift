@@ -12,7 +12,6 @@ enum Compositor {
         mask: CGImage,
         background: Background,
         bgFit: BgFit,
-        genStyle: GenStyle,
         originalSize: CGSize
     ) throws -> CGImage {
         switch background {
@@ -24,9 +23,6 @@ enum Compositor {
 
         case .image(let path):
             return try compositeOverImage(masked: masked, bgPath: path, fit: bgFit)
-
-        case .generative(let prompt):
-            return try compositeOverGenerative(masked: masked, prompt: prompt, style: genStyle)
         }
     }
 
@@ -77,35 +73,6 @@ enum Compositor {
         ctx.draw(masked, in: CGRect(x: 0, y: 0, width: w, height: h))
         guard let out = ctx.makeImage() else {
             throw BgBgOneError.frameworkError("cannot composite over image background")
-        }
-        return out
-    }
-
-    private static func compositeOverGenerative(masked: CGImage, prompt: String, style: GenStyle) throws -> CGImage {
-        // Image Playground gating: capability + macOS 15.2+. If unavailable, fail with a
-        // clear framework error per the design's exit-code policy.
-        guard CapabilityProbe.isImagePlaygroundAvailable() else {
-            throw BgBgOneError.frameworkError("--bg gen: requires macOS 15.2+ with Apple Intelligence enabled. Run `bgbgone --check` for the capability report.")
-        }
-        let bg = try GenerativeBg.generate(prompt: prompt, style: style, size: CGSize(width: masked.width, height: masked.height))
-        // Composite same as image bg
-        let w = masked.width
-        let h = masked.height
-        let cs = CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(
-            data: nil,
-            width: w, height: h,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: cs,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            throw BgBgOneError.frameworkError("cannot create compositing context for gen bg")
-        }
-        ctx.draw(bg, in: CGRect(x: 0, y: 0, width: w, height: h))
-        ctx.draw(masked, in: CGRect(x: 0, y: 0, width: w, height: h))
-        guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot composite over generated background")
         }
         return out
     }

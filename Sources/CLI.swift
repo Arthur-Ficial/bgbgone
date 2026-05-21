@@ -11,7 +11,7 @@ enum CLI {
         let appName = (CommandLine.arguments.first.map { ($0 as NSString).lastPathComponent }) ?? "bgbgone"
         print("""
         bgbgone v\(buildVersion) — the ultimate UNIX-style background remover
-                                   (100% on-device, Apple Vision + Image Playground)
+                                   (100% on-device, Apple Vision)
 
         USAGE:
           \(appName) [OPTIONS] [INPUT...]
@@ -26,16 +26,13 @@ enum CLI {
           \(appName) in.jpg -o out.png                  # to file
           \(appName) in.jpg --bg color:#fff -o w.png    # white background
           \(appName) in.jpg --bg image:bg.jpg           # image background
-          \(appName) in.jpg --bg gen:"sunset beach"     # generated background
           \(appName) *.jpg --out-dir ./cutouts          # batch
           cat in.png | \(appName) > out.png             # pipe in / pipe out
 
         BACKGROUND:
           --bg color:<#hex|named|rgb:r,g,b>     solid colour
           --bg image:<path>                     image file
-          --bg gen:<prompt>                     Image Playground generation
           --bg-fit cover|contain|tile|center    fit mode for image backgrounds
-          --style auto|illustration|sketch|animation   Image Playground style
 
         MATTE / EDGE:
           --mask-only                           output the alpha mask only
@@ -68,7 +65,7 @@ enum CLI {
           0  success
           1  user error (bad input, refusing TTY)
           2  parser error or no result
-          3  framework error (Vision / Image Playground unavailable)
+          3  framework error (Vision unavailable)
 
         100% on-device. No network. No API keys. No deps.
         Source: https://github.com/Arthur-Ficial/bgbgone
@@ -79,7 +76,6 @@ enum CLI {
         let proc = ProcessInfo.processInfo
         let osv = proc.operatingSystemVersion
         let os = "macOS \(osv.majorVersion).\(osv.minorVersion).\(osv.patchVersion)"
-        let aiAvailable = CapabilityProbe.isImagePlaygroundAvailable()
         let bgbgoneAvailable = CapabilityProbe.isVNRemoveBackgroundAvailable()
         let foregroundMaskAvailable = CapabilityProbe.isVNForegroundInstanceMaskAvailable()
         print("""
@@ -99,7 +95,6 @@ enum CLI {
         Backgrounds:
           color                always available
           image                always available
-          gen (Image Playground)\(aiAvailable ? "  available" : "  unavailable (requires macOS 15.1+ and Apple Intelligence enabled in System Settings)")
 
         Pipeline:
           network              hard-blocked at runtime

@@ -7,7 +7,7 @@ public enum BgBgOneError: Error, Equatable, Sendable {
     case userError(String)
     /// No result (no subject detected, empty input). Exit code 2.
     case noResult(String)
-    /// Apple framework gave up (Vision missing, ImagePlayground not enabled). Exit code 3.
+    /// Apple framework gave up (Vision missing or returned an error). Exit code 3.
     case frameworkError(String)
 
     public var exitCode: Int32 {

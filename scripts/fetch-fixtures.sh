@@ -35,6 +35,10 @@ FIXTURES=(
   "10-mona-lisa.jpg|Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg|600"
   "11-great-wave-hokusai.jpg|The_Great_Wave_off_Kanagawa.jpg|1024"
   "12-girl-with-pearl-earring.jpg|1665_Girl_with_a_Pearl_Earring.jpg|600"
+  "13-singer-1892.jpg|Singer sewing machines poster 1892.jpg|800"
+  "14-underwood-1909.jpg|PSM V75 D640 Underwood typewriter advertisement 1909.jpg|800"
+  "15-edison-phonograph.jpg|Edison and phonograph edit2.jpg|800"
+  "16-winchester-1909.jpg|Winchester advertisement, Rod and Gun in Canada November 1909, p1.jpg|800"
 )
 
 echo "fetching ${#FIXTURES[@]} PD fixtures into $OUT"

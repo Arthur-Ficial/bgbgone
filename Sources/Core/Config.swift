@@ -19,7 +19,6 @@ public enum Background: Sendable, Equatable {
     case transparent
     case solidColor(RGBA)
     case image(String)            // path
-    case generative(String)       // prompt
 }
 
 public enum Algo: String, Sendable, Equatable {
@@ -36,13 +35,6 @@ public enum BgFit: String, Sendable, Equatable {
     case contain
     case tile
     case center
-}
-
-public enum GenStyle: String, Sendable, Equatable {
-    case auto
-    case illustration
-    case sketch
-    case animation
 }
 
 public struct Config: Sendable, Equatable {
@@ -62,7 +54,6 @@ public struct Config: Sendable, Equatable {
     public var background: Background
     public var bgFit: BgFit
     public var algo: Algo
-    public var genStyle: GenStyle
     public var maskOnly: Bool
     public var feather: Double
     public var threshold: Double?
@@ -85,7 +76,6 @@ public struct Config: Sendable, Equatable {
         self.background = .transparent
         self.bgFit = .cover
         self.algo = .auto
-        self.genStyle = .auto
         self.maskOnly = false
         self.feather = 1.0
         self.threshold = nil

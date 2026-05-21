@@ -18,14 +18,19 @@ If you add a new fixture, it MUST appear in this file with its PD justification,
 | 10 | `10-mona-lisa.jpg` | [Mona Lisa, by Leonardo da Vinci](https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg) | **PD-Art.** Faithful 2D reproduction of Leonardo da Vinci's Mona Lisa (c.1503). The underlying painting is PD-old by ~500 years; faithful reproductions of 2D PD-Art works carry no new copyright per *Bridgeman v. Corel* and parallel jurisprudence. |
 | 11 | `11-great-wave-hokusai.jpg` | [The_Great_Wave_off_Kanagawa.jpg](https://commons.wikimedia.org/wiki/File:The_Great_Wave_off_Kanagawa.jpg) | **PD-old.** Hokusai's Great Wave, c.1831. Artist died 1849 → PD globally for ~175 years. |
 | 12 | `12-girl-with-pearl-earring.jpg` | [1665_Girl_with_a_Pearl_Earring.jpg](https://commons.wikimedia.org/wiki/File:1665_Girl_with_a_Pearl_Earring.jpg) | **PD-Art.** Faithful reproduction of Vermeer's Girl with a Pearl Earring (c.1665). PD-old by age (~360 years); 2D faithful reproduction → no new copyright. |
+| 13 | `13-singer-1892.jpg` | [Singer_sewing_machines_poster_1892.jpg](https://commons.wikimedia.org/wiki/File:Singer_sewing_machines_poster_1892.jpg) | **PD-old / PD-1929.** Advertising poster published by J. Ottmann Lith. Co., New York, 1892. Pre-1929 US publication → PD in US under the 1929 cutoff. Author unknown for over 120 years → PD globally per life + 70. Wikimedia LicenseShortName: Public domain. |
+| 14 | `14-underwood-1909.jpg` | [PSM_V75_D640_Underwood_typewriter_advertisement_1909.jpg](https://commons.wikimedia.org/wiki/File:PSM_V75_D640_Underwood_typewriter_advertisement_1909.jpg) | **PD-old / PD-1929.** Underwood Typewriter Company advertisement scanned from Popular Science Monthly Vol. 75 (1909-06-12), page 640. Pre-1929 US publication → PD in US. Author unknown for over 100 years → PD globally. Wikimedia LicenseShortName: Public domain. |
+| 15 | `15-edison-phonograph.jpg` | [Edison_and_phonograph_edit2.jpg](https://commons.wikimedia.org/wiki/File:Edison_and_phonograph_edit2.jpg) | **PD-old.** Studio portrait of Thomas Edison with his second-generation phonograph, photographed by Levin C. Handy, c.1877 (probably 1878-04-18). Library of Congress holding (cwpbh.04326). Pre-1929 US publication → PD in US. Photographer died 1932; combined with the publication-based PD, image is PD globally. Wikimedia LicenseShortName: Public domain. |
+| 16 | `16-winchester-1909.jpg` | [Winchester_advertisement,_Rod_and_Gun_in_Canada_November_1909,_p1.jpg](https://commons.wikimedia.org/wiki/File:Winchester_advertisement,_Rod_and_Gun_in_Canada_November_1909,_p1.jpg) | **PD-old / PD-1929.** Winchester Repeating Arms Company advertisement scanned from Rod and Gun in Canada, November 1909, page 1. Pre-1929 publication → PD in US (and Canada via parallel pre-1929 rules). Author unknown for over 110 years → PD globally. Wikimedia LicenseShortName: Public domain. |
 
 ## Why this set
 
-The 12 images were chosen to cover the algorithmic range bgbgone must handle:
+The 16 images were chosen to cover the algorithmic range bgbgone must handle:
 
 - **Easy bg removal** (clear subject against uniform background): 02 (astronaut vs black space), 07 (studio portrait), 08 (studio portrait), 12 (figure against dark).
 - **Medium** (subject + simple environment): 01 (astronaut on lunar surface), 06 (rover on Mars terrain), 09 (figures outdoors).
 - **Hard / edge cases**: 03 (Earth as subject + lunar surface), 04 (diffuse subject, no clear foreground — nebula), 05 (group of 3 subjects), 10 (painted figure with painted bg), 11 (no single foreground subject — abstract).
+- **Product photography**: 13 (Singer poster — colour litho with multi-panel composition), 14 (Underwood typewriter advertisement — isolated product graphic on text page), 15 (Edison + phonograph — real photograph, single subject), 16 (Winchester ad — stylised illustration over text).
 
 This range stress-tests the `auto` algorithm picker (`VNRemoveBackgroundRequest` → `VNGenerateForegroundInstanceMaskRequest` → saliency fallback) and validates that bgbgone fails gracefully on inputs where there is no meaningful foreground.
 

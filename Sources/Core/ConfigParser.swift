@@ -56,12 +56,6 @@ public enum ConfigParser {
                     throw BgBgOneError.parser("unknown --algo value: \(v) (allowed: auto, vn-remove, vn-mask, person, sky, saliency)")
                 }
                 cfg.algo = f
-            case "--style":
-                let v = try takeValue(args, &i, flag: a)
-                guard let f = GenStyle(rawValue: v) else {
-                    throw BgBgOneError.parser("unknown --style value: \(v) (allowed: auto, illustration, sketch, animation)")
-                }
-                cfg.genStyle = f
             case "--mask-only":
                 cfg.maskOnly = true
                 i += 1
@@ -161,10 +155,10 @@ public enum ConfigParser {
         if let v = spec.dropPrefixIfMatches("image:") {
             return .image(v)
         }
-        if let v = spec.dropPrefixIfMatches("gen:") {
-            return .generative(v)
+        if spec.hasPrefix("gen:") {
+            throw BgBgOneError.parser("--bg gen: was removed in v0.1.2 — Apple's Image Playground API cannot be invoked from a CLI without launching a foreground .app, which would steal the menu bar and break scripting. Use --bg image:<path> with an image you generated elsewhere.")
         }
-        throw BgBgOneError.parser("--bg must be color:<spec>, image:<path>, or gen:<prompt>, got: \(spec)")
+        throw BgBgOneError.parser("--bg must be color:<spec> or image:<path>, got: \(spec)")
     }
 
     private static func parsePadding(_ raw: String) throws -> Double {
