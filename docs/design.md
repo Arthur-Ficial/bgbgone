@@ -142,7 +142,9 @@ Three layers, all green-or-fail in `make test`:
 2. **Algorithm** (in unit runner, with `import Vision` allowed) — each algorithm exercised against fixture images; per-pixel assertions (corner alpha == 0, subject alpha > 0).
 3. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; exit codes; JSON shape; capability gating.
 
-**Fixtures:** `Tests/fixtures/` holds ≥10 strict public-domain images from Wikimedia (PD-NASA, PD-USGov, PD-old, PD-self only — never CC). `LICENSES.md` documents every fixture with source URL, PD tag, and attribution. Fixtures are checked into git for reproducible offline tests.
+**Fixtures:** `Tests/fixtures/` holds 16 strict public-domain images from Wikimedia (PD-NASA, PD-USGov, PD-old, PD-self, PD-Art, and pre-1929 American advertisements — never CC). The 16 break down as: 6 NASA spaceflight, 3 19th-c paintings, 3 19th/early-20th-c studio portraits, and 4 vintage product ads. `LICENSES.md` documents every fixture with source URL, PD tag, and attribution. Fixtures are checked into git for reproducible offline tests.
+
+**Reproducible README assets:** `scripts/make-readme-examples.sh` regenerates every showcase strip in `docs/images/` from real bgbgone invocations against the PD fixtures. CI doesn't run this (it's slow); the script is the audit trail for "every README image is real."
 
 ## TDD discipline
 
