@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.36](https://img.shields.io/badge/version-0.1.36-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.37](https://img.shields.io/badge/version-0.1.37-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -401,7 +401,7 @@ bgbgone --check
 ```
 
 ```
-bgbgone v0.1.36 capability report
+bgbgone v0.1.37 capability report
   OS:                  macOS 26.3.1
   Algorithms:
     vn-mask            available (foreground-instance mask, macOS 14+)
@@ -527,7 +527,7 @@ make test-performance-100
 bash Tests/performance/run-100.sh .build/release/bgbgone
 ```
 
-Average over 5 release-binary runs: **100 images in 8.100 s, 12.35 images/s, 81.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
+Average over 5 release-binary runs: **100 images in 7.995 s, 12.51 images/s, 80.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 

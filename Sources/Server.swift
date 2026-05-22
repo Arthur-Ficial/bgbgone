@@ -154,7 +154,7 @@ private final class ServerConnection: @unchecked Sendable {
         case ("GET", "/v1.0/account"), ("GET", "/account"):
             return json(status: 200, body: accountJSON(), origin: origin)
         case ("POST", "/v1.0/bgbgone"), ("POST", "/bgbgone"):
-            return await handleRemoveBackground(request, origin: origin)
+            return await handleBgbgone(request, origin: origin)
         case ("POST", "/v1.0/improve"), ("POST", "/improve"):
             let error = ServerAPIError.notImplementable("image improvement submissions require a remote training program")
             return json(status: error.status, body: error.json(), origin: origin)
@@ -163,7 +163,7 @@ private final class ServerConnection: @unchecked Sendable {
         }
     }
 
-    private func handleRemoveBackground(_ request: HTTPRequest, origin: String?) async -> HTTPResponse {
+    private func handleBgbgone(_ request: HTTPRequest, origin: String?) async -> HTTPResponse {
         do {
             let form = try parseForm(request)
             let tempDir = try FileManager.default.url(
