@@ -1,11 +1,14 @@
 # bgbgone
 
 [![Version 0.1.36](https://img.shields.io/badge/version-0.1.36-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![100% On-Device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
 [![100% Scriptable](https://img.shields.io/badge/scriptable-100%25-green)](#why)
+
+**Official site: [bgbgone.franzai.com](https://bgbgone.franzai.com/)**
 
 ## Background, be gone!
 
