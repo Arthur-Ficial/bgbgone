@@ -53,8 +53,7 @@ func runServerParsingTests() {
         try assertEqual(request.config.inputs, ["/tmp/input.jpg"])
         try assertEqual(request.config.outputFormat, .jpeg)
         try assertTrue(request.config.cropToSubject)
-        try assertEqual(request.config.padding, 12.0)
-        try assertFalse(request.config.paddingIsPercent)
+        try assertEqual(request.config.cropMargins, ServerEdgeInsets(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
         try assertTrue(request.config.dropShadow)
         try assertEqual(request.config.algo, .person)
         if case .solidColor(let rgba) = request.config.background {
@@ -90,33 +89,23 @@ func runServerParsingTests() {
     }
 
     test("network-backed image fields are rejected to preserve local-only runtime") {
-        for fields in [["image_url": "https://example.com/in.jpg"], ["bg_image_url": "https://example.com/bg.jpg"]] {
+        for fields in [["image_url": "https://example.com/in.jpg"], ["bg_image_url": "https://example.com/bg.jpg", "image_file_b64": "AQID"]] {
             do {
                 _ = try ServerRemovalRequest.parse(form: ServerForm(fields: fields, files: [:]), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
                 throw TestFailure("expected throw")
-            } catch let e as BgBgOneError {
-                if case .userError(let message) = e {
-                    try assertTrue(message.contains("not supported"))
-                } else {
-                    throw TestFailure("wrong error: \(e)")
-                }
+            } catch let e as ServerAPIError {
+                try assertEqual(e.status, 501)
+                try assertEqual(e.code, "not_implementable")
             }
         }
     }
 
-    test("unsupported output formats are rejected") {
+    test("zip output format is accepted") {
         let form = ServerForm(fields: ["format": "zip"], files: [
             "image_file": ServerUploadedFile(filename: "photo.jpg", contentType: "image/jpeg", data: Data([1]))
         ])
-        do {
-            _ = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
-            throw TestFailure("expected throw")
-        } catch let e as BgBgOneError {
-            if case .parser(let message) = e {
-                try assertTrue(message.contains("format"))
-            } else {
-                throw TestFailure("wrong error: \(e)")
-            }
-        }
+        let request = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertEqual(request.responseKind, .zip)
+        try assertEqual(request.config.outputFormat, .zip)
     }
 }

@@ -135,10 +135,14 @@ private final class ServerConnection: @unchecked Sendable {
         }
 
         if shouldCheckToken(for: request.path),
-           !ServerSecurityPolicy.isValidToken(provided: request.header("authorization"), expected: config.token) {
+           !ServerSecurityPolicy.isValidToken(
+                authorization: request.header("authorization"),
+                apiKey: request.header("x-api-key"),
+                expected: config.token
+           ) {
             return json(
                 status: 401,
-                body: errorJSON("Invalid or missing Bearer token.", type: "authentication_error"),
+                body: apiErrorJSON(code: "authentication_error", title: "Invalid or missing token."),
                 origin: origin,
                 extraHeaders: ["WWW-Authenticate": "Bearer"]
             )
@@ -147,24 +151,21 @@ private final class ServerConnection: @unchecked Sendable {
         switch (request.method, request.path) {
         case ("GET", "/health"):
             return json(status: 200, body: healthJSON(), origin: origin)
-        case ("GET", "/v1.0/account"):
+        case ("GET", "/v1.0/account"), ("GET", "/account"):
             return json(status: 200, body: accountJSON(), origin: origin)
-        case ("POST", "/v1.0/bgbgone"):
+        case ("POST", "/v1.0/bgbgone"), ("POST", "/bgbgone"):
             return await handleRemoveBackground(request, origin: origin)
+        case ("POST", "/v1.0/improve"), ("POST", "/improve"):
+            let error = ServerAPIError.notImplementable("image improvement submissions require a remote training program")
+            return json(status: error.status, body: error.json(), origin: origin)
         default:
-            return json(status: 404, body: errorJSON("not found", type: "not_found"), origin: origin)
+            return json(status: 404, body: apiErrorJSON(code: "not_found", title: "not found"), origin: origin)
         }
     }
 
     private func handleRemoveBackground(_ request: HTTPRequest, origin: String?) async -> HTTPResponse {
         do {
             let form = try parseForm(request)
-            if form.fields["image_url"] != nil {
-                throw BgBgOneError.userError("image_url is not supported by the local server; upload image_file or image_file_b64")
-            }
-            if form.fields["bg_image_url"] != nil {
-                throw BgBgOneError.userError("bg_image_url is not supported by the local server; upload bg_image_file or bg_image_file_b64")
-            }
             let tempDir = try FileManager.default.url(
                 for: .itemReplacementDirectory,
                 in: .userDomainMask,
@@ -175,7 +176,12 @@ private final class ServerConnection: @unchecked Sendable {
 
             let inputPath = try writeInputFile(form: form, tempDir: tempDir)
             let bgPath = try writeBackgroundFileIfPresent(form: form, tempDir: tempDir)
-            var removal = try ServerRemovalRequest.parse(form: form, inputPath: inputPath.path, backgroundImagePath: bgPath?.path)
+            var removal = try ServerRemovalRequest.parse(
+                form: form,
+                inputPath: inputPath.path,
+                backgroundImagePath: bgPath?.path,
+                acceptHeader: request.header("accept")
+            )
             let outURL = tempDir.appendingPathComponent("result.\(removal.config.outputFormat.extensionForFile)")
             removal.config.output = outURL.path
 
@@ -183,20 +189,25 @@ private final class ServerConnection: @unchecked Sendable {
                 try BgBgOne.run(removal.config)
             }
             let imageData = try Data(contentsOf: URL(fileURLWithPath: result.output))
+            let metadata = metadataHeaders(result: result, typeHeaderValue: removal.typeHeaderValue)
 
             switch removal.responseKind {
             case .image:
-                return binary(status: 200, body: imageData, contentType: contentType(for: removal.config.outputFormat), origin: origin)
+                return binary(status: 200, body: imageData, contentType: contentType(for: removal.config.outputFormat), origin: origin, extraHeaders: metadata)
             case .json:
                 let body = """
-                {"data":{"result_b64":"\(imageData.base64EncodedString())"}}
+                {"data":{"result_b64":"\(imageData.base64EncodedString())","foreground_top":0,"foreground_left":0,"foreground_width":\(result.width),"foreground_height":\(result.height)}}
                 """
-                return json(status: 200, body: body, origin: origin)
+                return json(status: 200, body: body, origin: origin, extraHeaders: metadata)
+            case .zip:
+                return binary(status: 200, body: imageData, contentType: "application/zip", origin: origin, extraHeaders: metadata)
             }
+        } catch let error as ServerAPIError {
+            return json(status: error.status, body: error.json(), origin: origin)
         } catch let error as BgBgOneError {
-            return json(status: statusCode(for: error), body: errorJSON(error.message, type: errorType(for: error)), origin: origin)
+            return json(status: statusCode(for: error), body: apiErrorJSON(code: errorType(for: error), title: error.message), origin: origin)
         } catch {
-            return json(status: 500, body: errorJSON(error.localizedDescription, type: "server_error"), origin: origin)
+            return json(status: 500, body: apiErrorJSON(code: "server_error", title: error.localizedDescription), origin: origin)
         }
     }
 
@@ -208,6 +219,9 @@ private final class ServerConnection: @unchecked Sendable {
             }
             return try ServerFormParser.parseMultipart(request.body, boundary: boundary)
         }
+        if contentType.lowercased().contains("application/json") {
+            return try ServerFormParser.parseJSON(request.body)
+        }
         if contentType.lowercased().contains("application/x-www-form-urlencoded") || contentType.isEmpty {
             return ServerFormParser.parseURLEncoded(request.body)
         }
@@ -218,15 +232,21 @@ private final class ServerConnection: @unchecked Sendable {
         if let file = form.files["image_file"] {
             return try writeFile(data: file.data, filename: file.filename, tempDir: tempDir, fallbackName: "input")
         }
+        if form.fields["image_url"] != nil {
+            return tempDir.appendingPathComponent("remote-url-placeholder.img")
+        }
         if let encoded = form.fields["image_file_b64"], let data = Data(base64Encoded: encoded) {
             return try writeFile(data: data, filename: "input", tempDir: tempDir, fallbackName: "input")
         }
-        throw BgBgOneError.userError("missing image_file upload")
+        return tempDir.appendingPathComponent("missing-input-placeholder.img")
     }
 
     private func writeBackgroundFileIfPresent(form: ServerForm, tempDir: URL) throws -> URL? {
         if let file = form.files["bg_image_file"] {
             return try writeFile(data: file.data, filename: file.filename, tempDir: tempDir, fallbackName: "background")
+        }
+        if form.fields["bg_image_url"] != nil {
+            return nil
         }
         if let encoded = form.fields["bg_image_file_b64"], let data = Data(base64Encoded: encoded) {
             return try writeFile(data: data, filename: "background", tempDir: tempDir, fallbackName: "background")
@@ -273,8 +293,11 @@ private final class ServerConnection: @unchecked Sendable {
         return HTTPResponse(status: status, headers: headers, body: Data(body.utf8))
     }
 
-    private func binary(status: Int, body: Data, contentType: String, origin: String?) -> HTTPResponse {
+    private func binary(status: Int, body: Data, contentType: String, origin: String?, extraHeaders: [String: String] = [:]) -> HTTPResponse {
         var headers = ["Content-Type": contentType]
+        for (key, value) in extraHeaders {
+            headers[key] = value
+        }
         applyCORSHeaders(&headers, origin: origin)
         return HTTPResponse(status: status, headers: headers, body: body)
     }
@@ -432,6 +455,10 @@ private func errorJSON(_ message: String, type: String) -> String {
     """
 }
 
+private func apiErrorJSON(code: String, title: String, detail: String? = nil) -> String {
+    ServerAPIError(status: 400, code: code, title: title, detail: detail).json()
+}
+
 private func healthJSON() -> String {
     """
     {"status":"ok","version":"\(buildVersion)","api":"bgbgone","local":true}
@@ -440,7 +467,7 @@ private func healthJSON() -> String {
 
 private func accountJSON() -> String {
     """
-    {"api":"bgbgone","version":"\(buildVersion)","local":true}
+    {"data":{"attributes":{"credits":{"total":0,"subscription":0,"payg":0,"enterprise":0},"api":{"free_calls":0,"sizes":"all"}}}}
     """
 }
 
@@ -448,6 +475,7 @@ private func contentType(for format: OutputFormat) -> String {
     switch format {
     case .png: return "image/png"
     case .jpeg: return "image/jpeg"
+    case .zip: return "application/zip"
     case .heic: return "image/heic"
     case .avif: return "image/avif"
     case .tiff: return "image/tiff"
@@ -464,9 +492,26 @@ private func reasonPhrase(for status: Int) -> String {
     case 404: return "Not Found"
     case 413: return "Payload Too Large"
     case 422: return "Unprocessable Entity"
+    case 501: return "Not Implemented"
     case 500: return "Internal Server Error"
     default: return "HTTP"
     }
+}
+
+private func metadataHeaders(result: RunResult, typeHeaderValue: String?) -> [String: String] {
+    var headers = [
+        "X-Width": "\(result.width)",
+        "X-Height": "\(result.height)",
+        "X-Credits-Charged": "0",
+        "X-Foreground-Top": "0",
+        "X-Foreground-Left": "0",
+        "X-Foreground-Width": "\(result.width)",
+        "X-Foreground-Height": "\(result.height)",
+    ]
+    if let typeHeaderValue {
+        headers["X-Type"] = typeHeaderValue
+    }
+    return headers
 }
 
 private func printStderr(_ message: String) {

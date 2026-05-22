@@ -140,6 +140,24 @@ out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "POST /v1.0/bgbgone multipart image_file -> PNG" \
     || fail "server multipart PNG" "rc=$rc out=$out"
 
+dst="$OUT/server-einstein-key-header.png"
+headers="$TMP/server-output.headers"
+out=$(curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
+    -H "X-API-Key: placeholder-local-key" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=auto" \
+    -F "size=preview" \
+    -o "$dst" 2>&1) ; rc=$?
+if [ $rc -eq 0 ] && check_png_rgba "$dst" \
+    && grep -qi '^X-Width:' "$headers" \
+    && grep -qi '^X-Height:' "$headers" \
+    && grep -qi '^X-Credits-Charged: 0' "$headers" \
+    && grep -qi '^X-Foreground-Width:' "$headers"; then
+    pass "server /bgbgone alias accepts placeholder X-API-Key and emits metadata"
+else
+    fail "server alias/auth metadata" "rc=$rc out=$out headers=$(cat "$headers" 2>/dev/null)"
+fi
+
 dst="$OUT/server-einstein-alpha.png"
 out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
@@ -176,10 +194,93 @@ else
     fail "server json response" "rc=$rc out=$out"
 fi
 
+python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-json-body.json" <<'PY'
+import base64, json, sys
+src, dst = sys.argv[1:3]
+payload = {
+    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "format": "jpg",
+    "bg_color": "ffffff",
+    "size": "preview",
+    "crop": True,
+    "crop_margin": "5%",
+    "shadow_type": "drop",
+    "shadow_opacity": "25"
+}
+open(dst, "w").write(json.dumps(payload))
+PY
+dst="$OUT/server-json-body.jpg"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -H "Content-Type: application/json" \
+    --data-binary "@$TMP/server-json-body.json" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server application/json image_file_b64 -> JPEG" \
+    || fail "server json body" "rc=$rc out=$out"
+
+python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-urlencoded-body.txt" <<'PY'
+import base64, sys, urllib.parse
+src, dst = sys.argv[1:3]
+payload = {
+    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "format": "png",
+    "channels": "rgba"
+}
+open(dst, "w").write(urllib.parse.urlencode(payload))
+PY
+json="$OUT/server-accept-json-response.json"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    --data-binary "@$TMP/server-urlencoded-body.txt" \
+    -o "$json" 2>&1) ; rc=$?
+if [ $rc -eq 0 ] && grep -q '"foreground_width"' "$json"; then
+    pass "server Accept application/json wraps result and foreground metadata"
+else
+    fail "server accept json" "rc=$rc out=$out body=$(cat "$json" 2>/dev/null)"
+fi
+
+zip="$OUT/server-result.zip"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=zip" \
+    -o "$zip" 2>&1) ; rc=$?
+if [ $rc -eq 0 ] && python3 - "$zip" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as z:
+    names = set(z.namelist())
+    assert {"color.jpg", "alpha.png"} <= names, names
+PY
+then
+    pass "server format=zip returns color.jpg and alpha.png"
+else
+    fail "server zip" "rc=$rc out=$out"
+fi
+
+out=$(curl -fsS "$SERVER_BASE/account" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && echo "$out" | grep -q '"free_calls"' && pass "server /account compatibility shape" \
+    || fail "server account shape" "rc=$rc out=$out"
+
 code=$(curl -sS -o "$TMP/server-image-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
     -d "image_url=https://example.com/in.jpg")
-[ "$code" = "400" ] && grep -q "not supported" "$TMP/server-image-url.json" && pass "server rejects network-backed image_url" \
+[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-image-url.json" && pass "server marks network-backed image_url not implementable" \
     || fail "server image_url rejection" "code=$code body=$(cat "$TMP/server-image-url.json" 2>/dev/null)"
+
+code=$(curl -sS -o "$TMP/server-bg-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "bg_image_url=https://example.com/bg.jpg")
+[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-bg-url.json" && pass "server marks bg_image_url not implementable" \
+    || fail "server bg_image_url rejection" "code=$code body=$(cat "$TMP/server-bg-url.json" 2>/dev/null)"
+
+code=$(curl -sS -o "$TMP/server-webp.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=webp")
+[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-webp.json" && pass "server marks webp output not implementable" \
+    || fail "server webp not implementable" "code=$code body=$(cat "$TMP/server-webp.json" 2>/dev/null)"
+
+code=$(curl -sS -o "$TMP/server-improve.json" -w "%{http_code}" -X POST "$SERVER_BASE/improve" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg")
+[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-improve.json" && pass "server /improve not implementable" \
+    || fail "server improve not implementable" "code=$code body=$(cat "$TMP/server-improve.json" 2>/dev/null)"
 
 stop_server
 
@@ -199,8 +300,12 @@ code=$(curl -sS -o "$TMP/server-no-token.json" -w "%{http_code}" "$SERVER_BASE/v
     || fail "server token missing" "code=$code body=$(cat "$TMP/server-no-token.json" 2>/dev/null)"
 
 out=$(curl -fsS -H "Authorization: Bearer secret-token" "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -q '"api"' && pass "server token accepts Bearer Authorization" \
+[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "server token accepts Bearer Authorization" \
     || fail "server token auth" "rc=$rc out=$out"
+
+out=$(curl -fsS -H "X-API-Key: secret-token" "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "server token accepts X-API-Key Authorization" \
+    || fail "server X-API-Key auth" "rc=$rc out=$out"
 
 stop_server
 
@@ -353,6 +458,20 @@ for fmt in png jpg heic avif tiff; do
     fi
 done
 
+dst="$OUT/einstein.zip"
+out=$("$BIN" "$src" --to zip -o "$dst" 2>&1) ; rc=$?
+if [ $rc -eq 0 ] && python3 - "$dst" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as z:
+    names = set(z.namelist())
+    assert {"color.jpg", "alpha.png"} <= names, names
+PY
+then
+    pass "--to zip contains color.jpg and alpha.png"
+else
+    fail "--to zip" "rc=$rc out=$out"
+fi
+
 # Removed formats and algorithms must be rejected with a parser error, not silently
 # accepted then failed at framework level. They never existed for the user.
 for fmt in webp bmp gif; do
@@ -463,6 +582,26 @@ for r in 0 8 16; do
         *) fail "--feather $r corner alpha" "expected transparent corner, got $corner" ;;
     esac
 done
+
+# --- e2e: shared advanced geometry/options ---
+echo ""
+echo "e2e: shared advanced geometry/options"
+
+src="$FIX/07-einstein-1921.jpg"
+dst="$OUT/einstein-advanced.png"
+out=$("$BIN" "$src" \
+    --size preview \
+    --roi "0% 0% 100% 100%" \
+    --crop \
+    --crop-margin "5%" \
+    --scale "75%" \
+    --position center \
+    --semitransparency false \
+    --shadow-type drop \
+    --shadow-opacity 25 \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI advanced compatibility options produce PNG" \
+    || fail "CLI advanced compatibility options" "rc=$rc out=$out"
 
 # --- e2e: --threshold changes matte decisively ---
 echo ""

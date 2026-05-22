@@ -33,8 +33,15 @@ bgbgone --server                        # local HTTP API on 127.0.0.1:8787
 --feather <px>                          # edge softening (default 1)
 --threshold <0..1>                      # mask binarisation threshold
 --padding <px|%>                        # extra space around subject
+--crop-margin <1|2|4 values>            # API-style crop margins, px or %
 --crop                                  # tight-crop to subject bbox
+--roi "x1 y1 x2 y2"                     # region of interest, px or %
+--scale <10%..100%|original>            # scale subject on canvas
+--position <center|x% y%|original>      # position scaled subject
+--semitransparency true|false           # keep or harden semi-transparent matte pixels
 --shadow                                # drop shadow under cutout
+--shadow-type auto|drop|3D|car|none     # shadow compatibility selector
+--shadow-opacity <0..100|auto>          # shadow darkness
 
 # algorithm
 --algo auto|vn-mask|person|saliency  (default: auto)
@@ -44,7 +51,8 @@ bgbgone --server                        # local HTTP API on 127.0.0.1:8787
 --instance-naming "{base}-{n}.{ext}"
 
 # output
---to png|jpg|heic|avif|tiff  (default: png)
+--to png|jpg|zip|heic|avif|tiff  (default: png)
+--size preview|medium|hd|full|50MP
 --quality 1..100             (default: 92 for lossy)
 -o, --output <path>
 --out-dir <dir>
@@ -79,7 +87,7 @@ Routing constraints are enforced before image processing starts:
 - Output path inference: `-o out.jpg` selects JPEG; `> out.jpg` selects JPEG when macOS exposes the stdout file path. Opaque-only formats use white unless `--bg` is set.
 - Algorithm `auto`: `VNGenerateForegroundInstanceMaskRequest`. No hidden fallback after a user explicitly chooses an unavailable algorithm.
 - Single instance: cutout = union of all detected subjects (use `--multi` for one-per-instance).
-- Format: PNG (only lossless option that preserves alpha out of the box).
+- Format: PNG by default; ZIP is a stored package containing `color.jpg` and `alpha.png`.
 - Quality: 92 for lossy formats (JPEG, HEIC, AVIF).
 - Feather: 1px.
 - Colour space: pass through input.
@@ -113,7 +121,7 @@ Routing constraints are enforced before image processing starts:
                                      CGImageDestination
 
 HTTP Server (/v1.0/*) ───────────────┘
-  multipart/form uploads, optional JSON/base64 response, same Config pipeline
+  multipart/JSON/form uploads, optional JSON/base64 response, same Config pipeline
 ```
 
 - `BgBgOneCore` library — pure Swift. No Vision / Core Image deps. Contains:
@@ -122,7 +130,7 @@ HTTP Server (/v1.0/*) ───────────────┘
   - Argument parser (text → Config) — unit-testable without frameworks
   - Naming math (output path templates, batch fan-out)
   - Colour parsing (`#fff`, `rgb:r,g,b`, named colours)
-  - Server request parsing, security policy, multipart form parsing
+  - Server request parsing, security policy, multipart/JSON/form parsing
 - `bgbgone` executable target — depends on `BgBgOneCore` + Apple frameworks. Contains:
   - `main.swift` — install NetworkGuard, parse args, run, exit with code
   - `CLI.swift` — `--help`, `--version`, `--check` dispatch
@@ -137,23 +145,27 @@ HTTP Server (/v1.0/*) ───────────────┘
 
 ## Server API
 
-The server exists for tools that need HTTP instead of a UNIX pipe. It is not a cloud client and does not fetch remote image URLs. `image_url` and `bg_image_url` are rejected by design so the runtime no-network promise remains true.
+The server exists for tools that need HTTP instead of a UNIX pipe. It is not a cloud client and does not fetch remote image URLs. `image_url` and `bg_image_url` return a structured `501 NOT IMPLEMENTABLE` response so the runtime no-network promise remains true.
 
 Endpoints:
 
 - `GET /health`
+- `GET /account`
 - `GET /v1.0/account`
+- `POST /bgbgone`
 - `POST /v1.0/bgbgone`
+- `POST /improve` and `/v1.0/improve` return `501 NOT IMPLEMENTABLE`
 
 Supported request fields for `POST /v1.0/bgbgone`:
 
 - Input: `image_file` multipart upload or `image_file_b64`.
-- Output: `format=png|jpg|jpeg|heic|avif|tiff|json`.
+- Output: `format=auto|png|jpg|jpeg|zip|heic|avif|tiff|json`; `webp` returns `501 NOT IMPLEMENTABLE` on this zero-dependency encoder stack.
 - Matte: `channels=rgba|alpha`.
 - Background: `bg_color`, `bg_image_file`, `bg_image_file_b64`.
-- Crop/shadow: `crop=true`, `crop_margin=<px|N%>`, `add_shadow=true`.
-- Subject hint: `type=auto|person|product|car|saliency|vn-mask`.
-- Accepted no-op compatibility field: `size`.
+- Geometry: `roi`, `crop=true`, `crop_margin`, `scale`, `position`.
+- Shadow/matte: `add_shadow`, `shadow_type`, `shadow_opacity`, `semitransparency`.
+- Subject hint: `type=auto|person|product|car|animal|graphic|transportation|saliency|vn-mask`, plus `type_level`.
+- Size cap: `size=preview|small|regular|medium|hd|full|4k|auto|50MP`.
 
 See `docs/server/` for the full wire contract and security matrix.
 
@@ -185,8 +197,8 @@ it via `--bg image:<path>`.
 
 Three layers, all green-or-fail in `make test`:
 
-1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, output naming, format inference, JSON escaping, routing validation, server parsing/security, threshold/padding config, NetworkPolicy.
-2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; live HTTP server, auth/origin/CORS checks, multipart processing, exit codes, JSON shape, capability gating, algorithm outputs against fixtures.
+1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, output naming, format inference, JSON escaping, routing validation, compatibility request parsing/security, geometry/size config, NetworkPolicy.
+2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; live HTTP server, auth/origin/CORS checks, multipart/JSON/form processing, ZIP output, metadata headers, accepted not-implementable cases, exit codes, JSON shape, capability gating, algorithm outputs against fixtures.
 3. **README image regeneration** (`scripts/make-readme-examples.sh`) — visual regression surface generated from the freshly installed binary.
 4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs one batch process, verifies 100 outputs, and reports throughput.
 

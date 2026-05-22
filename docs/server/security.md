@@ -55,7 +55,7 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 ## Token Auth
 
-Require a Bearer token:
+No API key is required by default. Require a local token only when exposing the server beyond trusted local automation:
 
 ```bash
 bgbgone --server --token "$(openssl rand -hex 16)"
@@ -65,6 +65,12 @@ Request:
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8787/v1.0/account
+```
+
+The same token is also accepted through `X-API-Key` for clients that already send that header:
+
+```bash
+curl -H "X-API-Key: $TOKEN" http://127.0.0.1:8787/v1.0/account
 ```
 
 Environment variable:

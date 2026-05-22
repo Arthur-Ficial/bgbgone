@@ -28,23 +28,19 @@ enum BgBgOne {
         let baseStem = (((input as NSString).lastPathComponent) as NSString).deletingPathExtension
         var outputs: [RunResult] = []
         for (i, r) in results.enumerated() {
-            let processedMask = try MaskPostProcess.process(mask: r.mask, threshold: cfg.threshold, feather: cfg.feather)
+            var processedMask = try preparedMask(r.mask, cfg: cfg)
             let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
+            let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
+            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
             var final = try Compositor.compose(
-                masked: maskedImg,
+                masked: positionedMasked,
                 background: effectiveBackground(cfg),
                 bgFit: cfg.bgFit,
-                dropShadow: cfg.dropShadow
+                dropShadow: cfg.dropShadow,
+                shadowOpacity: cfg.shadowOpacity
             )
-            if cfg.cropToSubject || cfg.padding != nil {
-                let bbox = MaskPostProcess.paddedRect(
-                    try MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
-                    in: CGSize(width: final.width, height: final.height),
-                    padding: cfg.padding,
-                    isPercent: cfg.paddingIsPercent
-                )
-                final = try MaskPostProcess.crop(final, to: bbox)
-            }
+            final = try cropIfNeeded(final, mask: processedMask, cfg: cfg)
+            final = try ImageTransforms.downscaleIfNeeded(final, maxMegapixels: cfg.maxOutputMegapixels)
             let filename = InstanceNaming.expand(
                 template: cfg.instanceNamingTemplate,
                 base: baseStem,
@@ -86,9 +82,11 @@ enum BgBgOne {
         let maskedResult = try ForegroundMask.maskedImage(from: cgImage, algo: cfg.algo)
 
         // 1a. optional --mask-only short-circuit (emit the grayscale matte as the output)
-        let processedMask = try MaskPostProcess.process(mask: maskedResult.mask, threshold: cfg.threshold, feather: cfg.feather)
+        var processedMask = try preparedMask(maskedResult.mask, cfg: cfg)
 
         if cfg.maskOnly {
+            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
+            processedMask = try ImageTransforms.downscaleIfNeeded(processedMask, maxMegapixels: cfg.maxOutputMegapixels)
             let outputPath = try Output.write(cgImage: processedMask, cfg: cfg, inputPath: input)
             return RunResult(
                 input: input,
@@ -102,25 +100,21 @@ enum BgBgOne {
 
         // 1b. Apply the matte as alpha. Feathering changes only this mask, not foreground RGB.
         let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
+        let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
+        processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
 
         // 2. compose with background (transparent = just emit the masked image)
         var final = try Compositor.compose(
-            masked: maskedImg,
+            masked: positionedMasked,
             background: effectiveBackground(cfg),
             bgFit: cfg.bgFit,
-            dropShadow: cfg.dropShadow
+            dropShadow: cfg.dropShadow,
+            shadowOpacity: cfg.shadowOpacity
         )
 
         // 2a. optional --crop / --padding (tight-crop to subject bbox, then expand)
-        if cfg.cropToSubject || cfg.padding != nil {
-            let bbox = MaskPostProcess.paddedRect(
-                try MaskPostProcess.subjectBoundingBox(fromMask: processedMask),
-                in: CGSize(width: final.width, height: final.height),
-                padding: cfg.padding,
-                isPercent: cfg.paddingIsPercent
-            )
-            final = try MaskPostProcess.crop(final, to: bbox)
-        }
+        final = try cropIfNeeded(final, mask: processedMask, cfg: cfg)
+        final = try ImageTransforms.downscaleIfNeeded(final, maxMegapixels: cfg.maxOutputMegapixels)
 
         // 3. encode + write
         let outputPath = try Output.write(
@@ -144,6 +138,32 @@ enum BgBgOne {
             return .solidColor(RGBA(r: 1, g: 1, b: 1, a: 1))
         }
         return cfg.background
+    }
+
+    private static func preparedMask(_ mask: CGImage, cfg: Config) throws -> CGImage {
+        var processed = try MaskPostProcess.process(mask: mask, threshold: cfg.threshold, feather: cfg.feather)
+        if let roi = cfg.roi {
+            processed = try MaskPostProcess.applyROI(roi, to: processed)
+        }
+        if !cfg.semitransparency {
+            processed = try MaskPostProcess.thresholdMask(processed, threshold: cfg.threshold ?? 0.5)
+        }
+        return processed
+    }
+
+    private static func cropIfNeeded(_ image: CGImage, mask: CGImage, cfg: Config) throws -> CGImage {
+        guard cfg.cropToSubject || cfg.padding != nil || cfg.cropMargins != nil else {
+            return image
+        }
+        let subject = try MaskPostProcess.subjectBoundingBox(fromMask: mask)
+        let imageSize = CGSize(width: image.width, height: image.height)
+        let bbox: CGRect
+        if let cropMargins = cfg.cropMargins {
+            bbox = MaskPostProcess.paddedRect(subject, in: imageSize, margins: cropMargins)
+        } else {
+            bbox = MaskPostProcess.paddedRect(subject, in: imageSize, padding: cfg.padding, isPercent: cfg.paddingIsPercent)
+        }
+        return try MaskPostProcess.crop(image, to: bbox)
     }
 }
 

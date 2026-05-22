@@ -3,6 +3,7 @@ import Foundation
 public enum OutputFormat: String, Sendable, Equatable {
     case png
     case jpeg = "jpg"
+    case zip
     case heic
     case avif
     case tiff
@@ -57,8 +58,15 @@ public struct Config: Sendable, Equatable {
     public var threshold: Double?
     public var padding: Double?           // px; percentage stored as 0..1
     public var paddingIsPercent: Bool
+    public var cropMargins: ServerEdgeInsets?
     public var cropToSubject: Bool
+    public var roi: ServerRectSpec?
+    public var scalePercent: Double?
+    public var position: ServerPosition?
+    public var maxOutputMegapixels: Double?
+    public var semitransparency: Bool
     public var dropShadow: Bool
+    public var shadowOpacity: Double
     public var multiInstance: Bool
     public var instanceNamingTemplate: String
     public var outputMode: OutputMode
@@ -82,8 +90,15 @@ public struct Config: Sendable, Equatable {
         self.threshold = nil
         self.padding = nil
         self.paddingIsPercent = false
+        self.cropMargins = nil
         self.cropToSubject = false
+        self.roi = nil
+        self.scalePercent = nil
+        self.position = nil
+        self.maxOutputMegapixels = nil
+        self.semitransparency = true
         self.dropShadow = false
+        self.shadowOpacity = 0.50
         self.multiInstance = false
         self.instanceNamingTemplate = "{base}-{n}.{ext}"
         self.outputMode = .standard

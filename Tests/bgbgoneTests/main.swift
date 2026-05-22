@@ -67,6 +67,7 @@ suite("JSONEscaperTests") { runJSONEscaperTests() }
 suite("NetworkGuardTests") { runNetworkGuardTests() }
 suite("NamingTests") { runNamingTests() }
 suite("ServerConfigTests") { runServerConfigTests() }
+suite("ServerCompatibilityTests") { runServerCompatibilityTests() }
 suite("ServerParsingTests") { runServerParsingTests() }
 suite("ServerSecurityTests") { runServerSecurityTests() }
 

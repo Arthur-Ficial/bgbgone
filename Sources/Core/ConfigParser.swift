@@ -33,6 +33,7 @@ public enum ConfigParser {
         var sawVerbose = false
         var sawServer = false
         var sawServerOnlyFlag = false
+        var rawSize: String?
 
         while i < args.count {
             let a = args[i]
@@ -115,10 +116,13 @@ public enum ConfigParser {
                 sawProcessingOption = true
                 let v = try takeValue(args, &i, flag: a)
                 guard let f = OutputFormat.parse(v) else {
-                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, heic, avif, tiff)")
+                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, zip, heic, avif, tiff; webp output is not supported by this zero-dependency ImageIO build)")
                 }
                 cfg.outputFormat = f
                 explicitOutputFormat = true
+            case "--size":
+                sawProcessingOption = true
+                rawSize = try takeValue(args, &i, flag: a)
             case "--quality":
                 sawProcessingOption = true
                 let v = try takeValue(args, &i, flag: a)
@@ -167,6 +171,26 @@ public enum ConfigParser {
                 let parsed = try parsePadding(v)
                 cfg.padding = parsed.value
                 cfg.paddingIsPercent = parsed.isPercent
+            case "--crop-margin":
+                sawProcessingOption = true
+                cfg.cropMargins = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseCropMargins(try takeValue(args, &i, flag: a))
+                }
+            case "--roi":
+                sawProcessingOption = true
+                cfg.roi = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseROI(try takeValue(args, &i, flag: a))
+                }
+            case "--scale":
+                sawProcessingOption = true
+                cfg.scalePercent = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseScale(try takeValue(args, &i, flag: a))
+                }
+            case "--position":
+                sawProcessingOption = true
+                cfg.position = try mapAPIParserError {
+                    try ServerCompatibilityParser.parsePosition(try takeValue(args, &i, flag: a), scalePercent: cfg.scalePercent)
+                }
             case "--crop":
                 sawProcessingOption = true
                 cfg.cropToSubject = true
@@ -175,6 +199,32 @@ public enum ConfigParser {
                 sawProcessingOption = true
                 cfg.dropShadow = true
                 i += 1
+            case "--shadow-type":
+                sawProcessingOption = true
+                let v = ServerCompatibilityParser.normalize(try takeValue(args, &i, flag: a))
+                switch v {
+                case "none":
+                    cfg.dropShadow = false
+                case "auto", "drop", "3d", "car":
+                    cfg.dropShadow = true
+                default:
+                    throw BgBgOneError.parser("unknown --shadow-type value: \(v) (allowed: auto, drop, 3D, car, none)")
+                }
+            case "--shadow-opacity":
+                sawProcessingOption = true
+                cfg.shadowOpacity = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseShadowOpacity(try takeValue(args, &i, flag: a))
+                }
+            case "--semitransparency":
+                sawProcessingOption = true
+                cfg.semitransparency = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseBoolean(
+                        try takeValue(args, &i, flag: a),
+                        default: true,
+                        code: "invalid_semitransparency",
+                        title: "Invalid semitransparency parameter given"
+                    )
+                }
             case "--multi":
                 sawProcessingOption = true
                 cfg.multiInstance = true
@@ -288,6 +338,15 @@ public enum ConfigParser {
             }
         }
 
+        if let rawSize {
+            cfg.maxOutputMegapixels = try mapAPIParserError {
+                try ServerCompatibilityParser.parseSize(rawSize, outputFormat: cfg.outputFormat)
+            }
+        }
+        if cfg.position == nil, cfg.scalePercent != nil {
+            cfg.position = .center
+        }
+
         try validate(cfg)
         return cfg
     }
@@ -356,6 +415,14 @@ public enum ConfigParser {
             throw BgBgOneError.parser("invalid --padding: \(raw)")
         }
         return (n, false)
+    }
+
+    private static func mapAPIParserError<T>(_ block: () throws -> T) throws -> T {
+        do {
+            return try block()
+        } catch let e as ServerAPIError {
+            throw BgBgOneError.parser(e.title)
+        }
     }
 }
 

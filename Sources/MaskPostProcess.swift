@@ -78,6 +78,34 @@ enum MaskPostProcess {
         return try makeGrayImage(width: mask.width, height: mask.height, bytes: bytes)
     }
 
+    static func applyROI(_ roi: ServerRectSpec, to mask: CGImage) throws -> CGImage {
+        let w = mask.width
+        let h = mask.height
+        var bytes = try grayscaleBytes(mask)
+        let rect = CGRect(
+            x: roi.x1.resolve(total: Double(w)),
+            y: roi.y1.resolve(total: Double(h)),
+            width: roi.x2.resolve(total: Double(w)) - roi.x1.resolve(total: Double(w)),
+            height: roi.y2.resolve(total: Double(h)) - roi.y1.resolve(total: Double(h))
+        ).integral
+        let bounds = CGRect(x: 0, y: 0, width: w, height: h)
+        let safe = rect.intersection(bounds)
+        if safe.isNull || safe.isEmpty {
+            throw ServerAPIError.invalid("roi_region_empty", "ROI region is empty", detail: "The given roi parameter defines an empty region")
+        }
+        if !bounds.contains(rect) {
+            throw ServerAPIError.invalid("roi_exceeds_bounds", "ROI exceeds image bounds", detail: "The given roi parameter defines a region that exceeds the image bounds")
+        }
+
+        for y in 0..<h {
+            let row = y * w
+            for x in 0..<w where !safe.contains(CGPoint(x: x, y: y)) {
+                bytes[row + x] = 0
+            }
+        }
+        return try makeGrayImage(width: w, height: h, bytes: bytes)
+    }
+
     /// Apply a grayscale mask as alpha to the original image, preserving sharp foreground pixels.
     static func apply(mask: CGImage, to image: CGImage) throws -> CGImage {
         let w = image.width
@@ -143,6 +171,26 @@ enum MaskPostProcess {
 
         let expanded = rect.insetBy(dx: -padPixels, dy: -padPixels)
         return expanded.intersection(CGRect(origin: .zero, size: imageSize))
+    }
+
+    static func paddedRect(_ rect: CGRect, in imageSize: CGSize, margins: ServerEdgeInsets?) -> CGRect {
+        guard let margins else { return rect }
+        let top = clampedMargin(margins.top, total: Double(rect.height))
+        let right = clampedMargin(margins.right, total: Double(rect.width))
+        let bottom = clampedMargin(margins.bottom, total: Double(rect.height))
+        let left = clampedMargin(margins.left, total: Double(rect.width))
+        let expanded = CGRect(
+            x: rect.minX - left,
+            y: rect.minY - top,
+            width: rect.width + left + right,
+            height: rect.height + top + bottom
+        )
+        return expanded.intersection(CGRect(origin: .zero, size: imageSize))
+    }
+
+    private static func clampedMargin(_ value: ServerDimension, total: Double) -> CGFloat {
+        let resolved = value.resolve(total: total)
+        return CGFloat(max(0, min(resolved, min(500, total * 0.5))))
     }
 
     /// Crop a CGImage to the given rect in top-left pixel coordinates.

@@ -29,8 +29,35 @@ public enum ServerFormParser {
         for pair in text.split(separator: "&", omittingEmptySubsequences: false) {
             let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             let key = decodeFormComponent(parts.first.map(String.init) ?? "")
+            if key.isEmpty { continue }
             let value = parts.count > 1 ? decodeFormComponent(String(parts[1])) : ""
             fields[key] = value
+        }
+        return ServerForm(fields: fields)
+    }
+
+    public static func parseJSON(_ body: Data) throws -> ServerForm {
+        guard !body.isEmpty else {
+            return ServerForm()
+        }
+        let value = try JSONSerialization.jsonObject(with: body)
+        guard let object = value as? [String: Any] else {
+            throw BgBgOneError.parser("JSON request body must be an object")
+        }
+        var fields: [String: String] = [:]
+        for (key, value) in object {
+            switch value {
+            case let string as String:
+                fields[key] = string
+            case let bool as Bool:
+                fields[key] = bool ? "true" : "false"
+            case let number as NSNumber:
+                fields[key] = number.stringValue
+            case is NSNull:
+                continue
+            default:
+                throw BgBgOneError.parser("unsupported JSON value for field \(key)")
+            }
         }
         return ServerForm(fields: fields)
     }

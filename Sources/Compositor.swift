@@ -5,14 +5,14 @@ import BgBgOneCore
 enum Compositor {
 
     /// Compose the alpha-masked foreground with the chosen background.
-    static func compose(masked: CGImage, background: Background, bgFit: BgFit, dropShadow: Bool) throws -> CGImage {
+    static func compose(masked: CGImage, background: Background, bgFit: BgFit, dropShadow: Bool, shadowOpacity: Double = 0.50) throws -> CGImage {
         switch background {
         case .transparent:
-            return try compositeTransparent(masked: masked, dropShadow: dropShadow)
+            return try compositeTransparent(masked: masked, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         case .solidColor(let rgba):
-            return try compositeOverSolid(masked: masked, rgba: rgba, dropShadow: dropShadow)
+            return try compositeOverSolid(masked: masked, rgba: rgba, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         case .image(let path):
-            return try compositeOverImage(masked: masked, bgPath: path, fit: bgFit, dropShadow: dropShadow)
+            return try compositeOverImage(masked: masked, bgPath: path, fit: bgFit, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         }
     }
 
@@ -32,45 +32,45 @@ enum Compositor {
         return ctx
     }
 
-    private static func compositeTransparent(masked: CGImage, dropShadow: Bool) throws -> CGImage {
+    private static func compositeTransparent(masked: CGImage, dropShadow: Bool, shadowOpacity: Double) throws -> CGImage {
         let w = masked.width
         let h = masked.height
         let ctx = try makeContext(width: w, height: h)
         ctx.clear(CGRect(x: 0, y: 0, width: w, height: h))
-        drawForeground(masked, in: ctx, dropShadow: dropShadow)
+        drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
             throw BgBgOneError.frameworkError("cannot composite transparent output")
         }
         return out
     }
 
-    private static func compositeOverSolid(masked: CGImage, rgba: RGBA, dropShadow: Bool) throws -> CGImage {
+    private static func compositeOverSolid(masked: CGImage, rgba: RGBA, dropShadow: Bool, shadowOpacity: Double) throws -> CGImage {
         let w = masked.width
         let h = masked.height
         let ctx = try makeContext(width: w, height: h)
         ctx.setFillColor(red: CGFloat(rgba.r), green: CGFloat(rgba.g), blue: CGFloat(rgba.b), alpha: CGFloat(rgba.a))
         ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
-        drawForeground(masked, in: ctx, dropShadow: dropShadow)
+        drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
             throw BgBgOneError.frameworkError("cannot composite over solid colour")
         }
         return out
     }
 
-    private static func compositeOverImage(masked: CGImage, bgPath: String, fit: BgFit, dropShadow: Bool) throws -> CGImage {
+    private static func compositeOverImage(masked: CGImage, bgPath: String, fit: BgFit, dropShadow: Bool, shadowOpacity: Double) throws -> CGImage {
         let bg = try ImageLoader.load(bgPath)
         let w = masked.width
         let h = masked.height
         let ctx = try makeContext(width: w, height: h)
         drawBackground(bg, in: ctx, canvas: CGSize(width: w, height: h), fit: fit)
-        drawForeground(masked, in: ctx, dropShadow: dropShadow)
+        drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
             throw BgBgOneError.frameworkError("cannot composite over image background")
         }
         return out
     }
 
-    private static func drawForeground(_ masked: CGImage, in ctx: CGContext, dropShadow: Bool) {
+    private static func drawForeground(_ masked: CGImage, in ctx: CGContext, dropShadow: Bool, shadowOpacity: Double) {
         let rect = CGRect(x: 0, y: 0, width: masked.width, height: masked.height)
         if dropShadow {
             let longest = CGFloat(max(masked.width, masked.height))
@@ -80,7 +80,7 @@ enum Compositor {
             ctx.setShadow(
                 offset: CGSize(width: 0, height: offsetY),
                 blur: blur,
-                color: CGColor(red: 0, green: 0, blue: 0, alpha: 0.35)
+                color: CGColor(red: 0, green: 0, blue: 0, alpha: max(0, min(1, shadowOpacity)))
             )
             ctx.draw(masked, in: rect)
             ctx.restoreGState()

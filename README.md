@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.29](https://img.shields.io/badge/version-0.1.29-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.32](https://img.shields.io/badge/version-0.1.32-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -67,7 +67,7 @@ curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
     -o cutout.png
 ```
 
-The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth, CORS for trusted local browser apps, origin checks, and a request body limit. Full details: [`docs/server/`](docs/server/).
+The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth, optional `X-API-Key` token checks, CORS for trusted local browser apps, origin checks, JSON/form/multipart bodies, ZIP output, metadata headers, and a request body limit. Full details: [`docs/server/`](docs/server/).
 
 ---
 
@@ -115,7 +115,7 @@ bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 
 ### Edge refinement
 
-`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` adds breathing room. `--shadow` drops a shadow under the cutout. `--mask-only` emits the grayscale alpha matte.
+`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--scale` and `--position` place the subject on the canvas. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--mask-only` emits the grayscale alpha matte.
 
 ![feather progression (0 to 16 px), --crop, --padding, --shadow, --mask-only](docs/images/showcase-edges.png)
 
@@ -124,7 +124,11 @@ bgbgone in.jpg --bg color:white --feather 8    -o soft.png
 bgbgone in.jpg --threshold 0.55                -o crisper.png
 bgbgone in.jpg --crop                          -o tight.png
 bgbgone in.jpg --crop --padding 10%            -o tight-padded.png
+bgbgone in.jpg --crop --crop-margin "5% 10%"   -o api-padded.png
+bgbgone in.jpg --roi "0% 0% 100% 80%"          -o top-region.png
+bgbgone in.jpg --scale 75% --position center   -o centered.png
 bgbgone in.jpg --bg color:white --shadow       -o dropshadow.png
+bgbgone in.jpg --shadow-type drop --shadow-opacity 25 -o soft-shadow.png
 bgbgone in.jpg --mask-only                     -o matte.png
 ```
 
@@ -154,6 +158,7 @@ Three subjects with every supported algorithm side by side: a Mars rover, two fi
 ```bash
 bgbgone in.jpg --to png                              # transparent PNG (default)
 bgbgone in.jpg --to jpg --quality 92                 # white bg unless --bg is set
+bgbgone in.jpg --to zip                              # color.jpg + alpha.png package
 bgbgone in.jpg -o out.jpg                            # extension infers JPEG
 bgbgone in.jpg --to heic
 bgbgone in.jpg --to avif
@@ -287,7 +292,7 @@ bgbgone v0.1.20 capability report
     vn-mask            available (foreground-instance mask, macOS 14+)
     person             available (Vision person segmentation, macOS 12+)
     saliency           available (Vision objectness saliency, macOS 10.15+)
-  Output formats:      png, jpg, heic, avif, tiff
+  Output formats:      png, jpg, zip, heic, avif, tiff
   Backgrounds:
     color              always available
     image              always available
@@ -316,8 +321,15 @@ MATTE / EDGE:
   --feather <px>                        edge softening (default: 1)
   --threshold <0..1>                    mask binarisation
   --padding <px|N%>                     extra space around subject
+  --crop-margin <1|2|4 values>          API-style crop margins (px or %)
   --crop                                tight-crop to subject bbox
+  --roi "x1 y1 x2 y2"                   region of interest, px or %
+  --scale <10%..100%|original>          scale subject on the canvas
+  --position <center|x% y%|original>    place scaled subject on canvas
+  --semitransparency true|false         keep or harden semi-transparent matte pixels
   --shadow                              drop shadow under cutout
+  --shadow-type auto|drop|3D|car|none   shadow compatibility selector
+  --shadow-opacity <0..100|auto>        shadow darkness
 
 ALGORITHM:
   --algo auto|vn-mask|person|saliency   (default: auto)
@@ -327,7 +339,8 @@ MULTI-INSTANCE:
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
-  --to png|jpg|heic|avif|tiff           output format (default: png)
+  --to png|jpg|zip|heic|avif|tiff       output format (default: png)
+  --size preview|medium|hd|full|50MP    optional output megapixel cap
   --quality 1..100                      for lossy formats (default: 92)
   -o, --output <path>                   explicit output file
   --out-dir <dir>                       batch output directory
@@ -371,10 +384,10 @@ Config
    │
    ▼                        BgBgOne pipeline
    ├─→ ForegroundMask       Algorithms/: VNMask, Person, Saliency
-   ├─→ MaskPostProcess      threshold, feather, crop, padding, --mask-only
+   ├─→ MaskPostProcess      threshold, feather, ROI, crop, padding, --mask-only
    ├─→ Compositor           SolidColor + ImageBg
-   └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF
-HTTP server ───────────────→ same pipeline, multipart uploads, JSON/base64 option
+   └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF + ZIP package
+HTTP server ───────────────→ same pipeline, multipart/JSON/form uploads, JSON/base64 option
                             NetworkGuard hard-blocks outbound http/https/ws/wss at runtime.
 ```
 

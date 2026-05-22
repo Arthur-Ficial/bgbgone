@@ -31,6 +31,14 @@ public enum ServerSecurityPolicy {
         return !token.isEmpty && token == expected
     }
 
+    public static func isValidToken(authorization: String?, apiKey: String?, expected: String?) -> Bool {
+        guard let expected else { return true }
+        if let apiKey, !apiKey.isEmpty, apiKey == expected {
+            return true
+        }
+        return isValidToken(provided: authorization, expected: expected)
+    }
+
     public static func isLoopbackHost(_ host: String) -> Bool {
         switch host.lowercased() {
         case "127.0.0.1", "localhost", "::1", "[::1]":

@@ -170,6 +170,11 @@ func runConfigParserTests() {
         )
     }
 
+    test("--to zip is accepted as a split color-and-alpha package") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.zip", "--to", "zip"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.outputFormat, .zip)
+    }
+
     test("--to webp is rejected (not supported by ImageIO on this SDK)") {
         do {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true)
@@ -301,6 +306,33 @@ func runConfigParserTests() {
     test("--shadow sets shadow true") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.dropShadow)
+    }
+
+    test("advanced geometry and output sizing flags parse through shared Config") {
+        let cfg = try ConfigParser.parse(
+            args: [
+                "in.jpg",
+                "-o", "out.png",
+                "--size", "hd",
+                "--roi", "10% 20% 90% 80%",
+                "--crop-margin", "10px 20px 30px 40px",
+                "--scale", "50%",
+                "--position", "25% 75%",
+                "--semitransparency", "false",
+                "--shadow-type", "drop",
+                "--shadow-opacity", "25"
+            ],
+            isStdinTTY: true,
+            isStdoutTTY: true
+        )
+        try assertEqual(cfg.maxOutputMegapixels, 4.0)
+        try assertEqual(cfg.roi, ServerRectSpec(x1: .percent(0.10), y1: .percent(0.20), x2: .percent(0.90), y2: .percent(0.80)))
+        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(10), right: .pixels(20), bottom: .pixels(30), left: .pixels(40)))
+        try assertEqual(cfg.scalePercent, 0.50)
+        try assertEqual(cfg.position, ServerPosition(x: 0.25, y: 0.75))
+        try assertFalse(cfg.semitransparency)
+        try assertTrue(cfg.dropShadow)
+        try assertEqual(cfg.shadowOpacity, 0.25)
     }
 
     test("--multi sets multiInstance true") {

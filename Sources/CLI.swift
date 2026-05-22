@@ -43,8 +43,15 @@ enum CLI {
           --feather <px>                        edge softening (default: 1)
           --threshold <0..1>                    mask binarisation
           --padding <px|N%>                     extra space around subject
+          --crop-margin <1|2|4 values>          API-style crop margins (px or %)
           --crop                                tight-crop to subject bbox
+          --roi "x1 y1 x2 y2"                   keep detections inside region of interest
+          --scale <10%..100%|original>          scale subject on the canvas
+          --position <center|x% y%|original>    place scaled subject on the canvas
+          --semitransparency true|false         keep or harden semi-transparent matte pixels
           --shadow                              drop shadow under cutout
+          --shadow-type auto|drop|3D|car|none   shadow compatibility selector
+          --shadow-opacity <0..100|auto>        shadow darkness
 
         ALGORITHM:
           --algo auto|vn-mask|person|saliency   (default: auto)
@@ -55,7 +62,8 @@ enum CLI {
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
-          --to png|jpg|heic|avif|tiff           output format (default: png)
+          --to png|jpg|zip|heic|avif|tiff       output format (default: png)
+          --size preview|medium|hd|full|50MP    optional output megapixel cap
           --quality 1..100                      for lossy formats (default: 92)
           -o, --output <path>                   explicit output file
           --out-dir <dir>                       batch output directory
@@ -112,7 +120,7 @@ enum CLI {
           person               \(personAvailable ? "available" : "unavailable") (Vision person segmentation, macOS 12+)
           saliency             \(saliencyAvailable ? "available" : "unavailable") (Vision objectness saliency, macOS 10.15+)
 
-        Output formats:        png, jpg, heic, avif, tiff
+        Output formats:        png, jpg, zip, heic, avif, tiff
 
         Backgrounds:
           color                always available
