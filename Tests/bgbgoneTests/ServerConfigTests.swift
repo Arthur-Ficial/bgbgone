@@ -115,4 +115,80 @@ func runServerConfigTests() {
             }
         }
     }
+
+    test("--no-origin-check disables browser-origin filtering but keeps CORS off") {
+        let cfg = try ConfigParser.parse(args: ["--server", "--no-origin-check"], isStdinTTY: true, isStdoutTTY: true)
+        try assertFalse(cfg.server.originCheckEnabled)
+        try assertFalse(cfg.server.cors)
+        try assertEqual(cfg.server.allowedOrigins, ServerSecurityPolicy.defaultAllowedOrigins)
+    }
+
+    test("--footgun is shorthand for disabling origin checks and enabling wildcard CORS") {
+        let cfg = try ConfigParser.parse(args: ["--server", "--footgun"], isStdinTTY: true, isStdoutTTY: true)
+        try assertFalse(cfg.server.originCheckEnabled)
+        try assertTrue(cfg.server.cors)
+        try assertEqual(cfg.server.allowedOrigins, ["*"])
+    }
+
+    test("--allowed-origins is additive over the default localhost set") {
+        let cfg = try ConfigParser.parse(args: ["--server", "--allowed-origins", "https://app.example.com"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.server.allowedOrigins, ServerSecurityPolicy.defaultAllowedOrigins + ["https://app.example.com"])
+    }
+
+    test("--allowed-origins comma-separates and trims whitespace") {
+        let cfg = try ConfigParser.parse(
+            args: ["--server", "--allowed-origins", " http://localhost:3000 , http://127.0.0.1:5173 "],
+            isStdinTTY: true,
+            isStdoutTTY: true
+        )
+        try assertEqual(cfg.server.allowedOrigins, ServerSecurityPolicy.defaultAllowedOrigins + ["http://localhost:3000", "http://127.0.0.1:5173"])
+    }
+
+    test("--token cannot be empty") {
+        do {
+            _ = try ConfigParser.parse(args: ["--server", "--token", ""], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser(let m) = e {
+                try assertTrue(m.contains("--token"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("BGBGONE_HOST and BGBGONE_PORT pre-seed the server bind") {
+        let cfg = try ConfigParser.parse(
+            args: ["--server"],
+            isStdinTTY: true,
+            isStdoutTTY: true,
+            environment: ["BGBGONE_HOST": "0.0.0.0", "BGBGONE_PORT": "19292"]
+        )
+        try assertEqual(cfg.server.host, "0.0.0.0")
+        try assertEqual(cfg.server.port, 19292)
+    }
+
+    test("BGBGONE_PORT outside the valid range is ignored, falling back to the default") {
+        let cfg = try ConfigParser.parse(
+            args: ["--server"],
+            isStdinTTY: true,
+            isStdoutTTY: true,
+            environment: ["BGBGONE_PORT": "99999"]
+        )
+        try assertEqual(cfg.server.port, 8787)
+    }
+
+    test("--max-body-mb upper bound is honored (512 MiB max)") {
+        do {
+            _ = try ConfigParser.parse(args: ["--server", "--max-body-mb", "1024"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--public-health is parsed and stored when --server is given") {
+        let cfg = try ConfigParser.parse(args: ["--server", "--public-health"], isStdinTTY: true, isStdoutTTY: true)
+        try assertTrue(cfg.server.publicHealth)
+    }
 }

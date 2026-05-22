@@ -144,15 +144,24 @@ Unsupported local features use the normal error envelope with HTTP `501`:
 
 ```text
 --server
---host <addr>
---port <n>
---cors
---allowed-origins <csv>
---no-origin-check
---token <secret>
---token-auto
---public-health
---max-body-mb <n>
+--host <addr>             # default 127.0.0.1
+--port <n>                # default 8787, valid 1..65535
+--cors                    # opt-in CORS headers for allowed origins
+--allowed-origins <csv>   # ADDITIVE; defaults include http://127.0.0.1, http://localhost, http://[::1]
+--no-origin-check         # disable browser Origin filtering (curl is already allowed)
+--token <secret>          # require Bearer / X-API-Key (also honoured via $BGBGONE_TOKEN)
+--token-auto              # generate a random token at startup, printed once to stderr
+--public-health           # keep /health public when --token is set on a non-loopback bind
+--max-body-mb <n>         # request body limit in MiB; default 32, max 512
+--footgun                 # shorthand: no origin check + wildcard CORS (demos only)
 ```
+
+### Environment overrides
+
+| Variable | Behaviour |
+|---|---|
+| `BGBGONE_TOKEN` | Pre-seeds the required token; `--token` on the CLI still wins. |
+| `BGBGONE_HOST` | Pre-seeds the bind host (overridden by `--host`). |
+| `BGBGONE_PORT` | Pre-seeds the bind port; ignored if outside `1..65535`. |
 
 See [security.md](security.md) for the full auth and origin matrix.

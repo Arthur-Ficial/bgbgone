@@ -161,6 +161,101 @@ func runServerCompatibilityTests() {
         try assertEqual(req.config.threshold, 0.35)
     }
 
+    test("normalizedColor handles bare hex, prefixed hex, and rgb syntax") {
+        try assertEqual(ServerCompatibilityParser.normalizedColor("fff"), "#fff")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("ffffff"), "#ffffff")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("ffffffff"), "#ffffffff")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("#abc"), "#abc")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("rgb:0,128,255"), "rgb:0,128,255")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("rgba:1,2,3,0.5"), "rgba:1,2,3,0.5")
+        try assertEqual(ServerCompatibilityParser.normalizedColor("  white  "), "white")
+    }
+
+    test("bg_color upload via JSON request payload propagates to the parsed Config") {
+        let json = """
+        {"image_file_b64":"AQID","bg_color":"#0066cc","format":"jpg"}
+        """
+        let form = try ServerFormParser.parseJSON(Data(json.utf8))
+        let req = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertEqual(req.config.outputFormat, .jpeg)
+        if case .solidColor(let rgba) = req.config.background {
+            try assertEqual(rgba.r, 0.0)
+            try assertEqual(rgba.b, 204.0 / 255.0)
+        } else {
+            throw TestFailure("expected solid color background")
+        }
+    }
+
+    test("bg_image_file_b64 maps to an .image background using the supplied path") {
+        let form = ServerForm(
+            fields: ["bg_image_file_b64": Data([4, 5, 6]).base64EncodedString()],
+            files: ["image_file": ServerUploadedFile(filename: "photo.jpg", contentType: "image/jpeg", data: Data([1, 2, 3]))]
+        )
+        let req = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: "/tmp/bg.png")
+        if case .image(let path) = req.config.background {
+            try assertEqual(path, "/tmp/bg.png")
+        } else {
+            throw TestFailure("expected image background, got \(String(describing: req.config.background))")
+        }
+    }
+
+    test("multiple background sources are rejected with multiple_bg_sources error") {
+        let form = ServerForm(
+            fields: [
+                "bg_color": "#fff",
+                "bg_image_file_b64": Data([1, 2, 3]).base64EncodedString()
+            ],
+            files: ["image_file": ServerUploadedFile(filename: "photo.jpg", contentType: "image/jpeg", data: Data([1]))]
+        )
+        do {
+            _ = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: "/tmp/bg.png")
+            throw TestFailure("expected multiple_bg_sources")
+        } catch let e as ServerAPIError {
+            try assertEqual(e.code, "multiple_bg_sources")
+        }
+    }
+
+    test("type_level=none suppresses the X-Type header even when type is set") {
+        let form = ServerForm(
+            fields: ["type": "person", "type_level": "none"],
+            files: ["image_file": ServerUploadedFile(filename: "photo.jpg", contentType: "image/jpeg", data: Data([1]))]
+        )
+        let req = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertNil(req.typeHeaderValue)
+    }
+
+    test("type_level=latest yields the literal type hint on the X-Type header") {
+        let form = ServerForm(
+            fields: ["type": "car", "type_level": "latest"],
+            files: ["image_file": ServerUploadedFile(filename: "photo.jpg", contentType: "image/jpeg", data: Data([1]))]
+        )
+        let req = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertEqual(req.typeHeaderValue, "car")
+    }
+
+    test("opaque bg color over format=auto picks JPEG; transparent picks PNG") {
+        let opaque = try ServerRemovalRequest.parse(form: ServerForm(
+            fields: ["bg_color": "fff"],
+            files: ["image_file": ServerUploadedFile(filename: "p.jpg", contentType: "image/jpeg", data: Data([1]))]
+        ), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertEqual(opaque.config.outputFormat, .jpeg)
+
+        let translucent = try ServerRemovalRequest.parse(form: ServerForm(
+            fields: ["bg_color": "rgba:255,255,255,128"],
+            files: ["image_file": ServerUploadedFile(filename: "p.jpg", contentType: "image/jpeg", data: Data([1]))]
+        ), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+        try assertEqual(translucent.config.outputFormat, .png)
+    }
+
+    test("missing-boundary multipart request is rejected") {
+        do {
+            _ = try ServerFormParser.parseMultipart(Data("hello".utf8), boundary: "")
+            throw TestFailure("expected parser error")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
     test("invalid channels, geometry, matte, output, and shadow controls return API error codes") {
         let invalids: [(String, [String: String])] = [
             ("invalid_channels", ["channels": "rgb"]),

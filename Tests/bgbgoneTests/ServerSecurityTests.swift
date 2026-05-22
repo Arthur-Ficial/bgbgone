@@ -47,4 +47,35 @@ func runServerSecurityTests() {
         exposed.publicHealth = true
         try assertFalse(exposed.healthRequiresAuthentication)
     }
+
+    test("authorization header without Bearer prefix still validates") {
+        try assertTrue(ServerSecurityPolicy.isValidToken(authorization: "secret", apiKey: nil, expected: "secret"))
+        try assertFalse(ServerSecurityPolicy.isValidToken(authorization: "Bearer ", apiKey: nil, expected: "secret"))
+    }
+
+    test("X-API-Key takes precedence over a missing Authorization header") {
+        try assertTrue(ServerSecurityPolicy.isValidToken(authorization: nil, apiKey: "secret", expected: "secret"))
+        try assertFalse(ServerSecurityPolicy.isValidToken(authorization: nil, apiKey: "wrong", expected: "secret"))
+    }
+
+    test("isLoopbackHost recognises loopback variants and IPv6 bracket form") {
+        try assertTrue(ServerSecurityPolicy.isLoopbackHost("127.0.0.1"))
+        try assertTrue(ServerSecurityPolicy.isLoopbackHost("localhost"))
+        try assertTrue(ServerSecurityPolicy.isLoopbackHost("::1"))
+        try assertTrue(ServerSecurityPolicy.isLoopbackHost("[::1]"))
+        try assertFalse(ServerSecurityPolicy.isLoopbackHost("0.0.0.0"))
+        try assertFalse(ServerSecurityPolicy.isLoopbackHost("10.0.0.1"))
+    }
+
+    test("HTTPS variant of an http://-allowed origin is also accepted") {
+        let allowed = ["http://app.example.test"]
+        try assertTrue(ServerSecurityPolicy.isAllowedOrigin("http://app.example.test", allowedOrigins: allowed))
+        try assertTrue(ServerSecurityPolicy.isAllowedOrigin("https://app.example.test", allowedOrigins: allowed))
+        try assertTrue(ServerSecurityPolicy.isAllowedOrigin("https://app.example.test:8443", allowedOrigins: allowed))
+    }
+
+    test("IPv6 loopback ([::1]) is an allowed origin under defaults") {
+        try assertTrue(ServerSecurityPolicy.isAllowedOrigin("http://[::1]", allowedOrigins: ServerSecurityPolicy.defaultAllowedOrigins))
+        try assertTrue(ServerSecurityPolicy.isAllowedOrigin("http://[::1]:8787", allowedOrigins: ServerSecurityPolicy.defaultAllowedOrigins))
+    }
 }

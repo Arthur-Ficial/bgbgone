@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.35](https://img.shields.io/badge/version-0.1.35-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.36](https://img.shields.io/badge/version-0.1.36-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -57,7 +57,13 @@ When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgon
 ### Local HTTP API
 
 ```bash
-bgbgone --server
+bgbgone --server                                             # 127.0.0.1:8787, no auth, localhost only
+bgbgone --server --port 9000                                 # custom port
+bgbgone --server --token-auto                                # one-shot Bearer token, printed on startup
+bgbgone --server --token "$(openssl rand -hex 16)"           # explicit token
+bgbgone --server --cors --allowed-origins http://localhost:3000   # CORS for a trusted browser app
+bgbgone --server --host 0.0.0.0 --token-auto --public-health      # LAN-exposed, /health stays public
+bgbgone --server --max-body-mb 64                            # raise body limit (default 32 MiB)
 ```
 
 ```bash
@@ -67,7 +73,7 @@ curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
     -o cutout.png
 ```
 
-The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth, optional `X-API-Key` token checks, CORS for trusted local browser apps, origin checks, JSON/form/multipart bodies, ZIP output, metadata headers, and a request body limit. Full details: [`docs/server/`](docs/server/).
+The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth (or `X-API-Key`), CORS for trusted local browser apps, an additive origin allowlist, JSON / multipart / urlencoded request bodies (also `image_file_b64`), ZIP output, `X-Width` / `X-Height` / `X-Foreground-*` / `X-Type` metadata headers, and a request body limit. Full details: [`docs/server/`](docs/server/).
 
 ---
 
@@ -115,21 +121,26 @@ bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 
 ### Edge refinement
 
-`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--scale` and `--position` place the subject on the canvas. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--mask-only` emits the grayscale alpha matte.
+`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--scale` and `--position` place the subject on the canvas. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--semitransparency false` hardens the matte so soft edges become opaque. `--mask-only` emits the grayscale alpha matte.
 
 ![feather progression (0 to 16 px), --crop, --padding, --shadow, --mask-only](docs/images/showcase-edges.png)
 
 ```bash
-bgbgone in.jpg --bg color:white --feather 8    -o soft.png
-bgbgone in.jpg --threshold 0.55                -o crisper.png
-bgbgone in.jpg --crop                          -o tight.png
-bgbgone in.jpg --crop --padding 10%            -o tight-padded.png
-bgbgone in.jpg --crop --crop-margin "5% 10%"   -o api-padded.png
-bgbgone in.jpg --roi "0% 0% 100% 80%"          -o top-region.png
-bgbgone in.jpg --scale 75% --position center   -o centered.png
-bgbgone in.jpg --bg color:white --shadow       -o dropshadow.png
+bgbgone in.jpg --bg color:white --feather 8           -o soft.png
+bgbgone in.jpg --threshold 0.55                       -o crisper.png
+bgbgone in.jpg --crop                                 -o tight.png
+bgbgone in.jpg --crop --padding 10%                   -o tight-padded.png
+bgbgone in.jpg --crop --crop-margin "5% 10%"          -o api-padded.png
+bgbgone in.jpg --crop --crop-margin "5% 10% 15% 20%"  -o four-sided.png
+bgbgone in.jpg --roi "0% 0% 100% 80%"                 -o top-region.png
+bgbgone in.jpg --scale 75% --position center          -o centered.png
+bgbgone in.jpg --scale 50% --position "25% 75%"       -o lower-left.png
+bgbgone in.jpg --bg color:white --shadow              -o dropshadow.png
 bgbgone in.jpg --shadow-type drop --shadow-opacity 25 -o soft-shadow.png
-bgbgone in.jpg --mask-only                     -o matte.png
+bgbgone in.jpg --shadow-type none                     -o no-shadow.png
+bgbgone in.jpg --semitransparency false               -o hard-edge.png
+bgbgone in.jpg --mask-only                            -o matte.png
+bgbgone in.jpg --channels alpha                       -o matte.png   # same as --mask-only
 ```
 
 Closer look at the matte itself. `--mask-only` writes the grayscale alpha, and the compositor blends with that:
@@ -153,6 +164,21 @@ Three subjects with every supported algorithm side by side: a Mars rover, two fi
 
 ![--algo vn-mask, person, saliency on three subjects](docs/images/showcase-algos.png)
 
+### Subject hints
+
+`--type` is the friendlier sibling of `--algo`. It accepts the same subject-hint vocabulary as the local HTTP API, then resolves to the best on-device algorithm:
+
+```bash
+bgbgone portrait.jpg     --type person          -o cutout.png
+bgbgone bottle.jpg       --type product         -o cutout.png
+bgbgone sedan.jpg        --type car             -o cutout.png
+bgbgone elephant.jpg     --type animal          -o cutout.png
+bgbgone logo.png         --type graphic         -o cutout.png
+bgbgone bicycle.jpg      --type transportation  -o cutout.png
+bgbgone busy-scene.jpg   --type saliency        -o cutout.png   # explicit objectness saliency
+bgbgone any.jpg          --type vn-mask         -o cutout.png   # explicit foreground-instance mask
+```
+
 ### Output formats
 
 ```bash
@@ -160,9 +186,22 @@ bgbgone in.jpg --to png                              # transparent PNG (default)
 bgbgone in.jpg --to jpg --quality 92                 # white bg unless --bg is set
 bgbgone in.jpg --to zip                              # color.jpg + alpha.png package
 bgbgone in.jpg -o out.jpg                            # extension infers JPEG
+bgbgone in.jpg -o out.heic                           # extension infers HEIC
 bgbgone in.jpg --to heic
 bgbgone in.jpg --to avif
 bgbgone in.jpg --to tiff
+bgbgone in.jpg --format png                          # --format is an alias of --to
+```
+
+### Output size cap
+
+`--size` caps the output by megapixels so a 12 MP source can land on the web in one call. PNG outputs are additionally clamped to 10 MP (alpha cost) just like the local API.
+
+```bash
+bgbgone giant.jpg --size preview --to jpg -o thumb.jpg    # 0.25 MP cap
+bgbgone giant.jpg --size full                  -o full.png   # 25 MP cap (10 MP for PNG)
+bgbgone giant.jpg --size 50MP --to jpg          -o huge.jpg   # 50 MP cap
+bgbgone giant.jpg --size auto  --to jpg         -o auto.jpg   # same cap as full
 ```
 
 ### Multi-instance
@@ -195,6 +234,57 @@ NDJSON streams through `jq`:
 ls *.jpg | xargs -I{} bgbgone {} --ndjson --out-dir ./out/ \
   | jq -s 'group_by(.algo) | map({algo: .[0].algo, n: length})'
 ```
+
+### Local HTTP API
+
+When pipes aren't an option (browser apps, drag-and-drop demos, Postman collections), run the same pipeline behind a local HTTP server. It's still 100% on-device — `NetworkGuard` hard-blocks outbound traffic inside the process.
+
+```bash
+bgbgone --server                                              # 127.0.0.1:8787
+bgbgone --server --port 9000                                  # custom port
+bgbgone --server --token "$(openssl rand -hex 16)"            # require Bearer / X-API-Key
+bgbgone --server --token-auto                                 # print one-shot token on startup
+bgbgone --server --cors --allowed-origins http://localhost:3000  # CORS for a trusted SPA
+bgbgone --server --host 0.0.0.0 --token-auto --public-health  # LAN-exposed, /health stays public
+bgbgone --server --max-body-mb 64                             # raise body limit (default 32 MiB)
+bgbgone --server --no-origin-check                            # disable browser origin filtering
+bgbgone --server --footgun                                    # wildcard CORS + no origin check (demos only)
+```
+
+Endpoints:
+
+```bash
+curl http://127.0.0.1:8787/health                                # liveness JSON
+curl http://127.0.0.1:8787/v1.0/account                          # local account shape, zero credits
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -F image_file=@photo.jpg -F format=png -o cutout.png         # multipart, PNG
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -F image_file=@photo.jpg -F format=jpg -F bg_color=ffffff \
+    -o on-white.jpg                                              # JPEG on white
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -F image_file=@photo.jpg -F channels=alpha -o matte.png      # mask-only
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -F image_file=@photo.jpg -F format=zip -o result.zip         # color.jpg + alpha.png
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -H "Accept: application/json" \
+    -F image_file=@photo.jpg                                     # JSON-wrapped base64 PNG
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -H "Authorization: Bearer $TOKEN" \
+    -F image_file=@photo.jpg -F type=person -F type_level=2 \
+    -o portrait.png                                              # token auth + subject hint
+
+curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+    -H "Content-Type: application/json" \
+    -d '{"image_file_b64":"<base64>","format":"jpg","bg_color":"#0066cc","scale":"60%","position":"25% 75%"}'
+```
+
+Successful image responses include `X-Width`, `X-Height`, `X-Credits-Charged: 0`, `X-Foreground-Top`, `X-Foreground-Left`, `X-Foreground-Width`, `X-Foreground-Height`, and (unless `type_level=none`) `X-Type`. Remote `image_url` / `bg_image_url` inputs respond `501 NOT IMPLEMENTABLE` so the no-network promise holds. Full wire contract and security matrix in [`docs/server/`](docs/server/).
 
 ### Pipe into downstream AI
 
@@ -269,6 +359,28 @@ bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && auge --classify /tm
 bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && kern --embed-image /tmp/x.jpg
 ```
 
+Run a token-protected local server for a browser SPA on `localhost:3000`:
+
+```bash
+TOKEN="$(openssl rand -hex 16)"
+bgbgone --server --token "$TOKEN" --cors --allowed-origins http://localhost:3000 &
+# in the SPA:
+fetch("http://127.0.0.1:8787/v1.0/bgbgone", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + token },
+    body: formData
+});
+```
+
+Drop a "remove background" hot folder onto your Mac with a one-liner watcher:
+
+```bash
+fswatch -0 ~/Drop | while IFS= read -r -d '' f; do
+    bgbgone "$f" --bg color:white --to jpg --quality 92 \
+        --out-dir ~/Drop/out/ --json --quiet
+done
+```
+
 bgbgone is part of the [apfel](https://github.com/Arthur-Ficial/apfel) ecosystem of on-device CLI tools:
 
 | Tool                                              | Capability                  | Apple framework        |
@@ -286,7 +398,7 @@ bgbgone --check
 ```
 
 ```
-bgbgone v0.1.20 capability report
+bgbgone v0.1.36 capability report
   OS:                  macOS 26.3.1
   Algorithms:
     vn-mask            available (foreground-instance mask, macOS 14+)
@@ -412,7 +524,7 @@ make test-performance-100
 bash Tests/performance/run-100.sh .build/release/bgbgone
 ```
 
-Average over 5 release-binary runs: **100 images in 7.802 s, 12.82 images/s, 78.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
+Average over 5 release-binary runs: **100 images in 8.100 s, 12.35 images/s, 81.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 

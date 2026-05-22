@@ -539,4 +539,266 @@ func runConfigParserTests() {
     test("stdin has no default auto output path") {
         try assertNil(OutputNaming.defaultOutputPath(inputPath: "-", format: .png))
     }
+
+    test("--type covers every shared subject hint") {
+        let cases: [(String, Algo)] = [
+            ("auto", .auto),
+            ("person", .person),
+            ("product", .auto),
+            ("car", .auto),
+            ("animal", .auto),
+            ("graphic", .auto),
+            ("transportation", .auto),
+            ("saliency", .saliency),
+            ("vn-mask", .vnMask)
+        ]
+        for (raw, expected) in cases {
+            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", raw], isStdinTTY: true, isStdoutTTY: true)
+            try assertEqual(cfg.algo, expected, " for --type \(raw)")
+        }
+    }
+
+    test("--type bogus is rejected as a parser error") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "alien"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser(let m) = e {
+                try assertTrue(m.contains("type"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
+
+    test("--shadow-type none clears the drop shadow flag") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow", "--shadow-type", "none"], isStdinTTY: true, isStdoutTTY: true)
+        try assertFalse(cfg.dropShadow)
+    }
+
+    test("--shadow-type auto / drop / 3D / car enables the drop shadow") {
+        for raw in ["auto", "drop", "3D", "car"] {
+            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-type", raw], isStdinTTY: true, isStdoutTTY: true)
+            try assertTrue(cfg.dropShadow, " for --shadow-type \(raw)")
+        }
+    }
+
+    test("--shadow-type bogus is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-type", "fake"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--shadow-opacity 25 maps to 0.25") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-opacity", "25"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.shadowOpacity, 0.25)
+    }
+
+    test("--shadow-opacity auto leaves the default 0.50") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-opacity", "auto"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.shadowOpacity, 0.50)
+    }
+
+    test("--shadow-opacity out-of-range is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-opacity", "101"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--semitransparency false hardens the matte") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--semitransparency", "false"], isStdinTTY: true, isStdoutTTY: true)
+        try assertFalse(cfg.semitransparency)
+    }
+
+    test("--semitransparency true is the default and stays true") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--semitransparency", "true"], isStdinTTY: true, isStdoutTTY: true)
+        try assertTrue(cfg.semitransparency)
+    }
+
+    test("--semitransparency maybe is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--semitransparency", "maybe"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--scale and --position interact: --scale alone implies --position center") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "60%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.scalePercent, 0.60)
+        try assertEqual(cfg.position, ServerPosition.center)
+    }
+
+    test("--scale original is a no-op (treated as nil)") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "original"], isStdinTTY: true, isStdoutTTY: true)
+        try assertNil(cfg.scalePercent)
+        try assertNil(cfg.position)
+    }
+
+    test("--scale below 10% is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "5%"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--position original keeps position nil when no scale is set") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "original"], isStdinTTY: true, isStdoutTTY: true)
+        try assertNil(cfg.position)
+    }
+
+    test("--position original combined with --scale still centres the scaled subject") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "50%", "--position", "original"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.position, ServerPosition.center, " — scaled subjects must land somewhere on the canvas")
+    }
+
+    test("--position center sets a centered placement") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "center"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.position, ServerPosition.center)
+    }
+
+    test("--position with single percent applies to both axes") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "75%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.position, ServerPosition(x: 0.75, y: 0.75))
+    }
+
+    test("--position with two percents maps to (x, y)") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "10% 90%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.position, ServerPosition(x: 0.10, y: 0.90))
+    }
+
+    test("--roi with mixed % and px values parses dimensions correctly") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--roi", "10px 20% 80% 200px"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.roi, ServerRectSpec(x1: .pixels(10), y1: .percent(0.20), x2: .percent(0.80), y2: .pixels(200)))
+    }
+
+    test("--roi malformed (only three values) is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--roi", "0 0 100"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--crop-margin with one value applies to all four sides") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "12px"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
+    }
+
+    test("--crop-margin with two values applies (vertical, horizontal)") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "5% 10%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .percent(0.05), right: .percent(0.10), bottom: .percent(0.05), left: .percent(0.10)))
+    }
+
+    test("--crop-margin with three values is rejected (only 1, 2, or 4 allowed)") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "1 2 3"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--size preview / full / auto / 50MP set megapixel caps") {
+        let cases: [(String, OutputFormat, Double)] = [
+            ("preview", .jpeg, 0.25),
+            ("full", .jpeg, 25.0),
+            ("auto", .jpeg, 25.0),
+            ("50MP", .jpeg, 50.0),
+            ("full", .png, 10.0)
+        ]
+        for (raw, format, expected) in cases {
+            let cfg = try ConfigParser.parse(
+                args: ["in.jpg", "-o", "out", "--format", format.rawValue, "--size", raw],
+                isStdinTTY: true,
+                isStdoutTTY: true
+            )
+            try assertEqual(cfg.maxOutputMegapixels, expected, " for --size \(raw) format=\(format.rawValue)")
+        }
+    }
+
+    test("--size bogus is rejected with a parser error") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--size", "4k"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--quality out-of-range is rejected") {
+        for raw in ["0", "101", "-1", "abc"] {
+            do {
+                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--quality", raw], isStdinTTY: true, isStdoutTTY: true)
+                throw TestFailure("expected throw for --quality \(raw)")
+            } catch let e as BgBgOneError {
+                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+            }
+        }
+    }
+
+    test("--threshold out-of-range is rejected") {
+        for raw in ["-0.1", "1.1", "abc"] {
+            do {
+                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--threshold", raw], isStdinTTY: true, isStdoutTTY: true)
+                throw TestFailure("expected throw for --threshold \(raw)")
+            } catch let e as BgBgOneError {
+                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+            }
+        }
+    }
+
+    test("--feather negative is rejected") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--feather", "-3"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--padding invalid syntax is rejected") {
+        for raw in ["-1", "1%%", "wat"] {
+            do {
+                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", raw], isStdinTTY: true, isStdoutTTY: true)
+                throw TestFailure("expected throw for --padding \(raw)")
+            } catch let e as BgBgOneError {
+                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+            }
+        }
+    }
+
+    test("--bg-color rgb:r,g,b parses the rgb triple") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-color", "rgb:0,128,255"], isStdinTTY: true, isStdoutTTY: true)
+        if case .solidColor(let rgba) = cfg.background {
+            try assertEqual(rgba.r, 0.0)
+            try assertEqual(rgba.g, 128.0 / 255.0)
+            try assertEqual(rgba.b, 1.0)
+        } else {
+            throw TestFailure("expected .solidColor, got \(String(describing: cfg.background))")
+        }
+    }
+
+    test("a flag missing its required value reports a parser error") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if case .parser(let m) = e {
+                try assertTrue(m.contains("value"))
+            } else {
+                throw TestFailure("wrong error: \(e)")
+            }
+        }
+    }
 }

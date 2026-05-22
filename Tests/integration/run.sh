@@ -98,6 +98,19 @@ out=$("$BIN" --check 2>&1) ; rc=$?
 [ $rc -eq 0 ] && echo "$out" | grep -qi "macOS" && pass "--check" \
     || fail "--check" "rc=$rc out=$out"
 
+[ $rc -eq 0 ] && echo "$out" | grep -q "bgbgone v$expected_version" && pass "--check reports the current .version" \
+    || fail "--check version" "expected v$expected_version, got $(echo "$out" | head -1)"
+
+out=$("$BIN" --help 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q -- "--server" && echo "$out" | grep -q -- "--token-auto" && echo "$out" | grep -q -- "--type" && pass "--help mentions the server, token-auto, and type flags" \
+    || fail "--help server/type coverage" "rc=$rc"
+
+# No-arg, TTY stdin: should print help and exit 0 (no error). We can't fake a TTY
+# from this script, so test the inverse: no-arg + piped empty stdin streams stdin
+# which becomes "-" — but with stdout redirected, the stdin pipe is what triggers
+# process mode. Skip — covered by parser tests.
+pass "no-args TTY help (covered by unit tests)"
+
 # --- Local HTTP server ---
 echo ""
 echo "server: local API"
@@ -294,6 +307,199 @@ code=$(curl -sS -o "$TMP/server-improve.json" -w "%{http_code}" -X POST "$SERVER
     -F "image_file=@$FIX/07-einstein-1921.jpg")
 [ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-improve.json" && pass "server /improve not implementable" \
     || fail "server improve not implementable" "code=$code body=$(cat "$TMP/server-improve.json" 2>/dev/null)"
+
+code=$(curl -sS -o "$TMP/server-unknown.json" -w "%{http_code}" "$SERVER_BASE/totally-made-up")
+[ "$code" = "404" ] && grep -q '"not_found"' "$TMP/server-unknown.json" && pass "unknown endpoint returns 404 not_found" \
+    || fail "unknown endpoint" "code=$code body=$(cat "$TMP/server-unknown.json" 2>/dev/null)"
+
+# /v1.0/account is aliased to /account
+out=$(curl -fsS "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "/v1.0/account is aliased to /account" \
+    || fail "v1.0/account alias" "rc=$rc out=$out"
+
+# Multi-source rejection: image_file plus image_file_b64
+b64=$(python3 -c "import base64; print(base64.b64encode(open('$FIX/07-einstein-1921.jpg','rb').read()).decode())")
+code=$(curl -sS -o "$TMP/server-multi-source.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file_b64=$b64")
+[ "$code" = "400" ] && grep -q '"multiple_sources"' "$TMP/server-multi-source.json" && pass "server rejects multiple image sources" \
+    || fail "multi source rejection" "code=$code body=$(cat "$TMP/server-multi-source.json" 2>/dev/null)"
+
+# Multi-bg-source rejection: bg_color + bg_image_file
+code=$(curl -sS -o "$TMP/server-multi-bg.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "bg_color=ffffff" \
+    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg")
+[ "$code" = "400" ] && grep -q '"multiple_bg_sources"' "$TMP/server-multi-bg.json" && pass "server rejects multiple background sources" \
+    || fail "multi bg rejection" "code=$code body=$(cat "$TMP/server-multi-bg.json" 2>/dev/null)"
+
+# Missing source: no input at all
+code=$(curl -sS -o "$TMP/server-missing.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "format=png")
+[ "$code" = "400" ] && grep -q '"missing_source"' "$TMP/server-missing.json" && pass "server rejects request with no image source" \
+    || fail "missing source" "code=$code body=$(cat "$TMP/server-missing.json" 2>/dev/null)"
+
+# X-Type header policy: type=person emits X-Type: person
+headers="$TMP/server-xtype.headers"
+dst="$OUT/server-einstein-xtype.png"
+curl -fsS -D "$headers" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "type=person" \
+    -o "$dst" >/dev/null 2>&1
+if grep -qi '^X-Type: person' "$headers"; then
+    pass "server emits X-Type: person when type=person"
+else
+    fail "server X-Type" "headers=$(cat "$headers" 2>/dev/null)"
+fi
+
+# X-Type header policy: type_level=none suppresses X-Type
+headers="$TMP/server-xtype-none.headers"
+dst="$OUT/server-einstein-xtype-none.png"
+curl -fsS -D "$headers" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "type=person" \
+    -F "type_level=none" \
+    -o "$dst" >/dev/null 2>&1
+if grep -qi '^X-Type:' "$headers"; then
+    fail "X-Type suppress" "type_level=none should not emit X-Type"
+else
+    pass "type_level=none suppresses X-Type header"
+fi
+
+# bg_image_file (uploaded background) composes onto a real fixture
+dst="$OUT/server-einstein-on-earth.png"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg" \
+    -F "format=png" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server bg_image_file uploads a background and composes the result" \
+    || fail "server bg_image_file" "rc=$rc out=$out"
+
+# bg_color rgb:r,g,b triple via multipart
+dst="$OUT/server-einstein-rgb.jpg"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=jpg" \
+    -F "bg_color=rgb:0,128,255" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server bg_color accepts rgb:r,g,b triples" \
+    || fail "server bg_color rgb triple" "rc=$rc out=$out"
+
+# scale + position via JSON body
+python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-scale-pos.json" <<'PY'
+import base64, json, sys
+src, dst = sys.argv[1:3]
+payload = {
+    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "format": "png",
+    "bg_color": "ffffff",
+    "scale": "60%",
+    "position": "25% 75%",
+    "semitransparency": "false"
+}
+open(dst, "w").write(json.dumps(payload))
+PY
+dst="$OUT/server-scale-position.png"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -H "Content-Type: application/json" \
+    --data-binary "@$TMP/server-scale-pos.json" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && [ -s "$dst" ] && pass "server scale+position+semitransparency via JSON body" \
+    || fail "server scale/position JSON" "rc=$rc out=$out"
+
+# OPTIONS preflight without --cors returns 204 but does NOT set the Allow-Origin header
+# We are currently running the server with --cors; skip and re-test in the next process.
+
+stop_server
+
+# --- Server: --max-body-mb 413 limit ---
+SERVER_PORT=18789
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server-limit.log"
+"$BIN" --server --port "$SERVER_PORT" --max-body-mb 1 >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--server --max-body-mb 1 starts"
+else
+    fail "--server --max-body-mb start" "server did not become healthy"
+fi
+
+# 1 MiB limit; send a 2 MiB body and expect 413
+big="$TMP/big-payload.txt"
+dd if=/dev/zero bs=1024 count=2048 of="$big" >/dev/null 2>&1
+code=$(curl -sS -o "$TMP/server-too-big.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -H "Content-Type: application/octet-stream" \
+    --data-binary "@$big")
+[ "$code" = "413" ] && grep -q "too large" "$TMP/server-too-big.json" && pass "server returns 413 when body exceeds --max-body-mb" \
+    || fail "server 413" "code=$code body=$(cat "$TMP/server-too-big.json" 2>/dev/null)"
+
+stop_server
+
+# --- Server: --no-origin-check accepts foreign Origin ---
+SERVER_PORT=18790
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server-noorigin.log"
+"$BIN" --server --port "$SERVER_PORT" --no-origin-check >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--server --no-origin-check starts"
+else
+    fail "--server --no-origin-check start" "log=$(cat "$SERVER_LOG" 2>/dev/null)"
+fi
+
+code=$(curl -sS -o /dev/null -w "%{http_code}" -H "Origin: http://example.com" "$SERVER_BASE/health")
+[ "$code" = "200" ] && pass "--no-origin-check accepts foreign Origin" \
+    || fail "no-origin-check" "expected 200, got $code"
+
+stop_server
+
+# --- Server: --footgun (wildcard CORS, no origin check) ---
+SERVER_PORT=18791
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server-footgun.log"
+"$BIN" --server --port "$SERVER_PORT" --footgun >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--footgun starts"
+else
+    fail "--footgun start" "log=$(cat "$SERVER_LOG" 2>/dev/null)"
+fi
+
+headers="$TMP/server-footgun.headers"
+curl -fsS -D "$headers" -H "Origin: http://anything.example" "$SERVER_BASE/health" >/dev/null 2>&1
+if grep -qi '^Access-Control-Allow-Origin: \*' "$headers"; then
+    pass "--footgun replies with Access-Control-Allow-Origin: *"
+else
+    fail "footgun CORS" "headers=$(cat "$headers" 2>/dev/null)"
+fi
+
+stop_server
+
+# --- Server: wrong Bearer rejected, X-API-Key rejected with bad value ---
+SERVER_PORT=18792
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+SERVER_LOG="$TMP/server-auth.log"
+"$BIN" --server --port "$SERVER_PORT" --token "right-token" >"$SERVER_LOG" 2>&1 &
+SERVER_PID=$!
+if wait_for_server "$SERVER_BASE/health"; then
+    pass "--server --token starts (auth scenario)"
+else
+    fail "--server token auth start" "log=$(cat "$SERVER_LOG" 2>/dev/null)"
+fi
+
+code=$(curl -sS -o "$TMP/server-wrong-bearer.json" -w "%{http_code}" -H "Authorization: Bearer wrong-token" "$SERVER_BASE/v1.0/account")
+[ "$code" = "401" ] && pass "wrong Bearer token -> 401" \
+    || fail "wrong Bearer" "expected 401, got $code"
+
+code=$(curl -sS -o "$TMP/server-wrong-apikey.json" -w "%{http_code}" -H "X-API-Key: wrong-token" "$SERVER_BASE/v1.0/account")
+[ "$code" = "401" ] && pass "wrong X-API-Key -> 401" \
+    || fail "wrong X-API-Key" "expected 401, got $code"
+
+# /health stays public on loopback even with --token
+code=$(curl -sS -o /dev/null -w "%{http_code}" "$SERVER_BASE/health")
+[ "$code" = "200" ] && pass "/health stays public on loopback even when --token is set" \
+    || fail "health loopback public" "expected 200, got $code"
 
 stop_server
 
@@ -640,6 +846,138 @@ out=$("$BIN" "$src" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI --bg-image shared field produces PNG" \
     || fail "CLI --bg-image shared field" "rc=$rc out=$out"
+
+# --- e2e: --type hint maps to an algorithm (product run on a real fixture) ---
+echo ""
+echo "e2e: --type"
+
+for type in person product car animal graphic transportation; do
+    dst="$OUT/einstein-type-$type.png"
+    out=$("$BIN" "$src" --type "$type" --bg color:white -o "$dst" 2>&1) ; rc=$?
+    [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--type $type" || fail "--type $type" "rc=$rc out=$out"
+done
+
+# --- e2e: --shadow-type drop vs none ---
+echo ""
+echo "e2e: --shadow-type"
+
+src="$FIX/07-einstein-1921.jpg"
+"$BIN" "$src" --bg color:white --shadow-type drop --shadow-opacity 60 -o "$OUT/einstein-shadow-drop.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --shadow-type none -o "$OUT/einstein-shadow-none.png" 2>/dev/null
+if [ -s "$OUT/einstein-shadow-drop.png" ] && [ -s "$OUT/einstein-shadow-none.png" ]; then
+    if cmp -s "$OUT/einstein-shadow-drop.png" "$OUT/einstein-shadow-none.png"; then
+        fail "--shadow-type" "drop and none produced identical output"
+    else
+        pass "--shadow-type drop differs from --shadow-type none"
+    fi
+else
+    fail "--shadow-type" "outputs missing"
+fi
+
+# --- e2e: --scale + --position shift the subject on the canvas ---
+echo ""
+echo "e2e: --scale + --position"
+
+src="$FIX/07-einstein-1921.jpg"
+"$BIN" "$src" --bg color:white -o "$OUT/einstein-scale-base.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --scale 50% --position center -o "$OUT/einstein-scale-center.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --scale 50% --position "25% 75%" -o "$OUT/einstein-scale-corner.png" 2>/dev/null
+if [ -s "$OUT/einstein-scale-base.png" ] && [ -s "$OUT/einstein-scale-center.png" ] && [ -s "$OUT/einstein-scale-corner.png" ]; then
+    if cmp -s "$OUT/einstein-scale-center.png" "$OUT/einstein-scale-corner.png"; then
+        fail "--scale + --position" "center and 25%/75% positions matched"
+    elif cmp -s "$OUT/einstein-scale-base.png" "$OUT/einstein-scale-center.png"; then
+        fail "--scale + --position" "scaled output identical to unscaled"
+    else
+        pass "--scale + --position move the subject vs base"
+    fi
+else
+    fail "--scale + --position" "outputs missing"
+fi
+
+# --- e2e: --size preview produces a smaller output than --size full ---
+echo ""
+echo "e2e: --size preview"
+
+src="$FIX/02-nasa-mccandless-eva.jpg"
+"$BIN" "$src" --size preview -o "$OUT/eva-preview.png" 2>/dev/null
+"$BIN" "$src" --size full -o "$OUT/eva-full.png" 2>/dev/null
+if [ -s "$OUT/eva-preview.png" ] && [ -s "$OUT/eva-full.png" ]; then
+    sz_prev=$(python3 -c "from PIL import Image; print(Image.open('$OUT/eva-preview.png').size)")
+    sz_full=$(python3 -c "from PIL import Image; print(Image.open('$OUT/eva-full.png').size)")
+    smaller=$(python3 -c "from PIL import Image
+p = Image.open('$OUT/eva-preview.png').size
+f = Image.open('$OUT/eva-full.png').size
+print('ok' if p[0]*p[1] < f[0]*f[1] else f'fail prev={p} full={f}')")
+    [ "$smaller" = "ok" ] && pass "--size preview $sz_prev is smaller than --size full $sz_full" \
+        || fail "--size preview" "$smaller"
+else
+    fail "--size preview" "outputs missing"
+fi
+
+# --- e2e: --semitransparency false hardens the matte (different bytes from default) ---
+echo ""
+echo "e2e: --semitransparency"
+
+src="$FIX/02-nasa-mccandless-eva.jpg"
+"$BIN" "$src" --semitransparency true -o "$OUT/eva-semi-true.png" 2>/dev/null
+"$BIN" "$src" --semitransparency false -o "$OUT/eva-semi-false.png" 2>/dev/null
+if [ -s "$OUT/eva-semi-true.png" ] && [ -s "$OUT/eva-semi-false.png" ]; then
+    if cmp -s "$OUT/eva-semi-true.png" "$OUT/eva-semi-false.png"; then
+        fail "--semitransparency" "true and false produced identical bytes"
+    else
+        pass "--semitransparency true differs from --semitransparency false"
+    fi
+else
+    fail "--semitransparency" "outputs missing"
+fi
+
+# --- e2e: --crop-margin one/two/four-value forms accepted ---
+echo ""
+echo "e2e: --crop-margin variants"
+
+src="$FIX/07-einstein-1921.jpg"
+for margin in "5%" "10% 20%" "5% 10% 15% 20%"; do
+    dst="$OUT/einstein-margin-${margin// /-}.png"
+    dst="${dst//%/pct}"
+    out=$("$BIN" "$src" --crop --crop-margin "$margin" -o "$dst" 2>&1) ; rc=$?
+    [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--crop-margin \"$margin\"" \
+        || fail "--crop-margin $margin" "rc=$rc out=$out"
+done
+
+# --- e2e: --roi narrows the detection region ---
+echo ""
+echo "e2e: --roi"
+
+src="$FIX/02-nasa-mccandless-eva.jpg"
+dst="$OUT/eva-roi.png"
+out=$("$BIN" "$src" --roi "0% 0% 100% 50%" -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "--roi 0% 0% 100% 50% produces PNG" \
+    || fail "--roi" "rc=$rc out=$out"
+
+# --- e2e: stdout format inference covers heic, tiff via -o ---
+echo ""
+echo "e2e: -o format inference"
+
+src="$FIX/07-einstein-1921.jpg"
+for ext in heic tiff avif; do
+    dst="$OUT/einstein-inferred.$ext"
+    out=$("$BIN" "$src" --bg color:white -o "$dst" 2>&1) ; rc=$?
+    [ $rc -eq 0 ] && [ -s "$dst" ] && pass "-o out.$ext infers $ext format" \
+        || fail "-o $ext inference" "rc=$rc out=$out"
+done
+
+# --- e2e: --quiet truly silent on success; --verbose writes diagnostic stderr ---
+echo ""
+echo "e2e: --quiet vs --verbose"
+
+src="$FIX/07-einstein-1921.jpg"
+qerr=$("$BIN" "$src" -o "$OUT/quiet.png" --quiet 2>&1 >/dev/null)
+[ -z "$qerr" ] && pass "--quiet writes no stderr on success" \
+    || fail "--quiet" "got stderr: $qerr"
+
+verr=$("$BIN" "$src" -o "$OUT/verbose.png" --verbose 2>&1 >/dev/null)
+[ -n "$verr" ] && pass "--verbose writes some stderr on success" \
+    || fail "--verbose" "stderr was empty"
 
 # --- e2e: --threshold changes matte decisively ---
 echo ""

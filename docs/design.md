@@ -1,6 +1,6 @@
 # bgbgone — design
 
-Date: 2026-05-20
+Date: 2026-05-22
 Status: approved (in implementation)
 Sibling references: [apfel](https://github.com/Arthur-Ficial/apfel), [auge](https://github.com/Arthur-Ficial/auge)
 
@@ -199,10 +199,10 @@ it via `--bg image:<path>`.
 
 ## Testing
 
-Three layers, all green-or-fail in `make test`:
+Four layers, all green-or-fail in `make release`:
 
-1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, output naming, format inference, JSON escaping, routing validation, compatibility request parsing/security, geometry/size config, NetworkPolicy.
-2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; live HTTP server, auth/origin/CORS checks, multipart/JSON/form processing, ZIP output, metadata headers, accepted not-implementable cases, exit codes, JSON shape, capability gating, algorithm outputs against fixtures.
+1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing for every CLI flag (~190 cases), colour parsing, output naming, format inference, JSON escaping, routing validation, server compatibility request parsing, server-side security policy (origin/Bearer/X-API-Key/loopback), geometry / size / shadow / type / channels config mapping, NetworkPolicy.
+2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; CLI invocations across every shared flag (`--type`, `--shadow-type`, `--scale`/`--position`, `--size`, `--semitransparency`, `--crop-margin` variants, `--roi`, all output formats, `--bg-image`/`--bg-color`); live HTTP server scenarios — CORS preflight, multi-source rejection, body limit `413`, `--no-origin-check`, `--footgun`, Bearer/X-API-Key auth, `X-Type` header policy, JSON/form/multipart bodies, ZIP output, accepted not-implementable cases.
 3. **README image regeneration** (`scripts/make-readme-examples.sh`) — visual regression surface generated from the freshly installed binary.
 4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs five batch processes, verifies 100 outputs per run, updates the README average, and reports throughput.
 
