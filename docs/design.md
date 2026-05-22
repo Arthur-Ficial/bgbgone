@@ -26,10 +26,13 @@ bgbgone --server                        # local HTTP API on 127.0.0.1:8787
 # background replacement
 --bg color:<spec>                       # solid colour: #fff | white | rgb:255,0,0
 --bg image:<path>                       # image background
+--bg-color <spec>                       # shared solid colour field
+--bg-image <path>                       # shared background image field
 --bg-fit cover|contain|tile|center      # how the bg fits the canvas
 
 # matte / edge tuning
 --mask-only                             # output the alpha mask only
+--channels rgba|alpha                   # finalized image or alpha mask
 --feather <px>                          # edge softening (default 1)
 --threshold <0..1>                      # mask binarisation threshold
 --padding <px|%>                        # extra space around subject
@@ -45,14 +48,15 @@ bgbgone --server                        # local HTTP API on 127.0.0.1:8787
 
 # algorithm
 --algo auto|vn-mask|person|saliency  (default: auto)
+--type auto|person|product|car|animal|graphic|transportation
 
 # multi-instance
 --multi                                 # one output per detected subject
 --instance-naming "{base}-{n}.{ext}"
 
 # output
---to png|jpg|zip|heic|avif|tiff  (default: png)
---size preview|medium|hd|full|50MP
+--to, --format png|jpg|zip|heic|avif|tiff  (default: png)
+--size preview|full|50MP|auto
 --quality 1..100             (default: 92 for lossy)
 -o, --output <path>
 --out-dir <dir>
@@ -163,9 +167,9 @@ Supported request fields for `POST /v1.0/bgbgone`:
 - Matte: `channels=rgba|alpha`.
 - Background: `bg_color`, `bg_image_file`, `bg_image_file_b64`.
 - Geometry: `roi`, `crop=true`, `crop_margin`, `scale`, `position`.
-- Shadow/matte: `add_shadow`, `shadow_type`, `shadow_opacity`, `semitransparency`.
+- Shared image controls: `quality`, `bg_fit`, `feather`, `threshold`, `shadow_type`, `shadow_opacity`, `semitransparency`.
 - Subject hint: `type=auto|person|product|car|animal|graphic|transportation|saliency|vn-mask`, plus `type_level`.
-- Size cap: `size=preview|small|regular|medium|hd|full|4k|auto|50MP`.
+- Size cap: `size=preview|full|auto|50MP`.
 
 See `docs/server/` for the full wire contract and security matrix.
 
@@ -200,7 +204,7 @@ Three layers, all green-or-fail in `make test`:
 1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing, colour parsing, output naming, format inference, JSON escaping, routing validation, compatibility request parsing/security, geometry/size config, NetworkPolicy.
 2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; live HTTP server, auth/origin/CORS checks, multipart/JSON/form processing, ZIP output, metadata headers, accepted not-implementable cases, exit codes, JSON shape, capability gating, algorithm outputs against fixtures.
 3. **README image regeneration** (`scripts/make-readme-examples.sh`) — visual regression surface generated from the freshly installed binary.
-4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs one batch process, verifies 100 outputs, and reports throughput.
+4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs five batch processes, verifies 100 outputs per run, updates the README average, and reports throughput.
 
 Current local measurement: 100 images in 8.075s, 12.38 images/s, 80.7 ms/image.
 

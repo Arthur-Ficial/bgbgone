@@ -83,11 +83,9 @@ func runServerCompatibilityTests() {
         }
     }
 
-    test("size aliases map to output megapixel caps") {
+    test("canonical size values map to output megapixel caps") {
         let cases: [(String, Double)] = [
-            ("preview", 0.25), ("small", 0.25), ("regular", 0.25),
-            ("medium", 1.5), ("hd", 4.0), ("full", 25.0), ("4k", 25.0),
-            ("auto", 25.0), ("50MP", 50.0)
+            ("preview", 0.25), ("full", 25.0), ("auto", 25.0), ("50MP", 50.0)
         ]
         for (raw, expected) in cases {
             let req = try ServerRemovalRequest.parse(form: uploadedForm(fields: ["size": raw, "format": "jpg"]), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
@@ -96,6 +94,17 @@ func runServerCompatibilityTests() {
 
         let pngFull = try ServerRemovalRequest.parse(form: uploadedForm(fields: ["size": "full", "format": "png"]), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
         try assertEqual(pngFull.config.maxOutputMegapixels, 10.0)
+    }
+
+    test("old size names are rejected") {
+        for raw in ["small", "regular", "medium", "hd", "4k"] {
+            do {
+                _ = try ServerRemovalRequest.parse(form: uploadedForm(fields: ["size": raw]), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
+                throw TestFailure("expected invalid_size for \(raw)")
+            } catch let e as ServerAPIError {
+                try assertEqual(e.code, "invalid_size")
+            }
+        }
     }
 
     test("type and type_level parse to local algorithm and response metadata policy") {
@@ -135,7 +144,24 @@ func runServerCompatibilityTests() {
         try assertEqual(req.config.shadowOpacity, 0.25)
     }
 
-    test("invalid channels, geometry, and shadow conflicts return API error codes") {
+    test("local shared image controls parse through the server request") {
+        let req = try ServerRemovalRequest.parse(
+            form: uploadedForm(fields: [
+                "quality": "77",
+                "bg_fit": "tile",
+                "feather": "6",
+                "threshold": "0.35"
+            ]),
+            inputPath: "/tmp/input.jpg",
+            backgroundImagePath: nil
+        )
+        try assertEqual(req.config.quality, 77)
+        try assertEqual(req.config.bgFit, .tile)
+        try assertEqual(req.config.feather, 6.0)
+        try assertEqual(req.config.threshold, 0.35)
+    }
+
+    test("invalid channels, geometry, matte, output, and shadow controls return API error codes") {
         let invalids: [(String, [String: String])] = [
             ("invalid_channels", ["channels": "rgb"]),
             ("invalid_roi", ["roi": "0 0 10"]),
@@ -143,7 +169,10 @@ func runServerCompatibilityTests() {
             ("invalid_scale", ["scale": "5%"]),
             ("invalid_position", ["position": "left"]),
             ("invalid_semitransparency", ["semitransparency": "maybe"]),
-            ("multiple_shadow_params", ["add_shadow": "true", "shadow_type": "drop"]),
+            ("invalid_quality", ["quality": "101"]),
+            ("invalid_bg_fit", ["bg_fit": "stretch"]),
+            ("invalid_feather", ["feather": "-1"]),
+            ("invalid_threshold", ["threshold": "2"]),
             ("invalid_shadow_opacity", ["shadow_type": "drop", "shadow_opacity": "101"])
         ]
         for (code, fields) in invalids {

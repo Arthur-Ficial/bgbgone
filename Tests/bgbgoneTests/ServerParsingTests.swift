@@ -39,7 +39,11 @@ func runServerParsingTests() {
                 "channels": "rgba",
                 "crop": "true",
                 "crop_margin": "12",
-                "add_shadow": "true",
+                "shadow_type": "drop",
+                "quality": "80",
+                "bg_fit": "contain",
+                "feather": "4",
+                "threshold": "0.55",
                 "type": "person",
                 "size": "auto"
             ],
@@ -55,6 +59,10 @@ func runServerParsingTests() {
         try assertTrue(request.config.cropToSubject)
         try assertEqual(request.config.cropMargins, ServerEdgeInsets(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
         try assertTrue(request.config.dropShadow)
+        try assertEqual(request.config.quality, 80)
+        try assertEqual(request.config.bgFit, .contain)
+        try assertEqual(request.config.feather, 4.0)
+        try assertEqual(request.config.threshold, 0.55)
         try assertEqual(request.config.algo, .person)
         if case .solidColor(let rgba) = request.config.background {
             try assertEqual(rgba.r, 1.0)

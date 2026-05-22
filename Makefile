@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration performance-100 test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
 
 # --- Environment ---
 
@@ -40,8 +40,10 @@ test-unit: check-toolchain generate-build-info
 test-integration: build
 	bash Tests/integration/run.sh .build/release/$(BINARY)
 
-test-performance-100 perf-100: build
+performance-100:
 	bash Tests/performance/run-100.sh .build/release/$(BINARY)
+
+test-performance-100 perf-100: build performance-100
 
 fixtures:
 	bash scripts/fetch-fixtures.sh
@@ -143,7 +145,7 @@ readme-images: install
 
 # Full release gate: bump → test → install → regenerate README images →
 # package. Use this for every public release; never tag without it.
-release: test install readme-images package-release-asset
+release: test install readme-images performance-100 package-release-asset
 	@v=$$(cat $(VERSION_FILE)); \
 	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
 	echo ""; \

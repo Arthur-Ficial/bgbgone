@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.32](https://img.shields.io/badge/version-0.1.32-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.35](https://img.shields.io/badge/version-0.1.35-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -314,10 +314,13 @@ DEFAULTS:
 BACKGROUND:
   --bg color:<#hex|named|rgb:r,g,b>     solid colour
   --bg image:<path>                     image file
+  --bg-color <spec>                     shared solid colour field
+  --bg-image <path>                     shared background image field
   --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
 MATTE / EDGE:
   --mask-only                           output the alpha mask only
+  --channels rgba|alpha                 finalized image or alpha mask
   --feather <px>                        edge softening (default: 1)
   --threshold <0..1>                    mask binarisation
   --padding <px|N%>                     extra space around subject
@@ -333,14 +336,16 @@ MATTE / EDGE:
 
 ALGORITHM:
   --algo auto|vn-mask|person|saliency   (default: auto)
+  --type auto|person|product|car|animal|graphic|transportation
 
 MULTI-INSTANCE:
   --multi                               one file per detected instance (file input only)
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
-  --to png|jpg|zip|heic|avif|tiff       output format (default: png)
-  --size preview|medium|hd|full|50MP    optional output megapixel cap
+  --to, --format png|jpg|zip|heic|avif|tiff
+                                         output format (default: png)
+  --size preview|full|50MP|auto         optional output megapixel cap
   --quality 1..100                      for lossy formats (default: 92)
   -o, --output <path>                   explicit output file
   --out-dir <dir>                       batch output directory
@@ -401,7 +406,13 @@ HTTP server ───────────────→ same pipeline, mult
 make test-performance-100
 ```
 
-100 fixture-backed inputs, one batch process, 100 outputs verified. Latest local run: **100 images in 8.098 s, 12.35 images/s, 81.0 ms/image**, on an M-series MacBook Air. On-device, no network, no GPU contention with another process.
+100 fixture-backed inputs, five batch processes, 100 outputs verified per run. Release-gate performance is measured with:
+
+```bash
+bash Tests/performance/run-100.sh .build/release/bgbgone
+```
+
+Average over 5 release-binary runs: **100 images in 7.802 s, 12.82 images/s, 78.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 

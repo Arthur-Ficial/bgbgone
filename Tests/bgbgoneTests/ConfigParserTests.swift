@@ -175,6 +175,11 @@ func runConfigParserTests() {
         try assertEqual(cfg.outputFormat, .zip)
     }
 
+    test("--format is the CLI spelling for the same output format contract") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.zip", "--format", "zip"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.outputFormat, .zip)
+    }
+
     test("--to webp is rejected (not supported by ImageIO on this SDK)") {
         do {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true)
@@ -215,8 +220,28 @@ func runConfigParserTests() {
         }
     }
 
+    test("--bg-color parses the shared solid colour field") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-color", "fff"], isStdinTTY: true, isStdoutTTY: true)
+        if case .solidColor(let rgba) = cfg.background {
+            try assertEqual(rgba.r, 1.0)
+            try assertEqual(rgba.g, 1.0)
+            try assertEqual(rgba.b, 1.0)
+        } else {
+            throw TestFailure("expected .solidColor, got \(String(describing: cfg.background))")
+        }
+    }
+
     test("--bg image:./bg.jpg parses image bg") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "image:./bg.jpg"], isStdinTTY: true, isStdoutTTY: true)
+        if case .image(let path) = cfg.background {
+            try assertEqual(path, "./bg.jpg")
+        } else {
+            throw TestFailure("expected .image, got \(String(describing: cfg.background))")
+        }
+    }
+
+    test("--bg-image parses the shared background image field") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-image", "./bg.jpg"], isStdinTTY: true, isStdoutTTY: true)
         if case .image(let path) = cfg.background {
             try assertEqual(path, "./bg.jpg")
         } else {
@@ -251,6 +276,14 @@ func runConfigParserTests() {
         }
     }
 
+    test("--type maps shared foreground type hints to local algorithms") {
+        let person = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "person"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(person.algo, .person)
+
+        let product = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "product"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(product.algo, .auto)
+    }
+
     test("--algo vn-remove and --algo sky are rejected (not in public SDK)") {
         for raw in ["vn-remove", "sky"] {
             do {
@@ -274,6 +307,17 @@ func runConfigParserTests() {
     test("--mask-only sets maskOnly true") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--mask-only"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.maskOnly)
+    }
+
+    test("--channels alpha maps to the same mask-only output as the server") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--channels", "alpha"], isStdinTTY: true, isStdoutTTY: true)
+        try assertTrue(cfg.maskOnly)
+        try assertEqual(cfg.outputFormat, .png)
+    }
+
+    test("--channels rgba keeps finalized image output") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--channels", "rgba"], isStdinTTY: true, isStdoutTTY: true)
+        try assertFalse(cfg.maskOnly)
     }
 
     test("--feather 4 parses") {
@@ -313,7 +357,8 @@ func runConfigParserTests() {
             args: [
                 "in.jpg",
                 "-o", "out.png",
-                "--size", "hd",
+                "--format", "jpg",
+                "--size", "full",
                 "--roi", "10% 20% 90% 80%",
                 "--crop-margin", "10px 20px 30px 40px",
                 "--scale", "50%",
@@ -325,7 +370,7 @@ func runConfigParserTests() {
             isStdinTTY: true,
             isStdoutTTY: true
         )
-        try assertEqual(cfg.maxOutputMegapixels, 4.0)
+        try assertEqual(cfg.maxOutputMegapixels, 25.0)
         try assertEqual(cfg.roi, ServerRectSpec(x1: .percent(0.10), y1: .percent(0.20), x2: .percent(0.90), y2: .percent(0.80)))
         try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(10), right: .pixels(20), bottom: .pixels(30), left: .pixels(40)))
         try assertEqual(cfg.scalePercent, 0.50)

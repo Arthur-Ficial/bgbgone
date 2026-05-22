@@ -175,6 +175,19 @@ out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
 [ $rc -eq 0 ] && check_jpeg "$dst" && pass "server format=jpg bg_color -> JPEG" \
     || fail "server jpg bg_color" "rc=$rc out=$out"
 
+dst="$OUT/server-shared-controls.jpg"
+out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "format=jpg" \
+    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg" \
+    -F "bg_fit=tile" \
+    -F "feather=3" \
+    -F "threshold=0.45" \
+    -F "quality=70" \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server shared image controls -> JPEG" \
+    || fail "server shared image controls" "rc=$rc out=$out"
+
 json="$OUT/server-json-response.json"
 out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
@@ -602,6 +615,31 @@ out=$("$BIN" "$src" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI advanced compatibility options produce PNG" \
     || fail "CLI advanced compatibility options" "rc=$rc out=$out"
+
+dst="$OUT/einstein-cli-shared.jpg"
+out=$("$BIN" "$src" \
+    --format jpg \
+    --bg-color fff \
+    --channels rgba \
+    --type person \
+    --quality 80 \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "CLI shared compatibility flags produce JPEG" \
+    || fail "CLI shared compatibility flags" "rc=$rc out=$out"
+
+dst="$OUT/einstein-cli-alpha.png"
+out=$("$BIN" "$src" --channels alpha --format png -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI --channels alpha emits matte PNG" \
+    || fail "CLI --channels alpha" "rc=$rc out=$out"
+
+dst="$OUT/einstein-cli-bg-image.png"
+out=$("$BIN" "$src" \
+    --bg-image "$FIX/03-nasa-earthrise.jpg" \
+    --bg-fit contain \
+    --format png \
+    -o "$dst" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI --bg-image shared field produces PNG" \
+    || fail "CLI --bg-image shared field" "rc=$rc out=$out"
 
 # --- e2e: --threshold changes matte decisively ---
 echo ""

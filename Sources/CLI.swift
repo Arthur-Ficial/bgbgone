@@ -36,10 +36,13 @@ enum CLI {
         BACKGROUND:
           --bg color:<#hex|named|rgb:r,g,b>     solid colour
           --bg image:<path>                     image file
+          --bg-color <spec>                     shared solid colour field
+          --bg-image <path>                     shared background image field
           --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
         MATTE / EDGE:
           --mask-only                           output the alpha mask only
+          --channels rgba|alpha                 finalized image or alpha mask
           --feather <px>                        edge softening (default: 1)
           --threshold <0..1>                    mask binarisation
           --padding <px|N%>                     extra space around subject
@@ -55,6 +58,7 @@ enum CLI {
 
         ALGORITHM:
           --algo auto|vn-mask|person|saliency   (default: auto)
+          --type auto|person|product|car|animal|graphic|transportation
           auto uses the public foreground-instance mask API.
 
         MULTI-INSTANCE:
@@ -62,8 +66,9 @@ enum CLI {
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
-          --to png|jpg|zip|heic|avif|tiff       output format (default: png)
-          --size preview|medium|hd|full|50MP    optional output megapixel cap
+          --to, --format png|jpg|zip|heic|avif|tiff
+                                                 output format (default: png)
+          --size preview|full|50MP|auto         optional output megapixel cap
           --quality 1..100                      for lossy formats (default: 92)
           -o, --output <path>                   explicit output file
           --out-dir <dir>                       batch output directory

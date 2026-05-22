@@ -112,11 +112,11 @@ public enum ConfigParser {
             case "--out-dir":
                 sawProcessingOption = true
                 cfg.outputDir = try takeValue(args, &i, flag: a)
-            case "--to":
+            case "--to", "--format":
                 sawProcessingOption = true
                 let v = try takeValue(args, &i, flag: a)
                 guard let f = OutputFormat.parse(v) else {
-                    throw BgBgOneError.parser("unknown --to value: \(v) (allowed: png, jpg/jpeg, zip, heic, avif, tiff; webp output is not supported by this zero-dependency ImageIO build)")
+                    throw BgBgOneError.parser("unknown \(a) value: \(v) (allowed: png, jpg/jpeg, zip, heic, avif, tiff; webp output is not supported by this zero-dependency ImageIO build)")
                 }
                 cfg.outputFormat = f
                 explicitOutputFormat = true
@@ -133,6 +133,13 @@ public enum ConfigParser {
             case "--bg":
                 sawProcessingOption = true
                 cfg.background = try parseBackground(try takeValue(args, &i, flag: a))
+            case "--bg-color":
+                sawProcessingOption = true
+                let value = try takeValue(args, &i, flag: a)
+                cfg.background = .solidColor(try ColourParser.parse(ServerCompatibilityParser.normalizedColor(value)))
+            case "--bg-image":
+                sawProcessingOption = true
+                cfg.background = .image(try takeValue(args, &i, flag: a))
             case "--bg-fit":
                 sawProcessingOption = true
                 let v = try takeValue(args, &i, flag: a)
@@ -147,10 +154,29 @@ public enum ConfigParser {
                     throw BgBgOneError.parser("unknown --algo value: \(v) (allowed: auto, vn-mask, person, saliency)")
                 }
                 cfg.algo = f
+            case "--type":
+                sawProcessingOption = true
+                let parsed = try mapAPIParserError {
+                    try ServerCompatibilityParser.parseForegroundType(try takeValue(args, &i, flag: a))
+                }
+                cfg.algo = parsed.algo
             case "--mask-only":
                 sawProcessingOption = true
                 cfg.maskOnly = true
                 i += 1
+            case "--channels":
+                sawProcessingOption = true
+                let v = ServerCompatibilityParser.normalize(try takeValue(args, &i, flag: a))
+                switch v {
+                case "rgba":
+                    cfg.maskOnly = false
+                case "alpha":
+                    cfg.maskOnly = true
+                    cfg.outputFormat = .png
+                    explicitOutputFormat = true
+                default:
+                    throw BgBgOneError.parser("unknown --channels value: \(v) (allowed: rgba, alpha)")
+                }
             case "--feather":
                 sawProcessingOption = true
                 let v = try takeValue(args, &i, flag: a)

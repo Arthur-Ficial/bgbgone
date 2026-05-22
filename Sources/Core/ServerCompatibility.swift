@@ -94,13 +94,9 @@ public enum ServerCompatibilityParser {
         let normalized = normalize(raw ?? "preview")
         let base: Double
         switch normalized {
-        case "", "preview", "small", "regular":
+        case "preview":
             base = 0.25
-        case "medium":
-            base = 1.5
-        case "hd":
-            base = 4.0
-        case "full", "4k", "auto":
+        case "full", "auto":
             base = 25.0
         case "50mp":
             base = 50.0
@@ -108,6 +104,16 @@ public enum ServerCompatibilityParser {
             throw ServerAPIError.invalid("invalid_size", "Invalid value for parameter 'size'")
         }
         return outputFormat == .png ? min(base, 10.0) : base
+    }
+
+    public static func parseQuality(_ raw: String?) throws -> Int {
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return 92
+        }
+        guard let value = Int(raw.trimmingCharacters(in: .whitespacesAndNewlines)), (1...100).contains(value) else {
+            throw ServerAPIError.invalid("invalid_quality", "Invalid quality parameter given")
+        }
+        return value
     }
 
     public static func parseBoolean(_ raw: String?, default defaultValue: Bool, code: String, title: String) throws -> Bool {
@@ -218,6 +224,65 @@ public enum ServerCompatibilityParser {
             throw ServerAPIError.invalid("invalid_shadow_opacity", "Invalid shadow_opacity parameter given")
         }
         return n / 100.0
+    }
+
+    public static func parseFeather(_ raw: String?) throws -> Double? {
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        guard let value = Double(raw.trimmingCharacters(in: .whitespacesAndNewlines)), value >= 0 else {
+            throw ServerAPIError.invalid("invalid_feather", "Invalid feather parameter given")
+        }
+        return value
+    }
+
+    public static func parseThreshold(_ raw: String?) throws -> Double? {
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        guard let value = Double(raw.trimmingCharacters(in: .whitespacesAndNewlines)), (0...1).contains(value) else {
+            throw ServerAPIError.invalid("invalid_threshold", "Invalid threshold parameter given")
+        }
+        return value
+    }
+
+    public static func parseBgFit(_ raw: String?) throws -> BgFit? {
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        guard let fit = BgFit(rawValue: normalize(raw)) else {
+            throw ServerAPIError.invalid("invalid_bg_fit", "Invalid bg_fit parameter given")
+        }
+        return fit
+    }
+
+    public static func parseForegroundType(_ raw: String?) throws -> (algo: Algo, typeValue: String) {
+        let type = normalize(raw ?? "auto")
+        switch type {
+        case "", "auto":
+            return (.auto, "other")
+        case "person":
+            return (.person, "person")
+        case "product", "car", "animal", "graphic", "transportation":
+            return (.auto, type)
+        case "saliency":
+            return (.saliency, "other")
+        case "vn-mask":
+            return (.vnMask, "other")
+        default:
+            throw ServerAPIError.invalid("invalid_type", "Invalid type parameter given")
+        }
+    }
+
+    public static func normalizedColor(_ value: String) -> String {
+        let raw = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.hasPrefix("#") || raw.hasPrefix("rgb:") || raw.hasPrefix("rgba:") {
+            return raw
+        }
+        if raw.allSatisfy(\.isHexDigit), [3, 4, 6, 8].contains(raw.count) {
+            return "#\(raw)"
+        }
+        return raw
     }
 
     public static func normalize(_ raw: String) -> String {

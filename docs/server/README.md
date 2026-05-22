@@ -66,22 +66,25 @@ Returns `501` with a `NOT IMPLEMENTABLE` error because local bgbgone never submi
 | `image_url` | text | NOT IMPLEMENTABLE | Remote fetches conflict with the no-network runtime. |
 | `format` | text | yes | `auto`, `png`, `jpg`, `jpeg`, `zip`, `heic`, `avif`, `tiff`, or `json`. `webp` returns NOT IMPLEMENTABLE on this encoder stack. |
 | `channels` | text | yes | `rgba` for image output, `alpha` for mask-only output. |
+| `quality` | text | yes | `1` through `100` for lossy output formats. |
 | `bg_color` | text | yes | Hex with or without `#`, named color, `rgb:r,g,b`, or `rgba:r,g,b,a`. |
 | `bg_image_file` | file | yes | Uploaded replacement background image. |
 | `bg_image_file_b64` | text | yes | Base64 replacement background bytes. |
 | `bg_image_url` | text | NOT IMPLEMENTABLE | Remote fetches conflict with the no-network runtime. |
+| `bg_fit` | text | yes | `cover`, `contain`, `tile`, or `center` for uploaded background images. |
+| `feather` | text | yes | Non-negative matte edge softening radius in pixels. |
+| `threshold` | text | yes | `0` through `1` matte binarisation threshold. |
 | `crop` | boolean text | yes | `true`, `1`, `yes`, `y`, or `on`. |
 | `crop_margin` | text | yes | One, two, or four pixel/percent values, for example `24px`, `10%`, or `5% 10%`. |
 | `roi` | text | yes | Four pixel/percent coordinates: `x1 y1 x2 y2`. |
 | `scale` | text | yes | `original` or `10%` through `100%`. |
 | `position` | text | yes | `original`, `center`, `x%`, or `x% y%`. |
-| `add_shadow` | boolean text | yes | Adds the same drop shadow as CLI `--shadow`. |
 | `shadow_type` | text | yes | `auto`, `drop`, `3D`, `car`, or `none`; all enabled types map to the local drop shadow. |
 | `shadow_opacity` | text | yes | `auto` or `0` through `100`. |
 | `semitransparency` | boolean text | yes | `false` hardens the matte. |
 | `type` | text | yes | `auto`, `person`, `product`, `car`, `animal`, `graphic`, `transportation`, `saliency`, `vn-mask`. |
 | `type_level` | text | yes | `none`, `1`, `2`, or `latest`; `none` suppresses `X-Type`. |
-| `size` | text | yes | `preview`, `small`, `regular`, `medium`, `hd`, `full`, `4k`, `auto`, or `50MP`; downscales only. |
+| `size` | text | yes | `preview`, `full`, `auto`, or `50MP`; downscales only. |
 
 Unknown fields are ignored unless they would require unsupported network behavior.
 
