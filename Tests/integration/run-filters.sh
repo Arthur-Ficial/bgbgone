@@ -222,3 +222,17 @@ if [ -f "$PROJECT_ROOT/docs/filters-out-of-scope.md" ] && \
 else
     fail "T61 #63 docs/filters-out-of-scope.md present" "missing or empty"
 fi
+
+# T62 #64: DEVELOPMENT.md captures the dev best practices working agreement.
+DEV_MD="$PROJECT_ROOT/DEVELOPMENT.md"
+if [ -f "$DEV_MD" ] \
+    && grep -qi "no fallbacks"        "$DEV_MD" \
+    && grep -qi "tdd"                 "$DEV_MD" \
+    && grep -qi "unix"                "$DEV_MD" \
+    && grep -qi "make release"        "$DEV_MD" \
+    && grep -qi "performance"         "$DEV_MD" \
+    && grep -qi "dependenc"           "$DEV_MD"; then
+    pass "T62 #64 DEVELOPMENT.md present with required sections"
+else
+    fail "T62 #64 DEVELOPMENT.md present" "missing or missing key sections"
+fi
