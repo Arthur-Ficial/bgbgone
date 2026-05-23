@@ -69,7 +69,8 @@ func runServerConfigTests() {
             _ = try ConfigParser.parse(args: ["--port", "19191"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--server"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -82,7 +83,8 @@ func runServerConfigTests() {
             _ = try ConfigParser.parse(args: ["--server", "in.jpg"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--server") && message.contains("input"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -96,7 +98,8 @@ func runServerConfigTests() {
                 _ = try ConfigParser.parse(args: args, isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for \(args)")
             } catch let e as BgBgOneError {
-                if case .userError(let message) = e {
+                if e.category == .user {
+                let message = e.message
                     try assertTrue(message.contains("--server") && message.contains("options"))
                 } else {
                     throw TestFailure("wrong error for \(args): \(e)")
@@ -111,7 +114,7 @@ func runServerConfigTests() {
                 _ = try ConfigParser.parse(args: args, isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for \(args)")
             } catch let e as BgBgOneError {
-                if case .parser = e { } else { throw TestFailure("wrong error for \(args): \(e)") }
+                if e.category != .parser { throw TestFailure("wrong error for \(args): \(e)") }
             }
         }
     }
@@ -149,7 +152,8 @@ func runServerConfigTests() {
             _ = try ConfigParser.parse(args: ["--server", "--token", ""], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser(let m) = e {
+            if e.category == .parser {
+                let m = e.message
                 try assertTrue(m.contains("--token"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -183,7 +187,7 @@ func runServerConfigTests() {
             _ = try ConfigParser.parse(args: ["--server", "--max-body-mb", "1024"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 

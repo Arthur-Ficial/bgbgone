@@ -27,13 +27,19 @@ enum ImageTransforms {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create positioning context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create positioning context"
+            )
         }
         ctx.clear(CGRect(x: 0, y: 0, width: canvasW, height: canvasH))
         ctx.interpolationQuality = .high
         ctx.draw(image, in: rect)
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot position foreground")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkResizeFail,
+                "cannot position foreground"
+            )
         }
         return out
     }
@@ -61,13 +67,19 @@ enum ImageTransforms {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create output resize context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create output resize context"
+            )
         }
         ctx.clear(CGRect(x: 0, y: 0, width: width, height: height))
         ctx.interpolationQuality = .high
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot resize output")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkResizeFail,
+                "cannot resize output"
+            )
         }
         return out
     }

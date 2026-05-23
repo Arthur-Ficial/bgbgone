@@ -12,7 +12,11 @@ enum BgBgOne {
     /// instance.
     static func runMany(_ cfg: Config) throws -> [RunResult] {
         guard cfg.inputs.count == 1 else {
-            throw BgBgOneError.userError("BgBgOne.runMany expects exactly 1 input; got \(cfg.inputs.count).")
+            throw BgBgOneError.userError(
+                ErrorCodes.userInputCountMismatch,
+                "BgBgOne.runMany expects exactly 1 input; got \(cfg.inputs.count).",
+                context: ["got": String(cfg.inputs.count), "expected": "1"]
+            )
         }
         if cfg.multiInstance && !cfg.maskOnly {
             return try runMultiInstance(cfg)
@@ -71,7 +75,11 @@ enum BgBgOne {
     /// Single-result happy path (no --multi).
     static func run(_ cfg: Config) throws -> RunResult {
         guard cfg.inputs.count == 1 else {
-            throw BgBgOneError.userError("BgBgOne.run expects exactly 1 input; got \(cfg.inputs.count).")
+            throw BgBgOneError.userError(
+                ErrorCodes.userInputCountMismatch,
+                "BgBgOne.run expects exactly 1 input; got \(cfg.inputs.count).",
+                context: ["got": String(cfg.inputs.count), "expected": "1"]
+            )
         }
         let input = cfg.inputs[0]
 

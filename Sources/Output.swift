@@ -38,7 +38,11 @@ enum Output {
         }
         if cfg.autoFileOutput {
             guard let outPath = OutputNaming.defaultOutputPath(inputPath: inputPath, format: format) else {
-                throw BgBgOneError.userError("cannot derive an output filename for stdin; use -o <file> or --out-dir <dir>")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputPathInvalid,
+                    "cannot derive an output filename for stdin; use -o <file> or --out-dir <dir>",
+                    hint: "pass -o <file> or --out-dir <dir>"
+                )
             }
             try writeToFile(cgImage: cgImage, path: outPath, utType: utType, opts: opts)
             return outPath
@@ -60,7 +64,11 @@ enum Output {
         }
         if cfg.autoFileOutput {
             guard let outPath = OutputNaming.defaultOutputPath(inputPath: inputPath, format: format) else {
-                throw BgBgOneError.userError("cannot derive an output filename for stdin; use -o <file> or --out-dir <dir>")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputPathInvalid,
+                    "cannot derive an output filename for stdin; use -o <file> or --out-dir <dir>",
+                    hint: "pass -o <file> or --out-dir <dir>"
+                )
             }
             try writeDataToFile(data, path: outPath)
             return outPath
@@ -76,21 +84,41 @@ enum Output {
         var isDirectory = ObjCBool(false)
         if fm.fileExists(atPath: parent.path, isDirectory: &isDirectory) {
             guard isDirectory.boolValue else {
-                throw BgBgOneError.userError("output parent is not a directory: \(parent.path)")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputDirNotWritable,
+                    "output parent is not a directory: \(parent.path)",
+                    origin: parent.path,
+                    context: ["parent": parent.path]
+                )
             }
         } else {
             do {
                 try fm.createDirectory(at: parent, withIntermediateDirectories: true)
             } catch {
-                throw BgBgOneError.userError("cannot create output parent directory \(parent.path): \(error.localizedDescription)")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputDirNotWritable,
+                    "cannot create output parent directory \(parent.path): \(error.localizedDescription)",
+                    origin: parent.path,
+                    context: ["parent": parent.path]
+                )
             }
         }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, utType.identifier as CFString, 1, nil) else {
-            throw BgBgOneError.frameworkError("cannot create output destination at \(path) (format \(utType.identifier) may be unsupported)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "cannot create output destination at \(path) (format \(utType.identifier) may be unsupported)",
+                origin: path,
+                context: ["path": path, "format": utType.identifier]
+            )
         }
         CGImageDestinationAddImage(dest, cgImage, opts as CFDictionary)
         guard CGImageDestinationFinalize(dest) else {
-            throw BgBgOneError.frameworkError("encoding/writing failed at \(path)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "encoding/writing failed at \(path)",
+                origin: path,
+                context: ["path": path]
+            )
         }
     }
 
@@ -101,13 +129,23 @@ enum Output {
         var isDirectory = ObjCBool(false)
         if fm.fileExists(atPath: parent.path, isDirectory: &isDirectory) {
             guard isDirectory.boolValue else {
-                throw BgBgOneError.userError("output parent is not a directory: \(parent.path)")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputDirNotWritable,
+                    "output parent is not a directory: \(parent.path)",
+                    origin: parent.path,
+                    context: ["parent": parent.path]
+                )
             }
         } else {
             do {
                 try fm.createDirectory(at: parent, withIntermediateDirectories: true)
             } catch {
-                throw BgBgOneError.userError("cannot create output parent directory \(parent.path): \(error.localizedDescription)")
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputDirNotWritable,
+                    "cannot create output parent directory \(parent.path): \(error.localizedDescription)",
+                    origin: parent.path,
+                    context: ["parent": parent.path]
+                )
             }
         }
         try data.write(to: url, options: .atomic)
@@ -116,18 +154,29 @@ enum Output {
     private static func writeToStdout(cgImage: CGImage, utType: UTType, opts: [CFString: Any]) throws {
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, utType.identifier as CFString, 1, nil) else {
-            throw BgBgOneError.frameworkError("cannot create output destination for stdout (format \(utType.identifier) may be unsupported)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "cannot create output destination for stdout (format \(utType.identifier) may be unsupported)",
+                context: ["format": utType.identifier]
+            )
         }
         CGImageDestinationAddImage(dest, cgImage, opts as CFDictionary)
         guard CGImageDestinationFinalize(dest) else {
-            throw BgBgOneError.frameworkError("encoding failed for stdout")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "encoding failed for stdout"
+            )
         }
         FileHandle.standardOutput.write(data as Data)
     }
 
     private static func deriveBatchPath(inputPath: String, outDir: String, format: OutputFormat) throws -> String {
         guard let path = OutputNaming.batchOutputPath(inputPath: inputPath, outDir: outDir, format: format) else {
-            throw BgBgOneError.userError("cannot derive an output filename for stdin; use -o <file>")
+            throw BgBgOneError.userError(
+                ErrorCodes.userOutputPathInvalid,
+                "cannot derive an output filename for stdin; use -o <file>",
+                hint: "pass -o <file>"
+            )
         }
         return path
     }
@@ -139,11 +188,17 @@ extension OutputFormat {
         case .png:  return .png
         case .jpeg: return .jpeg
         case .zip:
-            throw BgBgOneError.frameworkError("zip output is a package, not an ImageIO image type")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkInternalInvariant,
+                "zip output is a package, not an ImageIO image type"
+            )
         case .heic: return .heic
         case .avif:
             guard let type = UTType(filenameExtension: "avif") else {
-                throw BgBgOneError.frameworkError("AVIF output is unavailable on this macOS SDK")
+                throw BgBgOneError.frameworkError(
+                    ErrorCodes.frameworkEncodeFail,
+                    "AVIF output is unavailable on this macOS SDK"
+                )
             }
             return type
         case .tiff: return .tiff
@@ -172,14 +227,20 @@ private extension Output {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create zip color image context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create zip color image context"
+            )
         }
         let rect = CGRect(x: 0, y: 0, width: image.width, height: image.height)
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         ctx.fill(rect)
         ctx.draw(image, in: rect)
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot create zip color image")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGImageFail,
+                "cannot create zip color image"
+            )
         }
         return try encodeImageData(out, type: .jpeg, options: [
             kCGImageDestinationLossyCompressionQuality: CGFloat(quality) / 100.0
@@ -202,7 +263,10 @@ private extension Output {
                     space: cs,
                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
                   ) else {
-                throw BgBgOneError.frameworkError("cannot create zip alpha extraction context")
+                throw BgBgOneError.frameworkError(
+                    ErrorCodes.frameworkCGContextFail,
+                    "cannot create zip alpha extraction context"
+                )
             }
             ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         }
@@ -227,7 +291,10 @@ private extension Output {
                 shouldInterpolate: false,
                 intent: .defaultIntent
               ) else {
-            throw BgBgOneError.frameworkError("cannot create zip alpha image")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGImageFail,
+                "cannot create zip alpha image"
+            )
         }
         return try encodeImageData(mask, type: .png, options: [:])
     }
@@ -235,11 +302,18 @@ private extension Output {
     static func encodeImageData(_ image: CGImage, type: UTType, options: [CFString: Any]) throws -> Data {
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil) else {
-            throw BgBgOneError.frameworkError("cannot create image encoder for \(type.identifier)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "cannot create image encoder for \(type.identifier)",
+                context: ["format": type.identifier]
+            )
         }
         CGImageDestinationAddImage(dest, image, options as CFDictionary)
         guard CGImageDestinationFinalize(dest) else {
-            throw BgBgOneError.frameworkError("cannot encode image data")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkEncodeFail,
+                "cannot encode image data"
+            )
         }
         return data as Data
     }

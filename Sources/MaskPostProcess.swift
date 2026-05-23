@@ -31,16 +31,25 @@ enum MaskPostProcess {
         if radius <= 0 { return mask }
         let ci = CIImage(cgImage: mask)
         guard let filter = CIFilter(name: "CIGaussianBlur") else {
-            throw BgBgOneError.frameworkError("Core Image Gaussian blur filter is unavailable")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCIBlurUnavailable,
+                "Core Image Gaussian blur filter is unavailable"
+            )
         }
         filter.setValue(ci, forKey: kCIInputImageKey)
         filter.setValue(NSNumber(value: radius), forKey: kCIInputRadiusKey)
         guard let blurred = filter.outputImage else {
-            throw BgBgOneError.frameworkError("Core Image Gaussian blur produced no mask")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCIBlurNoOutput,
+                "Core Image Gaussian blur produced no mask"
+            )
         }
         let cropped = blurred.cropped(to: ci.extent)
         guard let blurredCG = ciContext.createCGImage(cropped, from: ci.extent) else {
-            throw BgBgOneError.frameworkError("cannot render feathered mask")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkMaskRenderFail,
+                "cannot render feathered mask"
+            )
         }
         return try forceGrayscale(blurredCG)
     }
@@ -60,11 +69,17 @@ enum MaskPostProcess {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.none.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create grayscale mask context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create grayscale mask context"
+            )
         }
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot create grayscale mask image")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGImageFail,
+                "cannot create grayscale mask image"
+            )
         }
         return out
     }
@@ -120,7 +135,10 @@ enum MaskPostProcess {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create masked foreground context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create masked foreground context"
+            )
         }
 
         let rect = CGRect(x: 0, y: 0, width: w, height: h)
@@ -131,7 +149,10 @@ enum MaskPostProcess {
         ctx.restoreGState()
 
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot apply alpha mask")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkMaskApplyFail,
+                "cannot apply alpha mask"
+            )
         }
         return out
     }
@@ -199,10 +220,16 @@ enum MaskPostProcess {
         let h = image.height
         let safeRect = rect.integral.intersection(CGRect(x: 0, y: 0, width: w, height: h))
         if safeRect.isNull || safeRect.isEmpty {
-            throw BgBgOneError.frameworkError("cannot crop image to an empty rectangle")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCropFail,
+                "cannot crop image to an empty rectangle"
+            )
         }
         guard let cropped = image.cropping(to: safeRect) else {
-            throw BgBgOneError.frameworkError("cannot crop image")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCropFail,
+                "cannot crop image"
+            )
         }
         return cropped
     }
@@ -223,7 +250,10 @@ enum MaskPostProcess {
                     space: cs,
                     bitmapInfo: CGImageAlphaInfo.none.rawValue
                   ) else {
-                throw BgBgOneError.frameworkError("cannot create grayscale mask context")
+                throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create grayscale mask context"
+            )
             }
             ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         }
@@ -233,7 +263,10 @@ enum MaskPostProcess {
     private static func makeGrayImage(width: Int, height: Int, bytes: [UInt8]) throws -> CGImage {
         let data = Data(bytes)
         guard let provider = CGDataProvider(data: data as CFData) else {
-            throw BgBgOneError.frameworkError("cannot create mask data provider")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGDataProviderFail,
+                "cannot create mask data provider"
+            )
         }
         let cs = CGColorSpaceCreateDeviceGray()
         guard let image = CGImage(
@@ -249,7 +282,10 @@ enum MaskPostProcess {
             shouldInterpolate: false,
             intent: .defaultIntent
         ) else {
-            throw BgBgOneError.frameworkError("cannot create thresholded mask image")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGImageFail,
+                "cannot create thresholded mask image"
+            )
         }
         return image
     }

@@ -27,7 +27,10 @@ enum Compositor {
             space: cs,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
-            throw BgBgOneError.frameworkError("cannot create compositing context")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGContextFail,
+                "cannot create compositing context"
+            )
         }
         return ctx
     }
@@ -39,7 +42,10 @@ enum Compositor {
         ctx.clear(CGRect(x: 0, y: 0, width: w, height: h))
         drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot composite transparent output")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkComposeFail,
+                "cannot composite transparent output"
+            )
         }
         return out
     }
@@ -52,7 +58,10 @@ enum Compositor {
         ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
         drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot composite over solid colour")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkComposeFail,
+                "cannot composite over solid colour"
+            )
         }
         return out
     }
@@ -65,7 +74,10 @@ enum Compositor {
         drawBackground(bg, in: ctx, canvas: CGSize(width: w, height: h), fit: fit)
         drawForeground(masked, in: ctx, dropShadow: dropShadow, shadowOpacity: shadowOpacity)
         guard let out = ctx.makeImage() else {
-            throw BgBgOneError.frameworkError("cannot composite over image background")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkComposeFail,
+                "cannot composite over image background"
+            )
         }
         return out
     }

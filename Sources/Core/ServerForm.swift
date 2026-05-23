@@ -42,7 +42,10 @@ public enum ServerFormParser {
         }
         let value = try JSONSerialization.jsonObject(with: body)
         guard let object = value as? [String: Any] else {
-            throw BgBgOneError.parser("JSON request body must be an object")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseHttpJsonNotObject,
+                "JSON request body must be an object"
+            )
         }
         var fields: [String: String] = [:]
         for (key, value) in object {
@@ -56,7 +59,11 @@ public enum ServerFormParser {
             case is NSNull:
                 continue
             default:
-                throw BgBgOneError.parser("unsupported JSON value for field \(key)")
+                throw BgBgOneError.parser(
+                    ErrorCodes.parseHttpJsonInvalid,
+                    "unsupported JSON value for field \(key)",
+                    context: ["field": key]
+                )
             }
         }
         return ServerForm(fields: fields)
@@ -64,7 +71,10 @@ public enum ServerFormParser {
 
     public static func parseMultipart(_ body: Data, boundary: String) throws -> ServerForm {
         guard !boundary.isEmpty else {
-            throw BgBgOneError.parser("multipart boundary is required")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseHttpMultipartBoundaryMissing,
+                "multipart boundary is required"
+            )
         }
 
         let delimiter = Data("--\(boundary)".utf8)

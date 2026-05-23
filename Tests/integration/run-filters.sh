@@ -236,3 +236,45 @@ if [ -f "$DEV_MD" ] \
 else
     fail "T62 #64 DEVELOPMENT.md present" "missing or missing key sections"
 fi
+
+# T63 #65: structured BgBgOneError. Default stderr emits multi-line code/message;
+# --json emits a stable {"ok":false,"error":{...}} envelope.
+out=$("$BIN" "/tmp/this-does-not-exist-bgbgone.jpg" 2>&1); rc=$?
+if [ $rc -eq 1 ] \
+    && printf '%s' "$out" | grep -q "code:" \
+    && printf '%s' "$out" | grep -q "message:" \
+    && printf '%s' "$out" | grep -q "BGBG_USER_INPUT_NOT_FOUND"; then
+    pass "T63 #65 stderr emits structured multi-line error"
+else
+    fail "T63 #65 stderr structured" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+out=$("$BIN" --json "/tmp/this-does-not-exist-bgbgone.jpg" 2>&1); rc=$?
+if [ $rc -eq 1 ] \
+    && printf '%s' "$out" | grep -q '"ok":false' \
+    && printf '%s' "$out" | grep -q '"error"' \
+    && printf '%s' "$out" | grep -q '"code":"BGBG_USER_INPUT_NOT_FOUND"' \
+    && printf '%s' "$out" | grep -q '"category":"user"' \
+    && printf '%s' "$out" | grep -q '"exit":1'; then
+    pass "T63 #65 --json emits stable error envelope"
+else
+    fail "T63 #65 --json envelope" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+out=$("$BIN" --quiet "/tmp/this-does-not-exist-bgbgone.jpg" 2>&1); rc=$?
+if [ $rc -eq 1 ] \
+    && ! printf '%s' "$out" | grep -q "code:" \
+    && printf '%s' "$out" | grep -q "input not found"; then
+    pass "T63 #65 --quiet collapses to single-line message"
+else
+    fail "T63 #65 --quiet single-line" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+out=$("$BIN" --bg "color:notacolor" "/tmp/x.jpg" 2>&1); rc=$?
+if [ $rc -eq 2 ] \
+    && printf '%s' "$out" | grep -q "BGBG_PARSE_COLOUR_UNKNOWN" \
+    && printf '%s' "$out" | grep -q "hint:"; then
+    pass "T63 #65 parser error includes code and hint"
+else
+    fail "T63 #65 parser error" "rc=$rc out=$(echo "$out" | head -1)"
+fi

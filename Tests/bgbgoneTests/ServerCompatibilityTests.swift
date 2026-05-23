@@ -252,7 +252,7 @@ func runServerCompatibilityTests() {
             _ = try ServerFormParser.parseMultipart(Data("hello".utf8), boundary: "")
             throw TestFailure("expected parser error")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 

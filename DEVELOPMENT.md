@@ -105,6 +105,10 @@ Cannot meet budget -> the feature does not ship until it can. No "fast path / sl
 
 ---
 
+## 6a. Error model
+
+Errors flow through `BgBgOneError` (struct with `code` / `category` / `message` / `where` / `context` / `hint`) - see [`docs/design.md`](docs/design.md) section "Error model" for the wire formats and code-naming convention. Adding a new failure mode means appending one entry to `Sources/Core/ErrorCodes.swift` and using it at the throw site. Never invent inline ad-hoc codes; never reuse a code for a semantically different failure.
+
 ## 7. Commit message conventions
 
 - `filter: <name> (TNN #issue)` - one filter landing, GREEN phase

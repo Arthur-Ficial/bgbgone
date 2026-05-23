@@ -17,10 +17,11 @@ do {
         stdoutPath: stdoutFilePath()
     )
 } catch let e as BgBgOneError {
-    FileHandle.standardError.write(Data("bgbgone: \(e.message)\n".utf8))
+    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(e).utf8))
     exit(e.exitCode)
 } catch {
-    FileHandle.standardError.write(Data("bgbgone: \(error.localizedDescription)\n".utf8))
+    let wrapped = BgBgOneError.parser(ErrorCodes.parseFlagUnknown, error.localizedDescription)
+    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(wrapped).utf8))
     exit(2)
 }
 
@@ -38,10 +39,11 @@ case .serverRequested:
     do {
         try BgBgOneHTTPServer(config: cfg.server, quiet: cfg.quiet).start()
     } catch let e as BgBgOneError {
-        FileHandle.standardError.write(Data("bgbgone: \(e.message)\n".utf8))
+        FileHandle.standardError.write(Data(ErrorRenderer.stderrText(e, quiet: cfg.quiet).utf8))
         exit(e.exitCode)
     } catch {
-        FileHandle.standardError.write(Data("bgbgone: \(error.localizedDescription)\n".utf8))
+        let wrapped = BgBgOneError.frameworkError(ErrorCodes.frameworkInternalInvariant, error.localizedDescription)
+        FileHandle.standardError.write(Data(ErrorRenderer.stderrText(wrapped, quiet: cfg.quiet).utf8))
         exit(3)
     }
 case .process:
@@ -69,10 +71,30 @@ if cfg.inputs.count == 1 {
         }
         exit(0)
     } catch let e as BgBgOneError {
-        FileHandle.standardError.write(Data("bgbgone: \(input): \(e.message)\n".utf8))
+        if cfg.outputMode == .json || cfg.outputMode == .ndjson {
+            print(ErrorRenderer.jsonEnvelope(e))
+        } else {
+            let withInput = BgBgOneError(
+                code: e.code, category: e.category, message: e.message,
+                origin: e.origin ?? input,
+                context: e.context.merging(["input": input]) { current, _ in current },
+                hint: e.hint
+            )
+            FileHandle.standardError.write(Data(ErrorRenderer.stderrText(withInput, quiet: cfg.quiet).utf8))
+        }
         exit(e.exitCode)
     } catch {
-        FileHandle.standardError.write(Data("bgbgone: \(input): \(error.localizedDescription)\n".utf8))
+        let wrapped = BgBgOneError.frameworkError(
+            ErrorCodes.frameworkInternalInvariant,
+            error.localizedDescription,
+            origin: input,
+            context: ["input": input]
+        )
+        if cfg.outputMode == .json || cfg.outputMode == .ndjson {
+            print(ErrorRenderer.jsonEnvelope(wrapped))
+        } else {
+            FileHandle.standardError.write(Data(ErrorRenderer.stderrText(wrapped, quiet: cfg.quiet).utf8))
+        }
         exit(3)
     }
 } else {
@@ -89,7 +111,10 @@ if cfg.inputs.count == 1 {
         } catch let e as BgBgOneError {
             buffer.setFailure(i, e)
         } catch {
-            buffer.setFailure(i, BgBgOneError.frameworkError(error.localizedDescription))
+            buffer.setFailure(i, BgBgOneError.frameworkError(
+                ErrorCodes.frameworkInternalInvariant,
+                error.localizedDescription
+            ))
         }
     }
 
@@ -107,7 +132,17 @@ if cfg.inputs.count == 1 {
                 }
             }
         case .failure(let e):
-            FileHandle.standardError.write(Data("bgbgone: \(input): \(e.message)\n".utf8))
+            if cfg.outputMode == .json || cfg.outputMode == .ndjson {
+                print(ErrorRenderer.jsonEnvelope(e))
+            } else {
+                let withInput = BgBgOneError(
+                    code: e.code, category: e.category, message: e.message,
+                    origin: e.origin ?? input,
+                    context: e.context.merging(["input": input]) { current, _ in current },
+                    hint: e.hint
+                )
+                FileHandle.standardError.write(Data(ErrorRenderer.stderrText(withInput, quiet: cfg.quiet).utf8))
+            }
             hadFailure = true
         }
     }

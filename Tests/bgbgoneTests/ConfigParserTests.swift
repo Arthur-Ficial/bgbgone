@@ -32,7 +32,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["-o", "out.png"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("input"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -111,7 +112,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--out-dir", "./out"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("-o") && message.contains("--out-dir"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -124,7 +126,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["a.jpg", "b.jpg", "-o", "out.png"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("-o") && message.contains("multiple inputs"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -137,7 +140,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["--out-dir", "./out"], isStdinTTY: false, isStdoutTTY: false)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("stdin") && message.contains("-o"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -185,7 +189,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw — webp is not supported")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -194,7 +198,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "bmp"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -254,7 +258,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "magic:sunset"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser(let m) = e {
+            if e.category == .parser {
+                let m = e.message
                 try assertTrue(m.contains("--bg") && m.contains("color:") && m.contains("image:"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -290,7 +295,7 @@ func runConfigParserTests() {
                 _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", raw], isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for --algo \(raw)")
             } catch let e as BgBgOneError {
-                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+                if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
@@ -300,7 +305,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", "magic"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -390,7 +395,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["team.jpg", "--multi", "-o", "person.png"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--multi") && message.contains("--out-dir"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -403,7 +409,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["--multi", "--out-dir", "./people"], isStdinTTY: false, isStdoutTTY: false)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--multi") && message.contains("stdin"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -416,7 +423,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["team.jpg", "--multi", "--mask-only", "--out-dir", "./people"], isStdinTTY: true, isStdoutTTY: false)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--multi") && message.contains("--mask-only"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -434,7 +442,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--json", "--ndjson"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--json") && message.contains("--ndjson"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -452,7 +461,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out.png", "--quiet", "--verbose"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError(let message) = e {
+            if e.category == .user {
+                let message = e.message
                 try assertTrue(message.contains("--quiet") && message.contains("--verbose"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -472,7 +482,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--style", "sketch"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw — --style is not a recognised flag")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -481,7 +491,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["--made-up-flag"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -510,7 +520,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: [], isStdinTTY: false, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .userError = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .user { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -563,7 +573,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "alien"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser(let m) = e {
+            if e.category == .parser {
+                let m = e.message
                 try assertTrue(m.contains("type"))
             } else {
                 throw TestFailure("wrong error: \(e)")
@@ -588,7 +599,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-type", "fake"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -607,7 +618,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-opacity", "101"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -626,7 +637,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--semitransparency", "maybe"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -647,7 +658,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "5%"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -686,7 +697,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--roi", "0 0 100"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -705,7 +716,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "1 2 3"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -732,7 +743,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--size", "4k"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -742,7 +753,7 @@ func runConfigParserTests() {
                 _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--quality", raw], isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for --quality \(raw)")
             } catch let e as BgBgOneError {
-                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+                if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
@@ -753,7 +764,7 @@ func runConfigParserTests() {
                 _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--threshold", raw], isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for --threshold \(raw)")
             } catch let e as BgBgOneError {
-                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+                if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
@@ -763,7 +774,7 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--feather", "-3"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -773,7 +784,7 @@ func runConfigParserTests() {
                 _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", raw], isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for --padding \(raw)")
             } catch let e as BgBgOneError {
-                if case .parser = e { } else { throw TestFailure("wrong error for \(raw): \(e)") }
+                if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
@@ -794,7 +805,8 @@ func runConfigParserTests() {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser(let m) = e {
+            if e.category == .parser {
+                let m = e.message
                 try assertTrue(m.contains("value"))
             } else {
                 throw TestFailure("wrong error: \(e)")

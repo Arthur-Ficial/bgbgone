@@ -154,7 +154,7 @@ func runServerParsingTests() {
             _ = try ServerFormParser.parseJSON(Data("[1,2,3]".utf8))
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -166,7 +166,7 @@ func runServerParsingTests() {
             _ = try ServerFormParser.parseJSON(Data(json.utf8))
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
-            if case .parser = e { } else { throw TestFailure("wrong error: \(e)") }
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 

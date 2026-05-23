@@ -37,7 +37,10 @@ struct BgBgOneHTTPServer {
     private func makeListeningSocket(host: String, port: Int) throws -> Int32 {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         guard fd >= 0 else {
-            throw BgBgOneError.frameworkError("cannot create server socket")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkServerSocketFail,
+                "cannot create server socket"
+            )
         }
 
         var yes: Int32 = 1
@@ -55,11 +58,19 @@ struct BgBgOneHTTPServer {
         }
         guard bindResult == 0 else {
             close(fd)
-            throw BgBgOneError.frameworkError("cannot bind server to \(host):\(port)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkServerBindFail,
+                "cannot bind server to \(host):\(port)",
+                context: ["host": host, "port": String(port)]
+            )
         }
         guard listen(fd, SOMAXCONN) == 0 else {
             close(fd)
-            throw BgBgOneError.frameworkError("cannot listen on \(host):\(port)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkServerListenFail,
+                "cannot listen on \(host):\(port)",
+                context: ["host": host, "port": String(port)]
+            )
         }
         return fd
     }
@@ -203,9 +214,10 @@ private final class ServerConnection: @unchecked Sendable {
         } catch let error as ServerAPIError {
             return json(status: error.status, body: error.json(), origin: origin)
         } catch let error as BgBgOneError {
-            return json(status: statusCode(for: error), body: apiErrorJSON(code: errorType(for: error), title: error.message), origin: origin)
+            return json(status: ErrorRenderer.httpStatus(error), body: ErrorRenderer.jsonEnvelope(error), origin: origin)
         } catch {
-            return json(status: 500, body: apiErrorJSON(code: "server_error", title: error.localizedDescription), origin: origin)
+            let wrapped = BgBgOneError.frameworkError(ErrorCodes.frameworkInternalInvariant, error.localizedDescription)
+            return json(status: 500, body: ErrorRenderer.jsonEnvelope(wrapped), origin: origin)
         }
     }
 
@@ -213,7 +225,10 @@ private final class ServerConnection: @unchecked Sendable {
         let contentType = request.header("content-type") ?? ""
         if contentType.lowercased().contains("multipart/form-data") {
             guard let boundary = multipartBoundary(from: contentType) else {
-                throw BgBgOneError.parser("multipart boundary is required")
+                throw BgBgOneError.parser(
+                    ErrorCodes.parseHttpMultipartBoundaryMissing,
+                    "multipart boundary is required"
+                )
             }
             return try ServerFormParser.parseMultipart(request.body, boundary: boundary)
         }
@@ -223,7 +238,11 @@ private final class ServerConnection: @unchecked Sendable {
         if contentType.lowercased().contains("application/x-www-form-urlencoded") || contentType.isEmpty {
             return ServerFormParser.parseURLEncoded(request.body)
         }
-        throw BgBgOneError.parser("unsupported content type: \(contentType)")
+        throw BgBgOneError.parser(
+            ErrorCodes.parseHttpContentTypeUnsupported,
+            "unsupported content type: \(contentType)",
+            context: ["content_type": contentType]
+        )
     }
 
     private func writeInputFile(form: ServerForm, tempDir: URL) throws -> URL {
@@ -254,7 +273,11 @@ private final class ServerConnection: @unchecked Sendable {
 
     private func writeFile(data: Data, filename: String, tempDir: URL, fallbackName: String) throws -> URL {
         guard !data.isEmpty else {
-            throw BgBgOneError.userError("\(fallbackName) image data is empty")
+            throw BgBgOneError.userError(
+                ErrorCodes.userImageDataEmpty,
+                "\(fallbackName) image data is empty",
+                origin: fallbackName
+            )
         }
         let ext = (filename as NSString).pathExtension
         let safeExt = ext.isEmpty ? "img" : ext
@@ -426,23 +449,23 @@ private func multipartBoundary(from contentType: String) -> String? {
 }
 
 private func statusCode(for error: BgBgOneError) -> Int {
-    switch error {
-    case .parser, .userError:
+    switch error.category {
+    case .parser, .user:
         return 400
     case .noResult:
         return 422
-    case .frameworkError:
+    case .framework:
         return 500
     }
 }
 
 private func errorType(for error: BgBgOneError) -> String {
-    switch error {
-    case .parser, .userError:
+    switch error.category {
+    case .parser, .user:
         return "invalid_request_error"
     case .noResult:
         return "no_result"
-    case .frameworkError:
+    case .framework:
         return "server_error"
     }
 }

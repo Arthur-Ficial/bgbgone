@@ -105,6 +105,30 @@ Routing constraints are enforced before image processing starts:
 - `2` parser error (bad flag) or no result (no subject detected; can be relaxed with `--allow-empty`)
 - `3` framework error (Vision unavailable or returned an error)
 
+## Error model
+
+Every error path emits a structured `BgBgOneError` (`Sources/Core/BgBgOneError.swift`). Single source of truth for rendering: `Sources/Core/ErrorRenderer.swift`. Stable code list: `Sources/Core/ErrorCodes.swift`.
+
+Fields:
+
+| Field      | Meaning                                                    |
+|------------|------------------------------------------------------------|
+| `code`     | Stable machine-readable id, e.g. `BGBG_USER_INPUT_NOT_FOUND` |
+| `category` | `parser` / `user` / `no_result` / `framework`              |
+| `exit`     | UNIX exit code (`0/1/2/3`) derived from `category`         |
+| `message`  | Short human sentence                                       |
+| `where`    | Origin pointer (flag name, file path)                      |
+| `context`  | Map of key/value extras                                    |
+| `hint`     | Optional suggested fix                                     |
+
+Wire formats:
+
+- **stderr (default):** multi-line. Honours `NO_COLOR` (no ANSI today; future) and `--quiet` (single-line message only).
+- **`--json`:** stable envelope `{"ok":false,"error":{...}}`. Sibling of the success body.
+- **HTTP `/v1.0/bgbgone`:** same JSON envelope. Status code: `parser` / `user` / `no_result` -> `400`; `framework` -> `500`.
+
+Adding a new code: append to `ErrorCodes.swift` (alphabetised) and use it at the throw site. Never invent ad-hoc codes inline.
+
 ## Architecture
 
 ```

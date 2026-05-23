@@ -52,17 +52,28 @@ enum ForegroundMask {
 
     private static func runForegroundInstanceMask(on image: CGImage, algoLabel: String) throws -> MaskedResult {
         guard #available(macOS 14, *) else {
-            throw BgBgOneError.frameworkError("foreground-instance mask requires macOS 14+")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "foreground-instance mask requires macOS 14+",
+                hint: "upgrade macOS or use --algo person/saliency"
+            )
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         let request = VNGenerateForegroundInstanceMaskRequest()
         do {
             try handler.perform([request])
         } catch {
-            throw BgBgOneError.frameworkError("Vision foreground-mask request failed: \(error.localizedDescription)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "Vision foreground-mask request failed: \(error.localizedDescription)"
+            )
         }
         guard let result = request.results?.first else {
-            throw BgBgOneError.noResult("no foreground subject detected")
+            throw BgBgOneError.noResult(
+                ErrorCodes.noResultNoSubject,
+                "no foreground subject detected",
+                hint: "try --algo person for portraits or --algo saliency for arbitrary subjects"
+            )
         }
 
         let maskPixelBuffer: CVPixelBuffer
@@ -72,24 +83,38 @@ enum ForegroundMask {
                 from: handler
             )
         } catch {
-            throw BgBgOneError.frameworkError("Vision generateScaledMask failed: \(error.localizedDescription)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionNoMask,
+                "Vision generateScaledMask failed: \(error.localizedDescription)"
+            )
         }
         return try resultFromMaskPixelBuffer(maskPixelBuffer, algoLabel: algoLabel)
     }
 
     private static func runForegroundInstanceMaskPerInstance(on image: CGImage, algoLabel: String) throws -> [MaskedResult] {
         guard #available(macOS 14, *) else {
-            throw BgBgOneError.frameworkError("foreground-instance mask requires macOS 14+")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "foreground-instance mask requires macOS 14+",
+                hint: "upgrade macOS or use --algo person/saliency"
+            )
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         let request = VNGenerateForegroundInstanceMaskRequest()
         do {
             try handler.perform([request])
         } catch {
-            throw BgBgOneError.frameworkError("Vision foreground-mask request failed: \(error.localizedDescription)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "Vision foreground-mask request failed: \(error.localizedDescription)"
+            )
         }
         guard let result = request.results?.first else {
-            throw BgBgOneError.noResult("no foreground subject detected")
+            throw BgBgOneError.noResult(
+                ErrorCodes.noResultNoSubject,
+                "no foreground subject detected",
+                hint: "try --algo person for portraits or --algo saliency for arbitrary subjects"
+            )
         }
 
         var outputs: [MaskedResult] = []
@@ -99,19 +124,29 @@ enum ForegroundMask {
             do {
                 maskOnly = try result.generateScaledMaskForImage(forInstances: oneInstance, from: handler)
             } catch {
-                throw BgBgOneError.frameworkError("per-instance mask generation failed at index \(idx): \(error.localizedDescription)")
+                throw BgBgOneError.frameworkError(
+                    ErrorCodes.frameworkVisionNoMask,
+                    "per-instance mask generation failed at index \(idx): \(error.localizedDescription)",
+                    context: ["index": String(idx)]
+                )
             }
             outputs.append(try resultFromMaskPixelBuffer(maskOnly, algoLabel: algoLabel + "+multi"))
         }
         if outputs.isEmpty {
-            throw BgBgOneError.noResult("no instances to emit")
+            throw BgBgOneError.noResult(
+                ErrorCodes.noResultNoSubject,
+                "no instances to emit"
+            )
         }
         return outputs
     }
 
     private static func runPersonSegmentation(on image: CGImage) throws -> MaskedResult {
         guard #available(macOS 12, *) else {
-            throw BgBgOneError.frameworkError("person segmentation requires macOS 12+")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "person segmentation requires macOS 12+"
+            )
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         let request = VNGeneratePersonSegmentationRequest()
@@ -120,10 +155,17 @@ enum ForegroundMask {
         do {
             try handler.perform([request])
         } catch {
-            throw BgBgOneError.frameworkError("Vision person-segmentation request failed: \(error.localizedDescription)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "Vision person-segmentation request failed: \(error.localizedDescription)"
+            )
         }
         guard let result = request.results?.first else {
-            throw BgBgOneError.noResult("no person detected")
+            throw BgBgOneError.noResult(
+                ErrorCodes.noResultNoSubject,
+                "no person detected",
+                hint: "try --algo vn-mask or --algo saliency"
+            )
         }
         return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.person.rawValue)
     }
@@ -134,10 +176,16 @@ enum ForegroundMask {
         do {
             try handler.perform([request])
         } catch {
-            throw BgBgOneError.frameworkError("Vision saliency request failed: \(error.localizedDescription)")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkVisionFail,
+                "Vision saliency request failed: \(error.localizedDescription)"
+            )
         }
         guard let result = request.results?.first else {
-            throw BgBgOneError.noResult("no salient object detected")
+            throw BgBgOneError.noResult(
+                ErrorCodes.noResultNoSubject,
+                "no salient object detected"
+            )
         }
         return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.saliency.rawValue)
     }
@@ -148,7 +196,10 @@ enum ForegroundMask {
     ) throws -> MaskedResult {
         let maskCI = CIImage(cvPixelBuffer: pixelBuffer)
         guard let maskCG = ciContext.createCGImage(maskCI, from: maskCI.extent) else {
-            throw BgBgOneError.frameworkError("cannot convert mask to CGImage")
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkCGImageFail,
+                "cannot convert mask to CGImage"
+            )
         }
         return MaskedResult(mask: maskCG, algoUsed: algoLabel)
     }

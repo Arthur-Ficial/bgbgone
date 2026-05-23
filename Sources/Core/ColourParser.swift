@@ -30,13 +30,22 @@ public enum ColourParser {
         if let c = namedColours[s.lowercased()] {
             return c
         }
-        throw BgBgOneError.parser("unknown colour: \(raw)")
+        throw BgBgOneError.parser(
+            ErrorCodes.parseColourUnknown,
+            "unknown colour: \(raw)",
+            context: ["input": raw],
+            hint: "use a named colour (white, black, red, ...), #hex, rgb:R,G,B, or rgba:R,G,B,A"
+        )
     }
 
     private static func parseHex(_ hex: String) throws -> RGBA {
         let chars = Array(hex)
         guard chars.allSatisfy({ $0.isHexDigit }) else {
-            throw BgBgOneError.parser("invalid hex digits in #\(hex)")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseColourUnknown,
+                "invalid hex digits in #\(hex)",
+                context: ["input": "#\(hex)"]
+            )
         }
         let (r, g, b, a): (Int, Int, Int, Int)
         switch chars.count {
@@ -61,7 +70,11 @@ public enum ColourParser {
             b = Int(hex.dropFirst(4).prefix(2), radix: 16)!
             a = Int(hex.dropFirst(6).prefix(2), radix: 16)!
         default:
-            throw BgBgOneError.parser("hex colour must be 3, 4, 6, or 8 digits: #\(hex)")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseColourUnknown,
+                "hex colour must be 3, 4, 6, or 8 digits: #\(hex)",
+                context: ["input": "#\(hex)", "digits": String(chars.count)]
+            )
         }
         return RGBA(r: Double(r) / 255.0, g: Double(g) / 255.0, b: Double(b) / 255.0, a: Double(a) / 255.0)
     }
@@ -70,11 +83,19 @@ public enum ColourParser {
         let parts = body.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         let expected = hasAlpha ? 4 : 3
         guard parts.count == expected else {
-            throw BgBgOneError.parser("\(hasAlpha ? "rgba" : "rgb"): expected \(expected) components, got \(parts.count)")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseColourUnknown,
+                "\(hasAlpha ? "rgba" : "rgb"): expected \(expected) components, got \(parts.count)",
+                context: ["expected": String(expected), "got": String(parts.count)]
+            )
         }
         let ints = try parts.map { (p: String) -> Int in
             guard let v = Int(p), (0...255).contains(v) else {
-                throw BgBgOneError.parser("component out of range 0..255: \(p)")
+                throw BgBgOneError.parser(
+                    ErrorCodes.parseColourUnknown,
+                    "component out of range 0..255: \(p)",
+                    context: ["component": p]
+                )
             }
             return v
         }
