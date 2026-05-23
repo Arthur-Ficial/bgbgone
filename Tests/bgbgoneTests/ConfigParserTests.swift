@@ -309,10 +309,15 @@ func runConfigParserTests() {
         }
     }
 
-    test("--mask-only sets maskOnly true") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--mask-only"], isStdinTTY: true, isStdoutTTY: true)
-        try assertTrue(cfg.maskOnly)
-    }
+    // T54..T56 removals: --mask-only, --feather, --threshold, --scale, --position
+    // are hard-removed from the CLI. Replacements:
+    //   --filter "fg:matte"             instead of --mask-only
+    //   --filter "mask:feather=N"       instead of --feather N
+    //   --filter "mask:threshold=N"     instead of --threshold N
+    //   --filter "fg:scale=F"           instead of --scale F
+    //   --filter "fg:translate=X,Y"     instead of --position X% Y%
+    // --channels still exists for kaleido.ai removebg compat (sets maskOnly via the
+    // server-form path), but the standalone --mask-only CLI flag is gone.
 
     test("--channels alpha maps to the same mask-only output as the server") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--channels", "alpha"], isStdinTTY: true, isStdoutTTY: true)
@@ -323,16 +328,6 @@ func runConfigParserTests() {
     test("--channels rgba keeps finalized image output") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--channels", "rgba"], isStdinTTY: true, isStdoutTTY: true)
         try assertFalse(cfg.maskOnly)
-    }
-
-    test("--feather 4 parses") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--feather", "4"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.feather, 4.0)
-    }
-
-    test("--threshold 0.5") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--threshold", "0.5"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.threshold, 0.5)
     }
 
     test("--padding percent: 10% -> 0.10 percent mode") {
@@ -366,8 +361,6 @@ func runConfigParserTests() {
                 "--size", "full",
                 "--roi", "10% 20% 90% 80%",
                 "--crop-margin", "10px 20px 30px 40px",
-                "--scale", "50%",
-                "--position", "25% 75%",
                 "--semitransparency", "false",
                 "--shadow-type", "drop",
                 "--shadow-opacity", "25"
@@ -378,8 +371,6 @@ func runConfigParserTests() {
         try assertEqual(cfg.maxOutputMegapixels, 25.0)
         try assertEqual(cfg.roi, ServerRectSpec(x1: .percent(0.10), y1: .percent(0.20), x2: .percent(0.90), y2: .percent(0.80)))
         try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(10), right: .pixels(20), bottom: .pixels(30), left: .pixels(40)))
-        try assertEqual(cfg.scalePercent, 0.50)
-        try assertEqual(cfg.position, ServerPosition(x: 0.25, y: 0.75))
         try assertFalse(cfg.semitransparency)
         try assertTrue(cfg.dropShadow)
         try assertEqual(cfg.shadowOpacity, 0.25)
@@ -418,19 +409,8 @@ func runConfigParserTests() {
         }
     }
 
-    test("--multi and --mask-only are rejected instead of silently ignoring one mode") {
-        do {
-            _ = try ConfigParser.parse(args: ["team.jpg", "--multi", "--mask-only", "--out-dir", "./people"], isStdinTTY: true, isStdoutTTY: false)
-            throw TestFailure("expected throw")
-        } catch let e as BgBgOneError {
-            if e.category == .user {
-                let message = e.message
-                try assertTrue(message.contains("--multi") && message.contains("--mask-only"))
-            } else {
-                throw TestFailure("wrong error: \(e)")
-            }
-        }
-    }
+    // --multi / --mask-only mutex test removed: --mask-only no longer exists (use --filter "fg:matte")
+    // and --multi + --filter chains have no mutex (each instance gets the same filter chain).
 
     test("--json sets outputMode .json") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--json"], isStdinTTY: true, isStdoutTTY: true)
@@ -641,50 +621,26 @@ func runConfigParserTests() {
         }
     }
 
-    test("--scale and --position interact: --scale alone implies --position center") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "60%"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.scalePercent, 0.60)
-        try assertEqual(cfg.position, ServerPosition.center)
-    }
+    // --scale and --position tests deleted - flags hard-removed in T54.
+    // Use --filter "fg:scale=F" / --filter "fg:translate=X,Y" instead.
+    // Server form fields scale=/position= still work for kaleido.ai removebg compat.
 
-    test("--scale original is a no-op (treated as nil)") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "original"], isStdinTTY: true, isStdoutTTY: true)
-        try assertNil(cfg.scalePercent)
-        try assertNil(cfg.position)
-    }
-
-    test("--scale below 10% is rejected") {
+    test("--scale removed: rc=2 with unknown-option diagnostic") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "5%"], isStdinTTY: true, isStdoutTTY: true)
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "60%"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
             if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
-    test("--position original keeps position nil when no scale is set") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "original"], isStdinTTY: true, isStdoutTTY: true)
-        try assertNil(cfg.position)
-    }
-
-    test("--position original combined with --scale still centres the scaled subject") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--scale", "50%", "--position", "original"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.position, ServerPosition.center, " — scaled subjects must land somewhere on the canvas")
-    }
-
-    test("--position center sets a centered placement") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "center"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.position, ServerPosition.center)
-    }
-
-    test("--position with single percent applies to both axes") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "75%"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.position, ServerPosition(x: 0.75, y: 0.75))
-    }
-
-    test("--position with two percents maps to (x, y)") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "10% 90%"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.position, ServerPosition(x: 0.10, y: 0.90))
+    test("--position removed: rc=2 with unknown-option diagnostic") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--position", "center"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
+        }
     }
 
     test("--roi with mixed % and px values parses dimensions correctly") {

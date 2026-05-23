@@ -47,17 +47,18 @@ public struct BgBgOneCommand: ParsableCommand {
     @Option(name: .customLong("bg-image")) public var bgImage: String?
     @Option(name: .customLong("bg-fit")) public var bgFit: String?
 
-    // Matte / edge
-    @Flag(name: .customLong("mask-only")) public var maskOnly: Bool = false
+    // Matte / edge — --mask-only, --feather, --threshold, --scale, --position
+    // hard-removed in T54/T55/T56 (v0.8.0 / v1.0.0). Use:
+    //   --filter "fg:matte"             instead of --mask-only
+    //   --filter "mask:feather=N"       instead of --feather N
+    //   --filter "mask:threshold=N"     instead of --threshold N
+    //   --filter "fg:scale=F"           instead of --scale F
+    //   --filter "fg:translate=X,Y"     instead of --position X% Y%
     @Option(name: .customLong("channels")) public var channels: String?
-    @Option(name: .customLong("feather")) public var feather: Double?
-    @Option(name: .customLong("threshold")) public var threshold: Double?
     @Option(name: .customLong("padding")) public var padding: String?
     @Option(name: .customLong("crop-margin")) public var cropMargin: String?
     @Flag(name: .customLong("crop")) public var crop: Bool = false
     @Option(name: .customLong("roi")) public var roi: String?
-    @Option(name: .customLong("scale")) public var scale: String?
-    @Option(name: .customLong("position")) public var position: String?
     @Option(name: .customLong("semitransparency")) public var semitransparency: String?
 
     // Algorithm

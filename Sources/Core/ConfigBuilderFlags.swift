@@ -74,7 +74,6 @@ extension ConfigBuilder {
             }
             cfg.bgFit = f; saw = true
         }
-        if cmd.maskOnly { cfg.maskOnly = true; saw = true }
         if let ch = cmd.channels {
             let v = ServerCompatibilityParser.normalize(ch)
             switch v {
@@ -85,14 +84,6 @@ extension ConfigBuilder {
             }
             saw = true
         }
-        if let f = cmd.feather {
-            guard f >= 0 else { throw flagInvalid("--feather must be non-negative, got: \(f)", origin: "--feather", value: String(f)) }
-            cfg.feather = f; saw = true
-        }
-        if let t = cmd.threshold {
-            guard (0...1).contains(t) else { throw flagInvalid("--threshold must be 0..1, got: \(t)", origin: "--threshold", value: String(t)) }
-            cfg.threshold = t; saw = true
-        }
         if let p = cmd.padding {
             let parsed = try parsePadding(p)
             cfg.padding = parsed.value; cfg.paddingIsPercent = parsed.isPercent; saw = true
@@ -102,11 +93,6 @@ extension ConfigBuilder {
         }
         if cmd.crop { cfg.cropToSubject = true; saw = true }
         if let r = cmd.roi { cfg.roi = try mapAPIParserError { try ServerCompatibilityParser.parseROI(r) }; saw = true }
-        if let s = cmd.scale { cfg.scalePercent = try mapAPIParserError { try ServerCompatibilityParser.parseScale(s) }; saw = true }
-        if let p = cmd.position {
-            cfg.position = try mapAPIParserError { try ServerCompatibilityParser.parsePosition(p, scalePercent: cfg.scalePercent) }
-            saw = true
-        }
         if let v = cmd.algo {
             guard let a = Algo(rawValue: v) else {
                 throw flagInvalid("unknown --algo value: \(v) (allowed: auto, vn-mask, person, saliency)", origin: "--algo", value: v)

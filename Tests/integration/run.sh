@@ -725,18 +725,18 @@ else
     fail "--quality" "outputs missing"
 fi
 
-# --- e2e: --mask-only emits a meaningful grayscale-ish file ---
+# --- e2e: --filter "fg:matte" emits the alpha mask (replaces removed --mask-only) ---
 echo ""
-echo "e2e: --mask-only"
+echo "e2e: matte filter (replaces --mask-only)"
 
 src="$FIX/02-nasa-mccandless-eva.jpg"
 dst="$OUT/eva-mask.png"
-out=$("$BIN" "$src" --mask-only -o "$dst" 2>&1) ; rc=$?
+out=$("$BIN" "$src" --filter "fg:matte" -o "$dst" 2>&1) ; rc=$?
 if [ $rc -eq 0 ] && [ -s "$dst" ]; then
-    head -c 8 "$dst" | xxd -p | tr -d '\n' | grep -qi '^89504e470d0a1a0a' && pass "--mask-only emits PNG" \
-        || fail "--mask-only" "output not PNG"
+    head -c 8 "$dst" | xxd -p | tr -d '\n' | grep -qi '^89504e470d0a1a0a' && pass "--filter fg:matte emits PNG" \
+        || fail "matte filter" "output not PNG"
 else
-    fail "--mask-only" "rc=$rc out=$out"
+    fail "matte filter" "rc=$rc out=$out"
 fi
 
 # --- e2e: stdin pipe in, stdout pipe out ---
@@ -769,36 +769,40 @@ else
     fail "batch" "rc=$rc count=$count"
 fi
 
-# --- e2e: --feather softens edges ---
+# --- e2e: --filter "mask:feather=N" softens edges (replaces removed --feather) ---
 echo ""
-echo "e2e: --feather"
+echo "e2e: feather filter (replaces --feather)"
 
 src="$FIX/02-nasa-mccandless-eva.jpg"
-"$BIN" "$src" --feather 0 -o "$OUT/eva-f0.png" 2>/dev/null
-"$BIN" "$src" --feather 8 -o "$OUT/eva-f8.png" 2>/dev/null
-"$BIN" "$src" --feather 16 -o "$OUT/eva-f16.png" 2>/dev/null
+"$BIN" "$src" -o "$OUT/eva-f0.png" 2>/dev/null
+"$BIN" "$src" --filter "mask:feather=8" -o "$OUT/eva-f8.png" 2>/dev/null
+"$BIN" "$src" --filter "mask:feather=16" -o "$OUT/eva-f16.png" 2>/dev/null
 if [ -s "$OUT/eva-f0.png" ] && [ -s "$OUT/eva-f8.png" ]; then
     sz0=$(stat -f '%z' "$OUT/eva-f0.png")
     sz8=$(stat -f '%z' "$OUT/eva-f8.png")
-    [ "$sz0" -ne "$sz8" ] && pass "--feather changes output (size $sz0 != $sz8)" \
-        || fail "--feather" "feather=0 and feather=8 produced identical files"
+    [ "$sz0" -ne "$sz8" ] && pass "mask:feather changes output (size $sz0 != $sz8)" \
+        || fail "feather filter" "feather=0 and feather=8 produced identical files"
 else
-    fail "--feather" "outputs missing"
+    fail "feather filter" "outputs missing"
 fi
 
 # Regression: feather > 0 used to silently disable background removal because the
-# Gaussian-blurred mask came back in sRGB rather than DeviceGray. The corner pixel
+# Gaussian-blurred mask came back in sRGB rather than DeviceGray. Corner pixel
 # of a cutout against space must be fully transparent regardless of feather radius.
 for r in 0 8 16; do
-    out=$("$BIN" "$src" --feather "$r" -o "$OUT/eva-f$r.png" 2>&1) ; rc=$?
+    if [ "$r" = "0" ]; then
+        out=$("$BIN" "$src" -o "$OUT/eva-f$r.png" 2>&1) ; rc=$?
+    else
+        out=$("$BIN" "$src" --filter "mask:feather=$r" -o "$OUT/eva-f$r.png" 2>&1) ; rc=$?
+    fi
     if [ $rc -ne 0 ] || [ ! -s "$OUT/eva-f$r.png" ]; then
-        fail "--feather $r corner alpha" "no output (rc=$rc out=$out)"
+        fail "feather $r corner alpha" "no output (rc=$rc out=$out)"
         continue
     fi
     corner=$(magick "$OUT/eva-f$r.png" -format '%[pixel:p{5,5}]' info: 2>/dev/null)
     case "$corner" in
-        *",0)"|*"a=0)"|*"none"*) pass "--feather $r corner alpha == 0 (bg removed)" ;;
-        *) fail "--feather $r corner alpha" "expected transparent corner, got $corner" ;;
+        *",0)"|*"a=0)"|*"none"*) pass "feather $r corner alpha == 0 (bg removed)" ;;
+        *) fail "feather $r corner alpha" "expected transparent corner, got $corner" ;;
     esac
 done
 
@@ -813,8 +817,7 @@ out=$("$BIN" "$src" \
     --roi "0% 0% 100% 100%" \
     --crop \
     --crop-margin "5%" \
-    --scale "75%" \
-    --position center \
+    --filter "fg:scale=0.75" \
     --semitransparency false \
     --shadow-type drop \
     --shadow-opacity 25 \
@@ -874,24 +877,24 @@ else
     fail "--shadow-type" "outputs missing"
 fi
 
-# --- e2e: --scale + --position shift the subject on the canvas ---
+# --- e2e: --filter "fg:scale" + "fg:translate" shift the subject (replaces --scale + --position) ---
 echo ""
-echo "e2e: --scale + --position"
+echo "e2e: fg:scale + fg:translate (replaces --scale + --position)"
 
 src="$FIX/07-einstein-1921.jpg"
 "$BIN" "$src" --bg color:white -o "$OUT/einstein-scale-base.png" 2>/dev/null
-"$BIN" "$src" --bg color:white --scale 50% --position center -o "$OUT/einstein-scale-center.png" 2>/dev/null
-"$BIN" "$src" --bg color:white --scale 50% --position "25% 75%" -o "$OUT/einstein-scale-corner.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --filter "fg:scale=0.5" -o "$OUT/einstein-scale-center.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --filter "fg:scale=0.5,translate=-200,200" -o "$OUT/einstein-scale-corner.png" 2>/dev/null
 if [ -s "$OUT/einstein-scale-base.png" ] && [ -s "$OUT/einstein-scale-center.png" ] && [ -s "$OUT/einstein-scale-corner.png" ]; then
     if cmp -s "$OUT/einstein-scale-center.png" "$OUT/einstein-scale-corner.png"; then
-        fail "--scale + --position" "center and 25%/75% positions matched"
+        fail "fg:scale + fg:translate" "centered and translated outputs matched"
     elif cmp -s "$OUT/einstein-scale-base.png" "$OUT/einstein-scale-center.png"; then
-        fail "--scale + --position" "scaled output identical to unscaled"
+        fail "fg:scale + fg:translate" "scaled output identical to unscaled"
     else
-        pass "--scale + --position move the subject vs base"
+        pass "fg:scale + fg:translate move the subject vs base"
     fi
 else
-    fail "--scale + --position" "outputs missing"
+    fail "fg:scale + fg:translate" "outputs missing"
 fi
 
 # --- e2e: --size preview produces a smaller output than --size full ---
@@ -979,21 +982,21 @@ verr=$("$BIN" "$src" -o "$OUT/verbose.png" --verbose 2>&1 >/dev/null)
 [ -n "$verr" ] && pass "--verbose writes some stderr on success" \
     || fail "--verbose" "stderr was empty"
 
-# --- e2e: --threshold changes matte decisively ---
+# --- e2e: --filter "mask:threshold=N" changes matte decisively (replaces --threshold) ---
 echo ""
-echo "e2e: --threshold"
+echo "e2e: mask:threshold (replaces --threshold)"
 
 src="$FIX/02-nasa-mccandless-eva.jpg"
-"$BIN" "$src" --threshold 0.20 -o "$OUT/eva-threshold-020.png" 2>/dev/null
-"$BIN" "$src" --threshold 0.80 -o "$OUT/eva-threshold-080.png" 2>/dev/null
+"$BIN" "$src" --filter "mask:threshold=0.20" -o "$OUT/eva-threshold-020.png" 2>/dev/null
+"$BIN" "$src" --filter "mask:threshold=0.80" -o "$OUT/eva-threshold-080.png" 2>/dev/null
 if [ -s "$OUT/eva-threshold-020.png" ] && [ -s "$OUT/eva-threshold-080.png" ]; then
     if cmp -s "$OUT/eva-threshold-020.png" "$OUT/eva-threshold-080.png"; then
-        fail "--threshold" "threshold 0.20 and 0.80 produced identical output"
+        fail "mask:threshold" "threshold 0.20 and 0.80 produced identical output"
     else
-        pass "--threshold changes the output matte"
+        pass "mask:threshold changes the output matte"
     fi
 else
-    fail "--threshold" "outputs missing"
+    fail "mask:threshold" "outputs missing"
 fi
 
 # --- e2e: --crop tightens to subject bbox ---
