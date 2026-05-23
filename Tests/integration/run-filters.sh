@@ -190,7 +190,7 @@ fi
 PORT=18790
 "$BIN" --server --host 127.0.0.1 --port $PORT --no-origin-check >/dev/null 2>&1 &
 SERVER_PID=$!
-if wait_for_server "http://127.0.0.1:$PORT/v1.0/bgbgone" >/dev/null 2>&1; then
+if wait_for_server "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
     dst="$OUT/t59-server.png"
     out=$(curl -fsS -X POST "http://127.0.0.1:$PORT/v1.0/bgbgone" \
         -F "image_file=@$RED_FIX" -F "format=png" -F "filter=bg:grayscale" \

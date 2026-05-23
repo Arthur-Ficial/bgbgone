@@ -83,6 +83,17 @@ public struct ServerRemovalRequest: Sendable, Equatable {
 
         try parseShadow(form: form, cfg: &cfg)
 
+        // T59 #61 - HTTP filter chain parity with the CLI --filter flag.
+        if let raw = form.fields["filter"], !raw.isEmpty {
+            do {
+                let chain = try FilterParser.parse(raw)
+                try FilterRegistry.validate(chain)
+                if !chain.isEmpty { cfg.filters.append(chain) }
+            } catch let e as BgBgOneError {
+                throw ServerAPIError.invalid("invalid_filter", e.message)
+            }
+        }
+
         return ServerRemovalRequest(input: input, config: cfg, responseKind: responseKind, typeHeaderValue: typeHeader)
     }
 
