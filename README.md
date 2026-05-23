@@ -441,14 +441,14 @@ bgbgone corgi.jpg \
 ### 4. Vintage finish — sepia + vignette on the original photo
 
 ```bash
-bgbgone pipeman.jpg --bg "image:pipeman.jpg" --filter "sepia=0.85,vignette=1.5:1.2" -o vintage.jpg
+bgbgone tabby-cat.jpg --filter "sepia=0.95,vignette=2:1" -o vintage.jpg
 ```
 
 | Before (original photo) | After (vintage) |
 |---|---|
-| ![pipe-man original](docs/images/showcase/04-pipeman-before.jpg) | ![pipe-man vintage](docs/images/showcase/04-pipeman-vintage.jpg) |
+| ![cat original](docs/images/showcase/04-cat-before.jpg) | ![cat vintage](docs/images/showcase/04-cat-vintage.jpg) |
 
-`CISepiaTone` + `CIVignette`. Composite-only chain (no `fg:`/`bg:` prefix needed) — operates on the final flattened frame.
+`CISepiaTone` at 95% + `CIVignette` intensity 2. Composite-only chain (no `fg:`/`bg:` prefix needed) — operates on the final flattened frame. The warm golden out-of-focus background of the source amplifies the sepia tone; the vignette darkens the corners to a classic film look.
 
 ### 5. Dramatic composite — corgi in deep space, three-stage chain
 
@@ -473,7 +473,7 @@ All showcase fixtures are CC0 or Franz Enzenhofer's own CC BY 4.0 work. Sidecar 
 |---|---|---|---|
 | `Red_Panda__24986761703_.jpg` | Mathias Appel | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Red_Panda_(24986761703).jpg) |
 | `Fawn_and_white_Welsh_Corgi_puppy_...jpg` | Huoadg5888 (Pixabay) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg) |
-| `Bearded_man_smoking_pipe-3013924.jpg` | Pexels contributor | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Bearded_man_smoking_pipe-3013924.jpg) |
+| `Tabby_cat_with_blue_eyes-3336579.jpg` | Pexels contributor | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tabby_cat_with_blue_eyes-3336579.jpg) |
 | `bg/Flying-Dragon-Nebula_Sh_2-113.png` | NASA / ESA Hubble (PD-USGov) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Flying-Dragon-Nebula_Sh_2-113.png) |
 
 Full per-filter docs in [`docs/filters/`](docs/filters/). The 49-filter catalogue index: [`docs/filters/README.md`](docs/filters/README.md).

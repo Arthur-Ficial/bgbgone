@@ -139,13 +139,17 @@ public enum OutlineFilter: Filter {
         guard let ring = sub.outputImage?.cropped(to: extent) else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "outline: ring failed")
         }
-        // Tint the ring with the chosen colour, then composite under the foreground.
-        let plane = try solidPlane(color, extent: extent)
-        let tinted = try blendWithMask(plane, background: try solidPlane(RGBA(r: 0, g: 0, b: 0, a: 0), extent: extent), mask: ring, extent: extent)
+        // Construct a new foreground: subject pixels where original mask=1,
+        // ring colour where original mask=0 but dilated mask=1. The flatten
+        // step uses dilated mask, so anywhere outside the dilated region the
+        // bg plate still shows through.
+        let ringPlane = try solidPlane(color, extent: extent)
         var r = image
-        r.foreground = try compositeOver(image.foreground, on: tinted, extent: extent)
-        // Expand the mask so the ring is visible at flatten time.
+        r.foreground = try blendWithMask(image.foreground, background: ringPlane, mask: image.foregroundMask, extent: extent)
         r.foregroundMask = dilated
+        // Mark _ used to silence unused warning on `ring` while keeping the
+        // diagnostic-friendly intermediate around for clarity.
+        _ = ring
         return r
     }
 }
@@ -175,18 +179,20 @@ public enum GlowFilter: Filter {
         guard let blurred = blur.outputImage?.cropped(to: extent) else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkCIBlurNoOutput, "glow: blur failed")
         }
-        let plane = try solidPlane(color, extent: extent)
-        let glow = try blendWithMask(plane, background: try solidPlane(RGBA(r: 0, g: 0, b: 0, a: 0), extent: extent), mask: blurred, extent: extent)
-        // Scale glow alpha by intensity
+        // Construct foreground: subject pixels where original_mask=1, glow colour
+        // (alpha=intensity * blurredMaskValue) where original_mask=0. Output mask
+        // = blurred so the flatten step shows subject + halo, bg plate shows
+        // elsewhere.
+        let glowPlane = try solidPlane(color, extent: extent)
+        // Scale plane alpha by intensity so the glow is tunable.
         guard let alpha = CIFilter(name: "CIColorMatrix") else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIColorMatrix unavailable")
         }
-        alpha.setValue(glow, forKey: kCIInputImageKey)
+        alpha.setValue(glowPlane, forKey: kCIInputImageKey)
         alpha.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(intensity)), forKey: "inputAVector")
-        let dimmedGlow = alpha.outputImage?.cropped(to: extent) ?? glow
+        let tunedPlane = alpha.outputImage?.cropped(to: extent) ?? glowPlane
         var r = image
-        r.foreground = try compositeOver(image.foreground, on: dimmedGlow, extent: extent)
-        // Expand mask to include the glow halo.
+        r.foreground = try blendWithMask(image.foreground, background: tunedPlane, mask: image.foregroundMask, extent: extent)
         r.foregroundMask = blurred
         return r
     }
@@ -222,16 +228,26 @@ public enum ShadowFilter: Filter {
         guard let shadowMask = blurFilter.outputImage?.cropped(to: extent) else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkCIBlurNoOutput, "shadow: blur failed")
         }
-        let plane = try solidPlane(color, extent: extent)
-        let tinted = try blendWithMask(plane, background: try solidPlane(RGBA(r: 0, g: 0, b: 0, a: 0), extent: extent), mask: shadowMask, extent: extent)
+        // Compose union of original mask + translated/blurred shadow mask so
+        // the flatten step keeps both subject and shadow visible.
+        guard let union = CIFilter(name: "CIMaximumCompositing") else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIMaximumCompositing unavailable")
+        }
+        union.setValue(image.foregroundMask, forKey: kCIInputImageKey)
+        union.setValue(shadowMask, forKey: kCIInputBackgroundImageKey)
+        let unionMask = union.outputImage?.cropped(to: extent) ?? shadowMask
+        // Tune shadow plane alpha by opacity * blurred mask value.
+        let shadowPlane = try solidPlane(color, extent: extent)
         guard let alpha = CIFilter(name: "CIColorMatrix") else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIColorMatrix unavailable")
         }
-        alpha.setValue(tinted, forKey: kCIInputImageKey)
+        alpha.setValue(shadowPlane, forKey: kCIInputImageKey)
         alpha.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity)), forKey: "inputAVector")
-        let shadow = alpha.outputImage?.cropped(to: extent) ?? tinted
+        let tunedShadow = alpha.outputImage?.cropped(to: extent) ?? shadowPlane
+        // Foreground = subject where original mask=1, tuned shadow where mask=0.
         var r = image
-        r.foreground = try compositeOver(image.foreground, on: shadow, extent: extent)
+        r.foreground = try blendWithMask(image.foreground, background: tunedShadow, mask: image.foregroundMask, extent: extent)
+        r.foregroundMask = unionMask
         return r
     }
 }

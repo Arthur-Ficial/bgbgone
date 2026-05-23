@@ -52,9 +52,13 @@ echo "-- showcase 3: sticker (corgi cutout vs corgi outline+shadow) --"
   --filter "fg:outline=color=#fff:width=6,shadow=blur=14:offset=6,6:opacity=0.55:color=#000" \
   -o "$OUT/03-corgi-sticker.png" >/dev/null
 
-echo "-- showcase 4: vintage (pipe-man, sepia+vignette on original bg) --"
-cp "$PIPEMAN" "$OUT/04-pipeman-before.jpg"
-"$BIN" "$PIPEMAN" --bg "image:$PIPEMAN" --filter "sepia=0.85,vignette=1.5:1.2" -o "$OUT/04-pipeman-vintage.jpg" >/dev/null
+echo "-- showcase 4: vintage (tabby cat with warm natural bg, sepia+vignette) --"
+# HYPOTHESIS: source has a warm golden out-of-focus background; sepia=0.95
+# warms it further into amber; vignette=2:1 darkens corners visibly.
+# (Pipeman replaced - its source is already B&W studio so sepia would
+# barely register; the rule is "filter must visibly change the image".)
+cp "$CAT" "$OUT/04-cat-before.jpg"
+"$BIN" "$CAT" --bg "image:$CAT" --filter "sepia=0.95,vignette=2:1" -o "$OUT/04-cat-vintage.jpg" >/dev/null
 
 echo "-- showcase 5: dramatic composite (yoga on Matterhorn, fg+bg colour-graded) --"
 "$BIN" "$YOGA" --bg "image:$MATTERHORN" -o "$OUT/05-yoga-matterhorn-before.jpg" >/dev/null
@@ -125,10 +129,10 @@ run_filter "scale"           "fg:scale=0.7"
 run_filter "translate"       "fg:translate=120,-60"
 run_filter "rotate"          "fg:rotate=15"
 run_filter "flip"            "fg:flip=horizontal"
-run_filter "feather"         "mask:feather=8"
+run_filter "feather"         "mask:feather=24"
 run_filter "threshold"       "mask:threshold=0.5"
-run_filter "expand"          "mask:expand=4"
-run_filter "contract"        "mask:contract=4"
+run_filter "expand"          "mask:expand=14"
+run_filter "contract"        "mask:contract=14"
 
 echo ""
 echo "done."

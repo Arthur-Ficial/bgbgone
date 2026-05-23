@@ -32,6 +32,17 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
 External communication (emails, PRs to other projects, posts) still needs
 Franz's explicit approval — only the local repo work is autonomous.
 
+## Hypothesis-then-AI-review for every image asset
+
+Every image shipped in `README.md`, `docs/`, or any other surface MUST be:
+
+1. **Hypothesised before generation.** Author states (in the script comment, doc text, or commit message) what the filter / chain is expected to do pixel-wise: which channels change, where in the frame, by how much, what should stay unchanged. Example: "bg:grayscale on a red-panda photo with its own bg → fur stays orange, forest behind goes monochrome; sample 20 background pixels and expect |R-G|+|G-B|+|R-B|<6."
+2. **Regenerated against the freshly-installed binary** via `scripts/make-filter-showcase.sh` (or an equivalent dedicated regen script). Never hand-edited. Never re-uploaded from a stale earlier session. Never generated against an out-of-date binary.
+3. **AI-reviewed BEFORE committing.** Open every newly-regenerated asset in the agent's vision tool (`Read` the JPG/PNG path) and trace the visible behaviour back to the hypothesis: did the subject keep its colour? did the background actually go grey / blur / sepia? did the outline appear at the expected width? **If the asset doesn't match the hypothesis, the implementation is wrong — fix the code, not the doc.**
+4. **Diff-checked against baseline.** For any filter that's expected to change pixels, run `cmp` (or `magick compare`) of the filter output vs the `_baseline.jpg`. Byte-identical output means the filter did nothing — either the parameter strength is too low (bump it) or the implementation is broken (fix it before shipping). Subject-photo selection matters too: a filter that needs a colourful background cannot be demoed on a white-studio cutout.
+
+This rule applies to README showcase pairs, per-filter docs, recipe walkthroughs, and any other image that claims to demonstrate behaviour. **No "shipped image" without all four steps.** Behaviour-vs-claim mismatches caught by the user are shipping bugs — they prove the agent skipped the AI-review pass.
+
 ## Never-stop directive (epic #1 — filter chain v1.0.0)
 
 Until the v1.0.0 epic is fully shipped (every issue closed, every test
