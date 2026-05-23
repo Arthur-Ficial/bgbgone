@@ -1121,6 +1121,11 @@ echo "e2e: NetworkGuard install"
 out=$("$BIN" --version 2>&1)
 echo "$out" | grep -q "^bgbgone v" && pass "binary starts after NetworkGuard install" || fail "NetworkGuard" "no version output"
 
+# --- RED tests for the --filter chain feature (epic #1) ---
+# All tests in this section are expected to FAIL until each ticket lands.
+# Sourced as a module so the RED batch is easy to find and isolated.
+source "$DIR/run-filters.sh"
+
 # --- Summary ---
 echo ""
 echo "================================="
