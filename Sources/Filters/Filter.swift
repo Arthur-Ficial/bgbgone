@@ -121,6 +121,28 @@ public enum FilterDispatch {
             return try ExpandFilter.apply(args: args, to: image, on: layer)
         case ContractFilter.name:
             return try ContractFilter.apply(args: args, to: image, on: layer)
+        case SilhouetteFilter.name:
+            return try SilhouetteFilter.apply(args: args, to: image, on: layer)
+        case CutoutFilter.name:
+            return try CutoutFilter.apply(args: args, to: image, on: layer)
+        case MatteFilter.name:
+            return try MatteFilter.apply(args: args, to: image, on: layer)
+        case OutlineFilter.name:
+            return try OutlineFilter.apply(args: args, to: image, on: layer)
+        case GlowFilter.name:
+            return try GlowFilter.apply(args: args, to: image, on: layer)
+        case ShadowFilter.name:
+            return try ShadowFilter.apply(args: args, to: image, on: layer)
+        case InnerShadowFilter.name:
+            return try InnerShadowFilter.apply(args: args, to: image, on: layer)
+        case ScaleFilter.name:
+            return try ScaleFilter.apply(args: args, to: image, on: layer)
+        case TranslateFilter.name:
+            return try TranslateFilter.apply(args: args, to: image, on: layer)
+        case RotateFilter.name:
+            return try RotateFilter.apply(args: args, to: image, on: layer)
+        case FlipFilter.name:
+            return try FlipFilter.apply(args: args, to: image, on: layer)
         // Cases added per filter ticket in S3..S8.
         default:
             // Unreachable when the registry manifest agrees with this dispatch.

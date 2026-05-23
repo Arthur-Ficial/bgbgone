@@ -83,5 +83,27 @@ public enum FilterCatalogue {
         .init(name: "expand", validLayers: [.mask], signature: "expand=pixels", doc: "grow matte dilation (CIMorphologyMaximum)"),
         // T53 #55 contract - SHIPPED (mask-only)
         .init(name: "contract", validLayers: [.mask], signature: "contract=pixels", doc: "shrink matte erosion (CIMorphologyMinimum)"),
+        // T39 #41 outline - SHIPPED (fg-only)
+        .init(name: "outline", validLayers: [.fg], signature: "outline=color=#hex:width=N", doc: "coloured outline outside the matte (morphology+subtract+tint)", producesAlpha: true),
+        // T40 #42 glow - SHIPPED (fg-only)
+        .init(name: "glow", validLayers: [.fg], signature: "glow=color=#hex:radius=R:intensity=I", doc: "subject glow halo (blur+tint+composite)", producesAlpha: true),
+        // T41 #43 shadow - SHIPPED (fg-only)
+        .init(name: "shadow", validLayers: [.fg], signature: "shadow=blur=B:offset=X,Y:opacity=O:color=#hex", doc: "per-subject drop shadow (translate+blur+tint+composite)", producesAlpha: true),
+        // T42 #44 inner-shadow - SHIPPED (fg-only)
+        .init(name: "inner-shadow", validLayers: [.fg], signature: "inner-shadow=blur=B:offset=X,Y:opacity=O:color=#hex", doc: "shadow inside the matte (invert+blur+intersect+tint)"),
+        // T43 #45 silhouette - SHIPPED (fg-only)
+        .init(name: "silhouette", validLayers: [.fg], signature: "silhouette=color=#hex", doc: "fill the subject with one colour"),
+        // T44 #46 cutout - SHIPPED (fg-only)
+        .init(name: "cutout", validLayers: [.fg], signature: "cutout", doc: "subject becomes a hole; background stays", producesAlpha: true),
+        // T45 #47 matte - SHIPPED (fg-only)
+        .init(name: "matte", validLayers: [.fg], signature: "matte", doc: "emit the alpha mask itself as final RGBA", producesAlpha: true),
+        // T46 #48 scale - SHIPPED (fg-only geometric)
+        .init(name: "scale", validLayers: [.fg], signature: "scale=factor", doc: "scale subject around centre (CIAffineTransform)"),
+        // T47 #49 translate - SHIPPED (fg-only geometric)
+        .init(name: "translate", validLayers: [.fg], signature: "translate=dx,dy", doc: "shift subject in pixels (CIAffineTransform)"),
+        // T48 #50 rotate - SHIPPED (fg-only geometric)
+        .init(name: "rotate", validLayers: [.fg], signature: "rotate=degrees", doc: "rotate subject around centre (CIAffineTransform)"),
+        // T49 #51 flip - SHIPPED (fg-only geometric)
+        .init(name: "flip", validLayers: [.fg], signature: "flip=horizontal|vertical", doc: "mirror subject (CIAffineTransform)"),
     ]
 }
