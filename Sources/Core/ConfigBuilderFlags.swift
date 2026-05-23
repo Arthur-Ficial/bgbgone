@@ -149,6 +149,7 @@ extension ConfigBuilder {
         if cmd.verbose { cfg.verbose = true }
         for raw in cmd.filter {
             let chain = try FilterParser.parse(raw)
+            try FilterRegistry.validate(chain)
             if !chain.isEmpty { cfg.filters.append(chain) }
             saw = true
         }

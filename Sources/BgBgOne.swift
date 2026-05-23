@@ -106,18 +106,32 @@ enum BgBgOne {
         }
 
         // 1b. Apply the matte as alpha. Feathering changes only this mask, not foreground RGB.
-        let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
-        let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
-        processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
-
-        // 2. compose with background (transparent = just emit the masked image)
-        var final = try Compositor.compose(
-            masked: positionedMasked,
-            background: effectiveBackground(cfg),
-            bgFit: cfg.bgFit,
-            dropShadow: cfg.dropShadow,
-            shadowOpacity: cfg.shadowOpacity
-        )
+        // When cfg.filters is non-empty, take the LayeredImage path (T3) so per-layer
+        // filters (fg:/bg:/all:/mask:) get a real layered surface to operate on.
+        var final: CGImage
+        if !cfg.filters.isEmpty {
+            let canvas = CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
+            let bgRendered = try BackgroundRenderer.render(effectiveBackground(cfg), bgFit: cfg.bgFit, canvas: canvas)
+            final = try FilterPipeline.executeAndFlatten(
+                foreground: cgImage,
+                mask: processedMask,
+                background: bgRendered,
+                canvas: canvas,
+                chains: cfg.filters
+            )
+        } else {
+            let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
+            let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
+            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
+            // 2. compose with background (transparent = just emit the masked image)
+            final = try Compositor.compose(
+                masked: positionedMasked,
+                background: effectiveBackground(cfg),
+                bgFit: cfg.bgFit,
+                dropShadow: cfg.dropShadow,
+                shadowOpacity: cfg.shadowOpacity
+            )
+        }
 
         // 2a. optional --crop / --padding (tight-crop to subject bbox, then expand)
         final = try cropIfNeeded(final, mask: processedMask, cfg: cfg)
