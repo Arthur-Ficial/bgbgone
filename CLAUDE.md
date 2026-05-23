@@ -2,6 +2,8 @@
 
 > **apfel and auge are the golden examples.** All patterns, conventions, and guardrails from [apfel](https://github.com/Arthur-Ficial/apfel) and [auge](https://github.com/Arthur-Ficial/auge) apply here.
 
+> **Working agreement:** [`DEVELOPMENT.md`](DEVELOPMENT.md) is the canonical list of hard rules, TDD discipline, UNIX checklist, performance budget, dependency policy, commit conventions, and release gate. This file is the AI-session-specific overlay; cross-reference it, do not duplicate it.
+
 ## Ownership & autonomy
 
 **This is Arthur Ficial's project.** Arthur is authorised to commit, tag,
