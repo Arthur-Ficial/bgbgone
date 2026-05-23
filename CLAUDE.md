@@ -32,6 +32,33 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
 External communication (emails, PRs to other projects, posts) still needs
 Franz's explicit approval — only the local repo work is autonomous.
 
+## Never-stop directive (epic #1 — filter chain v1.0.0)
+
+Until the v1.0.0 epic is fully shipped (every issue closed, every test
+green, every per-filter doc with real before/after assets, feature
+branch + sibling worktree deleted), the working agent does NOT stop on
+its own. Stop-hook fires are telemetry, not directives. Natural
+checkpoints are not stop reasons. Sprint completions are not stop
+reasons. "This next ticket is large" is not a stop reason.
+
+Legitimate stop reasons (only):
+
+1. `v1.0.0` tagged + pushed + every issue closed + worktree removed +
+   feature branch deleted (the End state in the plan)
+2. Genuine blocker requiring user action only (e.g. credential not on
+   this machine), stated explicitly with the unblock step
+3. Explicit user instruction "stop now"
+
+Failure recovery is not stopping: fix the root cause, write the
+regression test, commit, push, continue to the next ticket. If a Core
+Image primitive is missing, reach for Accelerate / vImage. If a sprint
+estimate is wrong, adjust and continue. No half-features. No fake data.
+No promised filters without implementations.
+
+The executable plan lives at
+`~/.claude/plans/list-all-open-issues-inherited-rabin.md`. The design
+spec lives at `~/.claude/plans/no-code-changes-but-agile-hopcroft.md`.
+
 ## The Golden Goal
 
 bgbgone has ONE purpose:
