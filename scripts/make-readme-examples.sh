@@ -18,8 +18,8 @@ trap 'trash_path "$WORK"' EXIT
 # `bgbgone` on PATH. Required because `bgbgone` on PATH can resolve to an older
 # installed binary (e.g. /opt/homebrew/bin/bgbgone), which silently makes the
 # README assets reflect the wrong release.
-if [ -x "$ROOT/.build/release/bgbgone" ]; then
-    BGBGONE="$ROOT/.build/release/bgbgone"
+if [ -x "$ROOT/build/release/bgbgone" ]; then
+    BGBGONE="$ROOT/build/release/bgbgone"
 elif [ -x "/usr/local/bin/bgbgone" ]; then
     BGBGONE="/usr/local/bin/bgbgone"
 else

@@ -1,6 +1,9 @@
 PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
+DIST_DIR = dist
+BUILD_DIR = build
+SCRATCH = --scratch-path $(BUILD_DIR)
 
 .PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing lint-version-policy docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k load-test-table fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
@@ -22,13 +25,13 @@ check-toolchain:
 build: check-toolchain
 	$(MAKE) generate-build-info
 	$(MAKE) update-readme
-	swift build -c release
+	swift build -c release $(SCRATCH)
 
 install: build
 	@if [ -w "$(PREFIX)/bin" ]; then \
-		install .build/release/$(BINARY) $(PREFIX)/bin/$(BINARY); \
+		install $(BUILD_DIR)/release/$(BINARY) $(PREFIX)/bin/$(BINARY); \
 	else \
-		sudo install .build/release/$(BINARY) $(PREFIX)/bin/$(BINARY); \
+		sudo install $(BUILD_DIR)/release/$(BINARY) $(PREFIX)/bin/$(BINARY); \
 	fi
 	@echo "installed: $$($(PREFIX)/bin/$(BINARY) --version)"
 
@@ -43,10 +46,10 @@ docs: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing
 test: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing lint-version-policy test-unit test-integration test-doc-blocks
 
 test-unit: check-toolchain generate-build-info
-	swift run bgbgone-tests
+	swift run $(SCRATCH) bgbgone-tests
 
 test-integration: build
-	bash Tests/integration/run.sh .build/release/$(BINARY)
+	bash Tests/integration/run.sh $(BUILD_DIR)/release/$(BINARY)
 
 lint-fixtures:
 	bash scripts/lint-fixtures.sh
@@ -76,7 +79,7 @@ lint-docs: check-toolchain generate-build-info
 lint: lint-fixtures lint-readme lint-contract lint-docs lint-doc-images lint-block-pairing lint-version-policy
 
 performance-100:
-	bash Tests/performance/run-100.sh .build/release/$(BINARY)
+	bash Tests/performance/run-100.sh $(BUILD_DIR)/release/$(BINARY)
 
 test-performance-100 perf-100: build performance-100
 
@@ -166,25 +169,26 @@ uninstall:
 	fi
 
 clean:
-	bash -c 'source scripts/trash.sh; trash_path .build Tests/integration/_out Tests/integration/_tmp'
+	bash -c 'source scripts/trash.sh; trash_path $(DIST_DIR) $(BUILD_DIR) .build Tests/integration/_out Tests/integration/_tmp'
 
 package-release-asset:
 	@v=$$(cat $(VERSION_FILE)); \
-	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
-	if [ ! -x ".build/release/$(BINARY)" ]; then \
-		echo "error: missing .build/release/$(BINARY). Build a release binary first."; \
+	asset="$(DIST_DIR)/bgbgone-$$v-arm64-macos.tar.gz"; \
+	if [ ! -x "$(BUILD_DIR)/release/$(BINARY)" ]; then \
+		echo "error: missing $(BUILD_DIR)/release/$(BINARY). Build a release binary first."; \
 		exit 1; \
 	fi; \
-	tar -C .build/release -czf "$$asset" $(BINARY); \
+	mkdir -p $(DIST_DIR); \
+	tar -C $(BUILD_DIR)/release -czf "$$asset" $(BINARY); \
 	echo "$$asset"
 
 print-release-asset:
 	@v=$$(cat $(VERSION_FILE)); \
-	echo "bgbgone-$$v-arm64-macos.tar.gz"
+	echo "$(DIST_DIR)/bgbgone-$$v-arm64-macos.tar.gz"
 
 print-release-sha256:
 	@v=$$(cat $(VERSION_FILE)); \
-	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
+	asset="$(DIST_DIR)/bgbgone-$$v-arm64-macos.tar.gz"; \
 	if [ ! -f "$$asset" ]; then \
 		echo "error: missing $$asset. Run make package-release-asset first."; \
 		exit 1; \
@@ -223,7 +227,7 @@ all-images: filter-images panel-images filter-docs readme-images
 # never tag without it. `make test`/`make build` no longer auto-bump.
 release: bump-patch lint test install all-images performance-100 package-release-asset
 	@v=$$(cat $(VERSION_FILE)); \
-	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
+	asset="$(DIST_DIR)/bgbgone-$$v-arm64-macos.tar.gz"; \
 	echo ""; \
 	echo "release ready:"; \
 	echo "  version : $$v"; \

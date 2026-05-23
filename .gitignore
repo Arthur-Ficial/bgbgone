@@ -1,3 +1,4 @@
+build/
 .build/
 .swiftpm/
 *.xcodeproj
@@ -5,6 +6,7 @@ xcuserdata/
 DerivedData/
 .DS_Store
 bgbgone-*.tar.gz
+dist/
 Tests/integration/_out/
 Tests/integration/_tmp/
 Tests/performance/_tmp_*/
