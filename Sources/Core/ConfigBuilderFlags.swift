@@ -147,6 +147,11 @@ extension ConfigBuilder {
         }
         if cmd.quiet { cfg.quiet = true }
         if cmd.verbose { cfg.verbose = true }
+        for raw in cmd.filter {
+            let chain = try FilterParser.parse(raw)
+            if !chain.isEmpty { cfg.filters.append(chain) }
+            saw = true
+        }
         return saw
     }
 

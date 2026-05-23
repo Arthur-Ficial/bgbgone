@@ -105,6 +105,28 @@ Routing constraints are enforced before image processing starts:
 - `2` parser error (bad flag) or no result (no subject detected; can be relaxed with `--allow-empty`)
 - `3` framework error (Vision unavailable or returned an error)
 
+## `--filter` chain (in progress, epic #1)
+
+bgbgone v0.3.0+ adds an FFmpeg-style `--filter` flag (repeatable) for per-layer effects. The grammar is locked:
+
+```
+chain  := stage (";" stage)*
+stage  := [layer ":"] filter ("," filter)*
+layer  := fg | bg | all | mask    (default: all)
+filter := name ("=" arg (":" arg)*)?
+arg    := value | key "=" value
+```
+
+Examples:
+
+```
+--filter "bg:grayscale"
+--filter "bg:blur=20"
+--filter "fg:outline=color=#fff:width=3,shadow=blur=12:opacity=0.5:offset=4,4"
+```
+
+Out-of-scope filter ideas are catalogued in [`filters-out-of-scope.md`](filters-out-of-scope.md). Per-filter deep-dives land in [`filters/`](filters/) as each filter ships.
+
 ## Error model
 
 Every error path emits a structured `BgBgOneError` (`Sources/Core/BgBgOneError.swift`). Single source of truth for rendering: `Sources/Core/ErrorRenderer.swift`. Stable code list: `Sources/Core/ErrorCodes.swift`.

@@ -74,6 +74,7 @@ public struct Config: Sendable, Equatable {
     public var quiet: Bool
     public var verbose: Bool
     public var server: ServerConfig
+    public var filters: [FilterChain]
 
     public init(mode: Mode = .helpRequested) {
         self.mode = mode
@@ -106,6 +107,7 @@ public struct Config: Sendable, Equatable {
         self.quiet = false
         self.verbose = false
         self.server = ServerConfig()
+        self.filters = []
     }
 }
 

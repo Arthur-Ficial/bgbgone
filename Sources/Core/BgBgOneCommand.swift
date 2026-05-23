@@ -78,6 +78,9 @@ public struct BgBgOneCommand: ParsableCommand {
     @Flag(name: .customLong("quiet")) public var quiet: Bool = false
     @Flag(name: .customLong("verbose")) public var verbose: Bool = false
 
+    // Filter chain (repeatable). Each value is one chain string parsed via FilterParser.
+    @Option(name: .customLong("filter"), parsing: .singleValue) public var filter: [String] = []
+
     // Positional inputs (paths or "-" for stdin)
     @Argument(parsing: .remaining) public var inputs: [String] = []
 

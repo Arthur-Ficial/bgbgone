@@ -61,6 +61,18 @@ enum CLI {
           --type auto|person|product|car|animal|graphic|transportation
           auto uses the public foreground-instance mask API.
 
+        FILTER (epic #1, in progress):
+          --filter "<chain>"                    FFmpeg-style filter chain (repeatable)
+          chain  := stage (";" stage)*
+          stage  := [layer ":"] filter ("," filter)*
+          layer  := fg | bg | all | mask        (default: all)
+          filter := name ("=" arg (":" arg)*)?
+          examples:
+            --filter "bg:grayscale"
+            --filter "bg:blur=20"
+            --filter "fg:outline=color=#fff:width=3,shadow=blur=12:opacity=0.5"
+          run `bgbgone --filters-list` to discover available filters.
+
         MULTI-INSTANCE:
           --multi                               one file per detected instance (file input only)
           --instance-naming "{base}-{n}.{ext}"  filename template
