@@ -16,88 +16,6 @@ One shell command. Any image. Transparent cutout in 86 milliseconds. 100% on you
 
 ![bgbgone hero](docs/images/hero.png)
 
-## Filter showcase
-
-Five real one-shot transforms produced by `bgbgone --filter` against the strict-CC0 fixtures in `Tests/fixtures/showcase/`. Run [`scripts/make-filter-showcase.sh`](scripts/make-filter-showcase.sh) to regenerate every asset below against the freshly-installed binary.
-
-### 1. Colour-pop — black-and-white background, colour subject
-
-```bash
-bgbgone corgi.jpg --bg color:white --filter "bg:grayscale" -o corgi-colourpop.jpg
-```
-
-| Before | After |
-|---|---|
-| ![corgi original](docs/images/showcase/01-corgi-before.jpg) | ![corgi colour-pop](docs/images/showcase/01-corgi-colourpop.jpg) |
-
-The subject keeps every shade of fawn fur; the white backdrop turns grey. Powered by `CIColorControls` with saturation 0 on the `bg` layer.
-
-### 2. Portrait mode — silky background blur, sharp subject
-
-```bash
-bgbgone yoga.jpg --bg color:white --filter "bg:blur=20" -o yoga-portrait.jpg
-```
-
-| Before | After |
-|---|---|
-| ![yoga original](docs/images/showcase/02-yoga-before.jpg) | ![yoga portrait mode](docs/images/showcase/02-yoga-portraitmode.jpg) |
-
-Phone-camera portrait mode on any subject. `CIGaussianBlur` runs on the background plate only; the foreground stays pin-sharp.
-
-### 3. Sticker style — coloured outline + drop shadow on transparent
-
-```bash
-bgbgone corgi.jpg \
-  --filter "fg:outline=color=#fff:width=4,shadow=blur=12:offset=4,4:opacity=0.5:color=#000" \
-  -o corgi-sticker.png
-```
-
-| Cutout | Sticker |
-|---|---|
-| ![corgi cutout](docs/images/showcase/03-corgi-cutout.png) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.png) |
-
-`CIMorphologyMaximum` dilates the matte for the white halo, `CIGaussianBlur` + `CIAffineTransform` produces the drop shadow. The chain order matters: outline first, then shadow under it.
-
-### 4. Vintage finish — sepia tone + vignette
-
-```bash
-bgbgone pipeman.jpg --bg color:white --filter "sepia=0.7,vignette=1:1.2" -o pipeman-vintage.jpg
-```
-
-| Before | After |
-|---|---|
-| ![pipe-man original](docs/images/showcase/04-pipeman-before.jpg) | ![pipe-man vintage](docs/images/showcase/04-pipeman-vintage.jpg) |
-
-`CISepiaTone` at 70% + `CIVignette`. Composite-only chain (no `fg:`/`bg:` prefix needed) operates on the final compositied frame.
-
-### 5. Dramatic composite — subject on the Matterhorn at golden hour
-
-```bash
-bgbgone yoga.jpg \
-  --bg "image:./Matterhorn_sunset.jpg" \
-  --filter "bg:adjust=brightness=-0.15:saturation=0.8; fg:adjust=saturation=1.2" \
-  -o yoga-matterhorn.jpg
-```
-
-| Plain composite | Colour-graded |
-|---|---|
-| ![yoga on Matterhorn](docs/images/showcase/05-yoga-matterhorn-before.jpg) | ![yoga on Matterhorn graded](docs/images/showcase/05-yoga-matterhorn-graded.jpg) |
-
-Background gets a moody darken + desaturate, foreground gets a saturation boost. Two stages in one chain (`;`) — left-to-right evaluation, independent layer scopes.
-
-### Showcase image credits
-
-All showcase fixtures are CC0 or Franz Enzenhofer's own CC BY 4.0 work. Sidecar JSONs travel with every fixture (`Tests/fixtures/showcase/*.json`).
-
-| Fixture | Subject | Licence | Source |
-|---|---|---|---|
-| `Fawn_and_white_Welsh_Corgi_puppy_...jpg` | Huoadg5888 (Pixabay) | CC0 / Public Domain | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg) |
-| `franz-yoga.jpg` | Franz Enzenhofer | **CC BY 4.0** | own work |
-| `Bearded_man_smoking_pipe-3013924.jpg` | Pexels contributor | CC0 / Public Domain | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Bearded_man_smoking_pipe-3013924.jpg) |
-| `bg/Matterhorn_sunset_2016__Unsplash_.jpg` | Eberhard Grossgasteiger (Unsplash) | CC0 / Public Domain | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Matterhorn_sunset_2016_(Unsplash).jpg) |
-
-Full per-filter docs in [`docs/filters/`](docs/filters/). The 49-filter catalogue: [`docs/filters/README.md`](docs/filters/README.md).
-
 ## Install
 
 ```bash
@@ -475,6 +393,90 @@ bgbgone is part of the [apfel](https://github.com/Arthur-Ficial/apfel) ecosystem
 | **bgbgone** (this)                                | Background removal (do)     | Vision + Core Image    |
 | [ohr](https://github.com/Arthur-Ficial/ohr)       | Speech-to-text              | SpeechAnalyzer         |
 | [kern](https://github.com/Arthur-Ficial/kern)     | Embeddings                  | NLContextualEmbedding  |
+
+## Filter showcase — `--filter` chain in action
+
+bgbgone v1.0.0 ships a 49-filter chain. Apple Vision separates foreground from background; per-layer filters then transform either independently, all together, or the mask itself. Five end-to-end examples below, each regenerated against the strict-CC0 fixtures in [`Tests/fixtures/showcase/`](Tests/fixtures/showcase/) via [`scripts/make-filter-showcase.sh`](scripts/make-filter-showcase.sh).
+
+Run `bgbgone --filters-list` to enumerate every filter with its valid layers, signature, and one-line doc. Per-filter deep-dives live in [`docs/filters/`](docs/filters/).
+
+### 1. Colour-pop — original background goes B&W, subject keeps its colour
+
+```bash
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale" -o colourpop.jpg
+```
+
+| Before (original photo) | After (colour-pop) |
+|---|---|
+| ![panda original](docs/images/showcase/01-panda-before.jpg) | ![panda colour-pop](docs/images/showcase/01-panda-colourpop.jpg) |
+
+The trick: pass the source photo as **both subject AND background plate** (`--bg image:<self>`). The pipeline extracts the subject via Apple Vision, runs `bg:grayscale` (CIColorControls with saturation 0) on the background plate only, then composites the colour subject back on top. Subject stays vibrantly red-orange; the forest behind goes monochrome.
+
+### 2. Portrait mode — silky background blur, sharp subject
+
+```bash
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=22" -o portrait.jpg
+```
+
+| Before (original photo) | After (portrait mode) |
+|---|---|
+| ![panda original](docs/images/showcase/01-panda-before.jpg) | ![panda portrait mode](docs/images/showcase/02-panda-portraitmode.jpg) |
+
+Same self-as-background trick. `CIGaussianBlur` runs on the background plate only; the foreground stays pin-sharp. Phone-camera portrait mode in one shell command.
+
+### 3. Sticker style — coloured outline + drop shadow on transparent
+
+```bash
+bgbgone corgi.jpg \
+  --filter "fg:outline=color=#fff:width=6,shadow=blur=14:offset=6,6:opacity=0.55:color=#000" \
+  -o corgi-sticker.png
+```
+
+| Cutout | Sticker |
+|---|---|
+| ![corgi cutout](docs/images/showcase/03-corgi-cutout.png) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.png) |
+
+`CIMorphologyMaximum` dilates the matte for the white halo; `CIGaussianBlur` + `CIAffineTransform` produces the drop shadow. Chain order matters: outline first, shadow under it. Output is RGBA PNG.
+
+### 4. Vintage finish — sepia + vignette on the original photo
+
+```bash
+bgbgone pipeman.jpg --bg "image:pipeman.jpg" --filter "sepia=0.85,vignette=1.5:1.2" -o vintage.jpg
+```
+
+| Before (original photo) | After (vintage) |
+|---|---|
+| ![pipe-man original](docs/images/showcase/04-pipeman-before.jpg) | ![pipe-man vintage](docs/images/showcase/04-pipeman-vintage.jpg) |
+
+`CISepiaTone` + `CIVignette`. Composite-only chain (no `fg:`/`bg:` prefix needed) — operates on the final flattened frame.
+
+### 5. Dramatic composite — corgi in deep space, three-stage chain
+
+```bash
+bgbgone corgi.jpg \
+  --bg "image:./Flying-Dragon-Nebula.png" \
+  --filter "bg:adjust=brightness=-0.1:saturation=1.4; fg:adjust=saturation=1.2:brightness=0.08; fg:outline=color=#ffaa00:width=4" \
+  -o corgi-space.jpg
+```
+
+| Plain composite | Three-stage grade |
+|---|---|
+| ![corgi in space](docs/images/showcase/05-corgi-space-before.jpg) | ![corgi space dramatic](docs/images/showcase/05-corgi-space-dramatic.jpg) |
+
+Three stages in one chain (`;` separators): background gets a moody darken + saturation boost so the nebula glows, foreground gets saturation + brightness lift to match the new lighting, then a golden 4-pixel outline rim-lights the subject against the deep colour. Independent layer scopes, left-to-right evaluation.
+
+### Showcase image credits
+
+All showcase fixtures are CC0 or Franz Enzenhofer's own CC BY 4.0 work. Sidecar JSONs travel with every fixture (`Tests/fixtures/showcase/*.json`).
+
+| Fixture | Subject / artist | Licence | Source |
+|---|---|---|---|
+| `Red_Panda__24986761703_.jpg` | Mathias Appel | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Red_Panda_(24986761703).jpg) |
+| `Fawn_and_white_Welsh_Corgi_puppy_...jpg` | Huoadg5888 (Pixabay) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg) |
+| `Bearded_man_smoking_pipe-3013924.jpg` | Pexels contributor | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Bearded_man_smoking_pipe-3013924.jpg) |
+| `bg/Flying-Dragon-Nebula_Sh_2-113.png` | NASA / ESA Hubble (PD-USGov) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Flying-Dragon-Nebula_Sh_2-113.png) |
+
+Full per-filter docs in [`docs/filters/`](docs/filters/). The 49-filter catalogue index: [`docs/filters/README.md`](docs/filters/README.md).
 
 ## Capabilities
 
