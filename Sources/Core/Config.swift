@@ -41,6 +41,7 @@ public struct Config: Sendable, Equatable {
         case versionRequested
         case capabilityCheckRequested
         case serverRequested
+        case filtersListRequested
         case process
     }
 

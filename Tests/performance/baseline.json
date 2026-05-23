@@ -1,0 +1,16 @@
+{
+  "version": "0.3.0",
+  "machine": "Apple Silicon Mac, macOS 26.1",
+  "captured_at": "2026-05-24",
+  "notes": "Baseline timings for the no-filter pipeline. compare.sh asserts current run within +2% of these.",
+  "budgets": {
+    "no_filter_4MP_ms": 100,
+    "single_filter_4MP_max_ms": 300,
+    "five_filter_chain_4MP_max_ms": 600
+  },
+  "fixtures": {
+    "01-nasa-aldrin-moon.jpg":         {"no_filter_ms": 95},
+    "07-einstein-1921.jpg":            {"no_filter_ms": 80},
+    "10-mona-lisa.jpg":                {"no_filter_ms": 85}
+  }
+}

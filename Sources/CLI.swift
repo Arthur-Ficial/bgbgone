@@ -118,6 +118,24 @@ enum CLI {
         """)
     }
 
+    static func printFiltersList() {
+        print("bgbgone v\(buildVersion) - filter catalogue (\(FilterRegistry.all.count) filters)")
+        print("")
+        let sorted = FilterRegistry.all.sorted { $0.name < $1.name }
+        for entry in sorted {
+            let layers = entry.validLayers.map { $0.rawValue }.sorted().joined(separator: "|")
+            let aliasStr = entry.aliases.isEmpty ? "" : " (aliases: \(entry.aliases.sorted().joined(separator: ", ")))"
+            print("  \(entry.name)\(aliasStr)")
+            print("    layers:    \(layers)")
+            print("    signature: \(entry.signature)")
+            print("    doc:       \(entry.doc)")
+            if entry.producesAlpha {
+                print("    note:      can introduce alpha; use PNG output or --bg")
+            }
+            print("")
+        }
+    }
+
     static func printCheck() {
         let proc = ProcessInfo.processInfo
         let osv = proc.operatingSystemVersion

@@ -105,6 +105,25 @@ enum BgBgOne {
             )
         }
 
+        // 1ab. T57 #59 - reject alpha-producing filter chain when output is JPEG and
+        // background is transparent (no opaque bg to flatten onto).
+        if cfg.outputFormat == .jpeg, case .transparent = cfg.background {
+            let alphaProducing = cfg.filters.contains { chain in
+                chain.stages.contains { stage in
+                    stage.calls.contains { call in
+                        FilterRegistry.find(call.name)?.producesAlpha ?? false
+                    }
+                }
+            }
+            if alphaProducing {
+                throw BgBgOneError.userError(
+                    ErrorCodes.userJpegAlphaLoss,
+                    "alpha-producing filter chain cannot output to JPEG (JPEG has no alpha channel)",
+                    hint: "use PNG output (-o out.png / --to png) or add --bg color:white to flatten onto a solid background"
+                )
+            }
+        }
+
         // 1b. Apply the matte as alpha. Feathering changes only this mask, not foreground RGB.
         // When cfg.filters is non-empty, take the LayeredImage path (T3) so per-layer
         // filters (fg:/bg:/all:/mask:) get a real layered surface to operate on.

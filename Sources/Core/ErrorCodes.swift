@@ -38,6 +38,7 @@ public enum ErrorCodes {
     public static let userBackgroundImageUnreadable    = "BGBG_USER_BACKGROUND_IMAGE_UNREADABLE"
     public static let userFormatUnsupported            = "BGBG_USER_FORMAT_UNSUPPORTED"
     public static let userServerPortInUse              = "BGBG_USER_SERVER_PORT_IN_USE"
+    public static let userJpegAlphaLoss                 = "BGBG_USER_JPEG_ALPHA_LOSS"
 
     // MARK: no_result (exit 2)
     public static let noResultNoSubject                = "BGBG_NORESULT_NO_SUBJECT"

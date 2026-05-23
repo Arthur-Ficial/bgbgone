@@ -20,6 +20,7 @@ public struct BgBgOneCommand: ParsableCommand {
     @Flag(name: [.customLong("help"), .customShort("h")]) public var help: Bool = false
     @Flag(name: .customLong("check")) public var check: Bool = false
     @Flag(name: .customLong("server")) public var server: Bool = false
+    @Flag(name: .customLong("filters-list")) public var filtersList: Bool = false
 
     // Server options (recognised even outside --server; ConfigBuilder catches misuse)
     @Option(name: .customLong("host")) public var host: String?

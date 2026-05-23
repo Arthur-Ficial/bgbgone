@@ -35,6 +35,9 @@ case .versionRequested:
 case .capabilityCheckRequested:
     CLI.printCheck()
     exit(0)
+case .filtersListRequested:
+    CLI.printFiltersList()
+    exit(0)
 case .serverRequested:
     do {
         try BgBgOneHTTPServer(config: cfg.server, quiet: cfg.quiet).start()

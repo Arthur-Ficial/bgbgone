@@ -60,6 +60,7 @@ public enum ConfigBuilder {
         if cmd.version { return .versionRequested }
         if cmd.help    { return .helpRequested }
         if cmd.check   { return .capabilityCheckRequested }
+        if cmd.filtersList { return .filtersListRequested }
         if cmd.server  { return .serverRequested }
         return nil
     }
