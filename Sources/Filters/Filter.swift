@@ -101,6 +101,26 @@ public enum FilterDispatch {
             return try LevelsFilter.apply(args: args, to: image, on: layer)
         case DuotoneFilter.name:
             return try DuotoneFilter.apply(args: args, to: image, on: layer)
+        case VignetteFilter.name:
+            return try VignetteFilter.apply(args: args, to: image, on: layer)
+        case VignetteEffectFilter.name:
+            return try VignetteEffectFilter.apply(args: args, to: image, on: layer)
+        case BloomFilter.name:
+            return try BloomFilter.apply(args: args, to: image, on: layer)
+        case GloomFilter.name:
+            return try GloomFilter.apply(args: args, to: image, on: layer)
+        case EmbossFilter.name:
+            return try EmbossFilter.apply(args: args, to: image, on: layer)
+        case NoiseFilter.name:
+            return try NoiseFilter.apply(args: args, to: image, on: layer)
+        case FeatherFilter.name:
+            return try FeatherFilter.apply(args: args, to: image, on: layer)
+        case ThresholdFilter.name:
+            return try ThresholdFilter.apply(args: args, to: image, on: layer)
+        case ExpandFilter.name:
+            return try ExpandFilter.apply(args: args, to: image, on: layer)
+        case ContractFilter.name:
+            return try ContractFilter.apply(args: args, to: image, on: layer)
         // Cases added per filter ticket in S3..S8.
         default:
             // Unreachable when the registry manifest agrees with this dispatch.

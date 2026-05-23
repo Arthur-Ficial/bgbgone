@@ -63,5 +63,25 @@ public enum FilterCatalogue {
         .init(name: "crystallize", validLayers: [.fg, .bg, .all], signature: "crystallize=radius", doc: "Voronoi mosaic (CICrystallize)"),
         // T32 #34 pointillize - SHIPPED
         .init(name: "pointillize", validLayers: [.fg, .bg, .all], signature: "pointillize=radius", doc: "Seurat dot effect (CIPointillize)"),
+        // T30 #32 emboss - SHIPPED
+        .init(name: "emboss", validLayers: [.fg, .bg, .all], signature: "emboss", doc: "raised relief via 3x3 convolution"),
+        // T34 #36 noise - SHIPPED
+        .init(name: "noise", validLayers: [.fg, .bg, .all], signature: "noise=amount", doc: "additive film grain (CIRandomGenerator + composite)"),
+        // T35 #37 vignette - SHIPPED (composite-only)
+        .init(name: "vignette", validLayers: [.all], signature: "vignette=intensity:radius", doc: "darken edges, composite only (CIVignette)"),
+        // T36 #38 vignette-effect - SHIPPED (composite-only)
+        .init(name: "vignette-effect", validLayers: [.all], signature: "vignette-effect=center=X,Y:radius=R:intensity=I", doc: "positioned vignette (CIVignetteEffect)"),
+        // T37 #39 bloom - SHIPPED (composite-only)
+        .init(name: "bloom", validLayers: [.all], signature: "bloom=intensity:radius", doc: "soft glow on highlights (CIBloom)"),
+        // T38 #40 gloom - SHIPPED (composite-only)
+        .init(name: "gloom", validLayers: [.all], signature: "gloom=intensity:radius", doc: "dark-glow inverse of bloom (CIGloom)"),
+        // T50 #52 feather - SHIPPED (mask-only)
+        .init(name: "feather", validLayers: [.mask], signature: "feather=radius", doc: "soften matte edge (CIGaussianBlur on mask)"),
+        // T51 #53 threshold - SHIPPED (mask-only)
+        .init(name: "threshold", validLayers: [.mask], signature: "threshold=value", doc: "binarise matte (CIColorThreshold)"),
+        // T52 #54 expand - SHIPPED (mask-only)
+        .init(name: "expand", validLayers: [.mask], signature: "expand=pixels", doc: "grow matte dilation (CIMorphologyMaximum)"),
+        // T53 #55 contract - SHIPPED (mask-only)
+        .init(name: "contract", validLayers: [.mask], signature: "contract=pixels", doc: "shrink matte erosion (CIMorphologyMinimum)"),
     ]
 }
