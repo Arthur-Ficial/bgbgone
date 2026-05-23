@@ -43,22 +43,27 @@ echo "-- showcase 1: colour-pop (red panda, original bg goes B&W) --"
 cp "$PANDA" "$OUT/01-panda-before.jpg"
 "$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:grayscale" -o "$OUT/01-panda-colourpop.jpg" >/dev/null
 
-echo "-- showcase 2: portrait mode (red panda, original bg gets silky blur) --"
-"$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:blur=22" -o "$OUT/02-panda-portraitmode.jpg" >/dev/null
+echo "-- showcase 2: portrait mode (red panda, original bg gets silky blur=60) --"
+"$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:blur=60" -o "$OUT/02-panda-portraitmode.jpg" >/dev/null
 
-echo "-- showcase 3: sticker (corgi cutout vs corgi outline+shadow) --"
-"$BIN" "$CORGI" -o "$OUT/03-corgi-cutout.png" >/dev/null
-"$BIN" "$CORGI" \
-  --filter "fg:outline=color=#fff:width=6,shadow=blur=14:offset=6,6:opacity=0.55:color=#000" \
-  -o "$OUT/03-corgi-sticker.png" >/dev/null
+echo "-- showcase 3: sticker (DARK bg so white halo+shadow are clearly visible) --"
+# HYPOTHESIS: dark navy bg (#1a2233) - thick white halo (width=30) glows
+# clearly around the subject; large drop shadow (blur=40, offset=24,24,
+# opacity=0.85) is visible against the dark plate. fg/bg split is obvious:
+# bg = uniform dark navy; fg = corgi with halo & shadow.
+"$BIN" "$CORGI" --bg "color:#1a2233" -o "$OUT/03-corgi-before.jpg" >/dev/null
+"$BIN" "$CORGI" --bg "color:#1a2233" \
+  --filter "fg:shadow=blur=40:offset=24,24:opacity=0.85:color=#000,outline=color=#fff:width=30" \
+  -o "$OUT/03-corgi-sticker.jpg" >/dev/null
+rm -f "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
-echo "-- showcase 4: vintage (tabby cat with warm natural bg, sepia+vignette) --"
-# HYPOTHESIS: source has a warm golden out-of-focus background; sepia=0.95
-# warms it further into amber; vignette=2:1 darkens corners visibly.
-# (Pipeman replaced - its source is already B&W studio so sepia would
-# barely register; the rule is "filter must visibly change the image".)
+echo "-- showcase 4: vintage backdrop, modern subject (bg sepia+darken; fg keeps colour) --"
+# HYPOTHESIS: bg gets full sepia + brightness=-0.25 + saturation=0.4 (old-
+# photo backdrop). fg keeps original colour - blue eyes stay vibrant. Clear
+# fg/bg split: modern colour subject in front of vintage backdrop.
 cp "$CAT" "$OUT/04-cat-before.jpg"
-"$BIN" "$CAT" --bg "image:$CAT" --filter "sepia=0.95,vignette=2:1" -o "$OUT/04-cat-vintage.jpg" >/dev/null
+"$BIN" "$CAT" --filter "bg:sepia=1.0,adjust=brightness=-0.25:saturation=0.4; vignette=2:1" \
+  -o "$OUT/04-cat-vintage.jpg" >/dev/null
 
 echo "-- showcase 5: dramatic composite (yoga on Matterhorn, fg+bg colour-graded) --"
 "$BIN" "$YOGA" --bg "image:$MATTERHORN" -o "$OUT/05-yoga-matterhorn-before.jpg" >/dev/null

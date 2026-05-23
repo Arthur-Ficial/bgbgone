@@ -122,37 +122,30 @@ bgbgone mona-lisa.jpg --bg image:./hokusai-great-wave.jpg    -o wave.jpg
 bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 ```
 
-### Edge refinement
+### Edge refinement (via `--filter`)
 
-`--feather <px>` softens the matte edge. `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--scale` and `--position` place the subject on the canvas. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--semitransparency false` hardens the matte so soft edges become opaque. `--mask-only` emits the grayscale alpha matte.
-
-![feather progression (0 to 16 px), --crop, --padding, --shadow, --mask-only](docs/images/showcase-edges.png)
+Mask shape and edge softness are tuned via the `--filter` chain (the old `--feather` / `--threshold` / `--mask-only` / `--scale` / `--position` flags were hard-removed in v1.0.0). `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--semitransparency false` hardens the matte so soft edges become opaque.
 
 ```bash
-bgbgone in.jpg --bg color:white --feather 8           -o soft.png
-bgbgone in.jpg --threshold 0.55                       -o crisper.png
-bgbgone in.jpg --crop                                 -o tight.png
-bgbgone in.jpg --crop --padding 10%                   -o tight-padded.png
-bgbgone in.jpg --crop --crop-margin "5% 10%"          -o api-padded.png
-bgbgone in.jpg --crop --crop-margin "5% 10% 15% 20%"  -o four-sided.png
-bgbgone in.jpg --roi "0% 0% 100% 80%"                 -o top-region.png
-bgbgone in.jpg --scale 75% --position center          -o centered.png
-bgbgone in.jpg --scale 50% --position "25% 75%"       -o lower-left.png
-bgbgone in.jpg --bg color:white --shadow              -o dropshadow.png
-bgbgone in.jpg --shadow-type drop --shadow-opacity 25 -o soft-shadow.png
-bgbgone in.jpg --shadow-type none                     -o no-shadow.png
-bgbgone in.jpg --semitransparency false               -o hard-edge.png
-bgbgone in.jpg --mask-only                            -o matte.png
-bgbgone in.jpg --channels alpha                       -o matte.png   # same as --mask-only
+bgbgone in.jpg --bg color:white --filter "mask:feather=8"      -o soft.png
+bgbgone in.jpg --filter "mask:threshold=0.55"                  -o crisper.png
+bgbgone in.jpg --crop                                          -o tight.png
+bgbgone in.jpg --crop --padding 10%                            -o tight-padded.png
+bgbgone in.jpg --crop --crop-margin "5% 10%"                   -o api-padded.png
+bgbgone in.jpg --crop --crop-margin "5% 10% 15% 20%"           -o four-sided.png
+bgbgone in.jpg --roi "0% 0% 100% 80%"                          -o top-region.png
+bgbgone in.jpg --filter "fg:scale=0.75"                        -o scaled.png
+bgbgone in.jpg --filter "fg:scale=0.5,translate=-200,200"      -o lower-left.png
+bgbgone in.jpg --bg color:white --shadow                       -o dropshadow.png
+bgbgone in.jpg --shadow-type drop --shadow-opacity 25          -o soft-shadow.png
+bgbgone in.jpg --shadow-type none                              -o no-shadow.png
+bgbgone in.jpg --semitransparency false                        -o hard-edge.png
+bgbgone in.jpg --filter "fg:matte"                             -o matte.png
+bgbgone in.jpg --filter "mask:expand=6"                        -o thicker-mask.png
+bgbgone in.jpg --filter "mask:contract=6"                      -o thinner-mask.png
 ```
 
-Closer look at the matte itself. `--mask-only` writes the grayscale alpha, and the compositor blends with that:
-
-![input, grayscale matte, composite](docs/images/mask-breakdown.png)
-
-Pixel-level zoom on the edge for `--feather 0` vs `--feather 8`:
-
-![--feather close-up](docs/images/feather-zoom.png)
+See [`docs/filters/`](docs/filters/) for the full per-filter deep-dives, and the [Filter showcase](#filter-showcase----filter-chain-in-action) section below for five end-to-end before/after examples.
 
 ### Algorithm selection
 
@@ -219,7 +212,7 @@ bgbgone team.jpg --multi --instance-naming "subject_{n:02}.{ext}" --out-dir ./pe
 
 The number of instances is decided by Vision. For tightly-grouped or touching subjects (e.g. an Apollo crew shoulder-to-shoulder) Vision returns one combined instance. For subjects with visible spatial gaps you get one file per subject.
 
-`--multi` is file-output only: it needs a file input stem for naming, cannot read image data from stdin, and cannot be combined with `-o` or `--mask-only`. If `--out-dir` is omitted, files are written beside the input image.
+`--multi` is file-output only: it needs a file input stem for naming and cannot read image data from stdin. If `--out-dir` is omitted, files are written beside the input image.
 
 ### Structured output
 
@@ -308,12 +301,12 @@ auge --classify /tmp/cut.jpg --top 5
 
 ### Product photography: every step
 
-For each vintage product fixture: source, then `--mask-only` matte, then transparent cutout, then composed onto a PD background. Same four-step pipeline, four different products.
+For each vintage product fixture: source, then `--filter "fg:matte"` matte, then transparent cutout, then composed onto a PD background. Same four-step pipeline, four different products.
 
 ![Products: source, mask-only, cutout, composed onto a PD background](docs/images/showcase-products.png)
 
 ```bash
-bgbgone pierce-arrow-1909.jpg --mask-only                          -o matte.png
+bgbgone pierce-arrow-1909.jpg --filter "fg:matte"                  -o matte.png
 bgbgone pierce-arrow-1909.jpg                                      -o cutout.png
 bgbgone pierce-arrow-1909.jpg --bg image:nasa-aldrin-moon.jpg      -o on-moon.png
 ```
@@ -336,7 +329,7 @@ done | jq -s 'group_by(.algo) | map({algo: .[0].algo, count: length})'
 Brand-coloured profile picture, tight-cropped, soft edge, high-quality JPEG:
 
 ```bash
-bgbgone selfie.jpg --bg color:#0066cc --crop --feather 2 \
+bgbgone selfie.jpg --bg color:#0066cc --crop --filter "mask:feather=2" \
     --to jpg --quality 95 -o linkedin-avatar.jpg
 ```
 
@@ -351,7 +344,7 @@ bgbgone team-portrait.jpg --multi \
 Doc-site product shot:
 
 ```bash
-bgbgone product.heic --bg color:white --crop --feather 1 \
+bgbgone product.heic --bg color:white --crop --filter "mask:feather=1" \
     --to jpg --quality 92 -o ./docs/product-shot.jpg
 ```
 
@@ -403,40 +396,40 @@ Run `bgbgone --filters-list` to enumerate every filter with its valid layers, si
 ### 1. Colour-pop — original background goes B&W, subject keeps its colour
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale" -o colourpop.jpg
+bgbgone red-panda.jpg --filter "bg:grayscale" -o colourpop.jpg
 ```
 
 | Before (original photo) | After (colour-pop) |
 |---|---|
 | ![panda original](docs/images/showcase/01-panda-before.jpg) | ![panda colour-pop](docs/images/showcase/01-panda-colourpop.jpg) |
 
-The trick: pass the source photo as **both subject AND background plate** (`--bg image:<self>`). The pipeline extracts the subject via Apple Vision, runs `bg:grayscale` (CIColorControls with saturation 0) on the background plate only, then composites the colour subject back on top. Subject stays vibrantly red-orange; the forest behind goes monochrome.
+When the filter chain uses the `bg` layer but no `--bg image:...` is set, bgbgone auto-promotes the source photo as the background plate. The pipeline extracts the subject via Apple Vision, runs `bg:grayscale` (CIColorControls with saturation 0) on the background plate only, then composites the colour subject back on top. Subject stays vibrantly red-orange; the forest behind goes monochrome. The explicit form `--bg image:red-panda.jpg --filter "bg:grayscale"` produces the same output.
 
 ### 2. Portrait mode — silky background blur, sharp subject
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=22" -o portrait.jpg
+bgbgone red-panda.jpg --filter "bg:blur=60" -o portrait.jpg
 ```
 
 | Before (original photo) | After (portrait mode) |
 |---|---|
 | ![panda original](docs/images/showcase/01-panda-before.jpg) | ![panda portrait mode](docs/images/showcase/02-panda-portraitmode.jpg) |
 
-Same self-as-background trick. `CIGaussianBlur` runs on the background plate only; the foreground stays pin-sharp. Phone-camera portrait mode in one shell command.
+`CIGaussianBlur` at radius 60 runs on the background plate only; the foreground stays pin-sharp. Note: no `--bg` flag needed — when a chain uses the `bg` layer, bgbgone auto-promotes the source image as the background plate. Phone-camera portrait mode in one shell command.
 
-### 3. Sticker style — coloured outline + drop shadow on transparent
+### 3. Sticker style — thick white halo + big drop shadow on white background
 
 ```bash
-bgbgone corgi.jpg \
-  --filter "fg:outline=color=#fff:width=6,shadow=blur=14:offset=6,6:opacity=0.55:color=#000" \
-  -o corgi-sticker.png
+bgbgone corgi.jpg --bg color:white \
+  --filter "fg:shadow=blur=30:offset=20,20:opacity=0.7:color=#000,outline=color=#fff:width=24" \
+  -o corgi-sticker.jpg
 ```
 
-| Cutout | Sticker |
+| Before (on white) | After (sticker) |
 |---|---|
-| ![corgi cutout](docs/images/showcase/03-corgi-cutout.png) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.png) |
+| ![corgi on white](docs/images/showcase/03-corgi-before.jpg) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.jpg) |
 
-`CIMorphologyMaximum` dilates the matte for the white halo; `CIGaussianBlur` + `CIAffineTransform` produces the drop shadow. Chain order matters: outline first, shadow under it. Output is RGBA PNG.
+`CIMorphologyMaximum` dilates the matte by 24 px for a thick white halo; `CIGaussianBlur` + `CIAffineTransform` produce a big offset drop shadow (30 px blur, 20 px down-right, 70% opacity). Chain order matters: shadow rendered first so the outline overpaints the inner edge cleanly.
 
 ### 4. Vintage finish — sepia + vignette on the original photo
 
@@ -518,16 +511,13 @@ BACKGROUND:
   --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
 MATTE / EDGE:
-  --mask-only                           output the alpha mask only
-  --channels rgba|alpha                 finalized image or alpha mask
-  --feather <px>                        edge softening (default: 1)
-  --threshold <0..1>                    mask binarisation
+  --channels rgba|alpha                 finalized image or alpha mask (server compat)
   --padding <px|N%>                     extra space around subject
   --crop-margin <1|2|4 values>          API-style crop margins (px or %)
   --crop                                tight-crop to subject bbox
   --roi "x1 y1 x2 y2"                   region of interest, px or %
-  --scale <10%..100%|original>          scale subject on the canvas
-  --position <center|x% y%|original>    place scaled subject on canvas
+  --filter "fg:scale=F"                 scale subject on the canvas (replaces removed --scale)
+  --filter "fg:translate=dx,dy"         place subject on canvas (replaces removed --position)
   --semitransparency true|false         keep or harden semi-transparent matte pixels
   --shadow                              drop shadow under cutout
   --shadow-type auto|drop|3D|car|none   shadow compatibility selector
@@ -552,7 +542,7 @@ OUTPUT:
 ROUTING RULES:
   -o and --out-dir are mutually exclusive
   stdin input requires stdout or -o; --out-dir needs file inputs
-  --multi writes files; it cannot combine with -o or --mask-only
+  --multi writes files; it cannot combine with -o
 
 SERVER:
   --server                             run local HTTP API
@@ -588,7 +578,7 @@ Config
    │
    ▼                        BgBgOne pipeline
    ├─→ ForegroundMask       Algorithms/: VNMask, Person, Saliency
-   ├─→ MaskPostProcess      threshold, feather, ROI, crop, padding, --mask-only
+   ├─→ MaskPostProcess      ROI, crop, padding (mask shape/edge via --filter "mask:..." / "fg:matte")
    ├─→ Compositor           SolidColor + ImageBg
    └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF + ZIP package
 HTTP server ───────────────→ same pipeline, multipart/JSON/form uploads, JSON/base64 option
