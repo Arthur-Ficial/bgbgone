@@ -37,5 +37,31 @@ public enum FilterCatalogue {
         .init(name: "edges", validLayers: [.fg, .bg, .all], signature: "edges=intensity", doc: "edge detection (CIEdges)"),
         // T33 #35 comic - SHIPPED
         .init(name: "comic", validLayers: [.fg, .bg, .all], signature: "comic", doc: "halftone comic-book effect (CIComicEffect)"),
+        // T13 #15 tint - SHIPPED
+        .init(name: "tint", validLayers: [.fg, .bg, .all], signature: "tint=color=#hex:amount=A", doc: "blend toward a tint colour (CIColorMonochrome)"),
+        // T14 #16 colorize - SHIPPED
+        .init(name: "colorize", validLayers: [.fg, .bg, .all], signature: "colorize=color=#hex:amount=A", doc: "monochrome at a target colour (CIColorMonochrome)"),
+        // T15 #17 temperature - SHIPPED
+        .init(name: "temperature", validLayers: [.fg, .bg, .all], signature: "temperature=K", doc: "shift colour temperature in Kelvin (CITemperatureAndTint)"),
+        // T16 #18 levels - SHIPPED
+        .init(name: "levels", validLayers: [.fg, .bg, .all], signature: "levels=black=B:white=W:gamma=G", doc: "Photoshop-style levels (CIColorMatrix + CIGammaAdjust)"),
+        // T18 #20 opacity - SHIPPED
+        .init(name: "opacity", validLayers: [.fg, .bg, .all], signature: "opacity=value", doc: "scale alpha by value 0..1 (CIColorMatrix)", producesAlpha: true),
+        // T19 #21 duotone - SHIPPED
+        .init(name: "duotone", validLayers: [.fg, .bg, .all], signature: "duotone=dark=#hex:light=#hex", doc: "two-colour map by luminance (CIColorMatrix)"),
+        // T22 #24 motion-blur - SHIPPED
+        .init(name: "motion-blur", validLayers: [.fg, .bg, .all], signature: "motion-blur=radius:angle", doc: "directional blur (CIMotionBlur)"),
+        // T23 #25 zoom-blur - SHIPPED
+        .init(name: "zoom-blur", validLayers: [.fg, .bg, .all], signature: "zoom-blur=center=X,Y:amount=A", doc: "radial zoom blur (CIZoomBlur)"),
+        // T25 #27 unsharp - SHIPPED
+        .init(name: "unsharp", validLayers: [.fg, .bg, .all], signature: "unsharp=radius:intensity", doc: "unsharp mask (CIUnsharpMask)"),
+        // T27 #29 pixelate - SHIPPED
+        .init(name: "pixelate", validLayers: [.fg, .bg, .all], aliases: ["mosaic"], signature: "pixelate=size", doc: "block pixelation, alias mosaic (CIPixellate)"),
+        // T29 #31 edge-work - SHIPPED
+        .init(name: "edge-work", validLayers: [.fg, .bg, .all], signature: "edge-work=radius", doc: "line-art edges (CIEdgeWork)"),
+        // T31 #33 crystallize - SHIPPED
+        .init(name: "crystallize", validLayers: [.fg, .bg, .all], signature: "crystallize=radius", doc: "Voronoi mosaic (CICrystallize)"),
+        // T32 #34 pointillize - SHIPPED
+        .init(name: "pointillize", validLayers: [.fg, .bg, .all], signature: "pointillize=radius", doc: "Seurat dot effect (CIPointillize)"),
     ]
 }

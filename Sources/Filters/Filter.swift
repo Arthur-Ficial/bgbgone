@@ -75,6 +75,32 @@ public enum FilterDispatch {
             return try ComicFilter.apply(args: args, to: image, on: layer)
         case AdjustFilter.name:
             return try AdjustFilter.apply(args: args, to: image, on: layer)
+        case TemperatureFilter.name:
+            return try TemperatureFilter.apply(args: args, to: image, on: layer)
+        case MotionBlurFilter.name:
+            return try MotionBlurFilter.apply(args: args, to: image, on: layer)
+        case ZoomBlurFilter.name:
+            return try ZoomBlurFilter.apply(args: args, to: image, on: layer)
+        case UnsharpFilter.name:
+            return try UnsharpFilter.apply(args: args, to: image, on: layer)
+        case PixelateFilter.name, "mosaic":
+            return try PixelateFilter.apply(args: args, to: image, on: layer)
+        case EdgeWorkFilter.name:
+            return try EdgeWorkFilter.apply(args: args, to: image, on: layer)
+        case CrystallizeFilter.name:
+            return try CrystallizeFilter.apply(args: args, to: image, on: layer)
+        case PointillizeFilter.name:
+            return try PointillizeFilter.apply(args: args, to: image, on: layer)
+        case OpacityFilter.name:
+            return try OpacityFilter.apply(args: args, to: image, on: layer)
+        case TintFilter.name:
+            return try TintFilter.apply(args: args, to: image, on: layer)
+        case ColorizeFilter.name:
+            return try ColorizeFilter.apply(args: args, to: image, on: layer)
+        case LevelsFilter.name:
+            return try LevelsFilter.apply(args: args, to: image, on: layer)
+        case DuotoneFilter.name:
+            return try DuotoneFilter.apply(args: args, to: image, on: layer)
         // Cases added per filter ticket in S3..S8.
         default:
             // Unreachable when the registry manifest agrees with this dispatch.
