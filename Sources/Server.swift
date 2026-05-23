@@ -185,9 +185,7 @@ private final class ServerConnection: @unchecked Sendable {
             let outURL = tempDir.appendingPathComponent("result.\(removal.config.outputFormat.extensionForFile)")
             removal.config.output = outURL.path
 
-            let result = try await MainActor.run {
-                try BgBgOne.run(removal.config)
-            }
+            let result = try BgBgOne.run(removal.config)
             let imageData = try Data(contentsOf: URL(fileURLWithPath: result.output))
             let metadata = metadataHeaders(result: result, typeHeaderValue: removal.typeHeaderValue)
 

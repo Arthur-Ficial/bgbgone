@@ -6,9 +6,11 @@ import Vision
 import BgBgOneCore
 
 struct MaskedResult {
-    /// The original image with non-foreground pixels made transparent.
-    let maskedImage: CGImage
-    /// The alpha mask itself (grayscale), useful for compositing custom backgrounds.
+    /// The alpha mask itself (grayscale). Consumers post-process and apply it
+    /// themselves; we deliberately do NOT pre-compute a masked image here
+    /// because every caller re-applies the mask after `preparedMask`
+    /// (threshold, ROI, feather), so any pre-computed masked image would be
+    /// thrown away.
     let mask: CGImage
     /// Which algorithm actually ran (after `auto` resolution).
     let algoUsed: String
@@ -72,7 +74,7 @@ enum ForegroundMask {
         } catch {
             throw BgBgOneError.frameworkError("Vision generateScaledMask failed: \(error.localizedDescription)")
         }
-        return try resultFromMaskPixelBuffer(maskPixelBuffer, original: image, algoLabel: algoLabel)
+        return try resultFromMaskPixelBuffer(maskPixelBuffer, algoLabel: algoLabel)
     }
 
     private static func runForegroundInstanceMaskPerInstance(on image: CGImage, algoLabel: String) throws -> [MaskedResult] {
@@ -99,7 +101,7 @@ enum ForegroundMask {
             } catch {
                 throw BgBgOneError.frameworkError("per-instance mask generation failed at index \(idx): \(error.localizedDescription)")
             }
-            outputs.append(try resultFromMaskPixelBuffer(maskOnly, original: image, algoLabel: algoLabel + "+multi"))
+            outputs.append(try resultFromMaskPixelBuffer(maskOnly, algoLabel: algoLabel + "+multi"))
         }
         if outputs.isEmpty {
             throw BgBgOneError.noResult("no instances to emit")
@@ -123,7 +125,7 @@ enum ForegroundMask {
         guard let result = request.results?.first else {
             throw BgBgOneError.noResult("no person detected")
         }
-        return try resultFromMaskPixelBuffer(result.pixelBuffer, original: image, algoLabel: Algo.person.rawValue)
+        return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.person.rawValue)
     }
 
     private static func runObjectnessSaliency(on image: CGImage) throws -> MaskedResult {
@@ -137,19 +139,17 @@ enum ForegroundMask {
         guard let result = request.results?.first else {
             throw BgBgOneError.noResult("no salient object detected")
         }
-        return try resultFromMaskPixelBuffer(result.pixelBuffer, original: image, algoLabel: Algo.saliency.rawValue)
+        return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.saliency.rawValue)
     }
 
     private static func resultFromMaskPixelBuffer(
         _ pixelBuffer: CVPixelBuffer,
-        original image: CGImage,
         algoLabel: String
     ) throws -> MaskedResult {
         let maskCI = CIImage(cvPixelBuffer: pixelBuffer)
         guard let maskCG = ciContext.createCGImage(maskCI, from: maskCI.extent) else {
             throw BgBgOneError.frameworkError("cannot convert mask to CGImage")
         }
-        let masked = try MaskPostProcess.apply(mask: maskCG, to: image)
-        return MaskedResult(maskedImage: masked, mask: maskCG, algoUsed: algoLabel)
+        return MaskedResult(mask: maskCG, algoUsed: algoLabel)
     }
 }

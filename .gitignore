@@ -7,3 +7,4 @@ DerivedData/
 bgbgone-*.tar.gz
 Tests/integration/_out/
 Tests/integration/_tmp/
+Tests/performance/_tmp_*/

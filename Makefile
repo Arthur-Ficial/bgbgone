@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration performance-100 test-performance-100 perf-100 fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
 
 # --- Environment ---
 
@@ -44,6 +44,21 @@ performance-100:
 	bash Tests/performance/run-100.sh .build/release/$(BINARY)
 
 test-performance-100 perf-100: build performance-100
+
+# Optional sustained-throughput stress tests. NOT part of `release` —
+# opt-in only. Both call the same parameterised script with different
+# invocation counts (batch stays 100). Each re-writes its own README
+# result line on every run so the numbers stay current.
+performance-1000:
+	bash Tests/performance/run-sustained.sh .build/release/$(BINARY) 10
+
+test-performance-1000 perf-1000: build performance-1000
+
+# 100 x 100 = 10,000 image operations.
+performance-10000:
+	bash Tests/performance/run-sustained.sh .build/release/$(BINARY) 100
+
+test-performance-10000 perf-10000 perf-10k: build performance-10000
 
 fixtures:
 	bash scripts/fetch-fixtures.sh

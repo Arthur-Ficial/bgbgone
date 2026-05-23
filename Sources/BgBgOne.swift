@@ -5,7 +5,6 @@ import ImageIO
 import UniformTypeIdentifiers
 import BgBgOneCore
 
-@MainActor
 enum BgBgOne {
 
     /// Run the pipeline for a single input. Returns one or more `RunResult`s.
@@ -167,7 +166,7 @@ enum BgBgOne {
     }
 }
 
-struct RunResult {
+struct RunResult: Sendable {
     let input: String
     let output: String        // "-" if stdout
     let algo: String

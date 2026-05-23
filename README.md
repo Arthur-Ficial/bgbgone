@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.1.37](https://img.shields.io/badge/version-0.1.37-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 0.1.43](https://img.shields.io/badge/version-0.1.43-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -527,7 +527,25 @@ make test-performance-100
 bash Tests/performance/run-100.sh .build/release/bgbgone
 ```
 
-Average over 5 release-binary runs: **100 images in 7.995 s, 12.51 images/s, 80.0 ms/image** with 95,445,087 output bytes verified per run. On-device, no network, no GPU contention with another process.
+Average over 5 release-binary runs: **100 images in 1.223 s, 81.74 images/s, 12.2 ms/image** with 95,487,542 output bytes verified per run. On-device, no network, no GPU contention with another process.
+
+### Optional sustained-throughput tests (1k / 10k)
+
+```bash
+make test-performance-1000    # 10 x 100  = 1,000  image operations
+make test-performance-10000   # 100 x 100 = 10,000 image operations
+```
+
+Both replay the same 100-image batch the release-gate exercises, but call the binary **N times in a row**. **Not part of `make release`** — opt-in. Models a heavy user who runs the same batch over and over throughout a day. Every invocation must produce identical output bytes (determinism check) and the matching README line below is re-written on every run, so repeated invocations always show the current measurement.
+
+```bash
+bash Tests/performance/run-sustained.sh .build/release/bgbgone 10    # 1k
+bash Tests/performance/run-sustained.sh .build/release/bgbgone 100   # 10k
+```
+
+Average over 10 release-binary invocations of 100: **1000 image operations in 12.174 s, 82.14 images/s, 12.2 ms/image** with 95,487,542 output bytes verified per invocation. On-device, no network, no GPU contention with another process.
+
+Average over 100 release-binary invocations of 100: **10000 image operations in 124.668 s, 80.21 images/s, 12.5 ms/image** with 95,487,542 output bytes verified per invocation. On-device, no network, no GPU contention with another process.
 
 ## Build & test
 
@@ -537,7 +555,9 @@ make build                # bump patch + build release
 make test                 # unit + integration
 make test-unit            # Swift unit tests
 make test-integration     # CLI e2e against strict-PD Wikimedia fixtures
-make test-performance-100 # 100-image local performance scenario
+make test-performance-100   # 100-image release-gate performance scenario
+make test-performance-1000  # OPTIONAL 10 x 100  = 1,000  sustained ops
+make test-performance-10000 # OPTIONAL 100 x 100 = 10,000 sustained ops
 make fixtures             # fetch the test fixtures (one-time)
 ```
 

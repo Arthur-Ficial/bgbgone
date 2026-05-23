@@ -32,7 +32,11 @@ for i in $(seq 1 100); do
     ln -s "$src" "$IN/perf-$n-$(basename "$src")"
 done
 
-mapfile -t inputs < <(find "$IN" -type l -name '*.jpg' | sort)
+inputs=("$IN"/perf-*.jpg)
+if [ "${#inputs[@]}" -ne 100 ]; then
+    echo "error: expected 100 input symlinks, got ${#inputs[@]}" >&2
+    exit 1
+fi
 
 for run in $(seq 1 "$RUNS"); do
     rm -rf "$OUT"
