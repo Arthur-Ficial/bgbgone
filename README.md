@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
