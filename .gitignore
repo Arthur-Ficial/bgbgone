@@ -9,4 +9,7 @@ bgbgone-*.tar.gz
 dist/
 Tests/integration/_out/
 Tests/integration/_tmp/
+Tests/performance/_out/
+Tests/performance/_tmp/
 Tests/performance/_tmp_*/
+.wrangler/
