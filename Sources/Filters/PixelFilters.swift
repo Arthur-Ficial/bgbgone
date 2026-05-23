@@ -1,0 +1,214 @@
+import Foundation
+import CoreImage
+import BgBgOneCore
+
+/// Shared infrastructure for pixel filters that wrap a single CIFilter
+/// applied to fg/bg/all layers. The mask layer is rejected at the
+/// per-filter level (these filters operate on RGB, not the mask).
+public enum PixelFilterHelper {
+    public static func applyCI(
+        name ciName: String,
+        params: [String: Any],
+        to layered: LayeredImage,
+        on layer: FilterLayer,
+        humanName: String
+    ) throws -> LayeredImage {
+        var out = layered
+        switch layer {
+        case .fg:
+            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName)
+        case .bg:
+            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName)
+        case .all:
+            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName)
+            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName)
+        case .mask:
+            throw rejectMask(humanName)
+        }
+        return out
+    }
+
+    private static func transform(_ image: CIImage, ciName: String, params: [String: Any], humanName: String) throws -> CIImage {
+        guard let filter = CIFilter(name: ciName) else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "\(ciName) unavailable (filter \(humanName))")
+        }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        for (k, v) in params { filter.setValue(v, forKey: k) }
+        guard let out = filter.outputImage else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "\(humanName): no output from \(ciName)")
+        }
+        return out.cropped(to: image.extent)
+    }
+
+    public static func rejectMask(_ humanName: String) -> BgBgOneError {
+        BgBgOneError.parser(
+            ErrorCodes.parseFlagValueInvalid,
+            "filter \(humanName) does not accept layer mask",
+            origin: "--filter",
+            context: ["name": humanName, "layer": "mask"]
+        )
+    }
+
+    /// Extract a single named or positional float arg, with default.
+    public static func floatArg(_ args: [FilterArg], key: String? = nil, default def: Double) throws -> Double {
+        for a in args {
+            switch a {
+            case .keyed(let k, let v) where k.lowercased() == key?.lowercased():
+                guard let d = Double(v) else { throw badArg(value: v, name: k) }
+                return d
+            case .value(let v) where key == nil:
+                guard let d = Double(v) else { throw badArg(value: v, name: "value") }
+                return d
+            default: continue
+            }
+        }
+        return def
+    }
+
+    private static func badArg(value: String, name: String) -> BgBgOneError {
+        BgBgOneError.parser(
+            ErrorCodes.parseFlagValueInvalid,
+            "filter arg \(name)=\(value) is not a number",
+            origin: "--filter",
+            context: ["arg": name, "value": value]
+        )
+    }
+}
+
+// MARK: - Trivial single-CIFilter wraps. One per filter ticket.
+
+public enum DesaturateFilter: Filter {
+    public static let name = "desaturate"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let amount = try PixelFilterHelper.floatArg(args, default: 1.0)
+        let saturation = max(0, min(1, 1.0 - amount))
+        return try PixelFilterHelper.applyCI(name: "CIColorControls", params: ["inputSaturation": saturation], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum NegateFilter: Filter {
+    public static let name = "negate"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        try PixelFilterHelper.applyCI(name: "CIColorInvert", params: [:], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum SepiaFilter: Filter {
+    public static let name = "sepia"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let intensity = try PixelFilterHelper.floatArg(args, default: 1.0)
+        return try PixelFilterHelper.applyCI(name: "CISepiaTone", params: ["inputIntensity": intensity], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum GammaFilter: Filter {
+    public static let name = "gamma"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let value = try PixelFilterHelper.floatArg(args, default: 1.0)
+        return try PixelFilterHelper.applyCI(name: "CIGammaAdjust", params: ["inputPower": value], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum ExposureFilter: Filter {
+    public static let name = "exposure"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let stops = try PixelFilterHelper.floatArg(args, default: 0.0)
+        return try PixelFilterHelper.applyCI(name: "CIExposureAdjust", params: ["inputEV": stops], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum HueFilter: Filter {
+    public static let name = "hue"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let degrees = try PixelFilterHelper.floatArg(args, default: 0.0)
+        let radians = degrees * .pi / 180.0
+        return try PixelFilterHelper.applyCI(name: "CIHueAdjust", params: ["inputAngle": radians], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum VibranceFilter: Filter {
+    public static let name = "vibrance"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let amount = try PixelFilterHelper.floatArg(args, default: 0.0)
+        return try PixelFilterHelper.applyCI(name: "CIVibrance", params: ["inputAmount": amount], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum BlurFilter: Filter {
+    public static let name = "blur"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let radius = try PixelFilterHelper.floatArg(args, default: 10.0)
+        return try PixelFilterHelper.applyCI(name: "CIGaussianBlur", params: ["inputRadius": radius], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum BoxBlurFilter: Filter {
+    public static let name = "box-blur"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let radius = try PixelFilterHelper.floatArg(args, default: 10.0)
+        return try PixelFilterHelper.applyCI(name: "CIBoxBlur", params: ["inputRadius": radius], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum SharpenFilter: Filter {
+    public static let name = "sharpen"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let amount = try PixelFilterHelper.floatArg(args, default: 0.4)
+        return try PixelFilterHelper.applyCI(name: "CISharpenLuminance", params: ["inputSharpness": amount], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum PosterizeFilter: Filter {
+    public static let name = "posterize"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let levels = try PixelFilterHelper.floatArg(args, default: 6.0)
+        return try PixelFilterHelper.applyCI(name: "CIColorPosterize", params: ["inputLevels": levels], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum EdgesFilter: Filter {
+    public static let name = "edges"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        let intensity = try PixelFilterHelper.floatArg(args, default: 1.0)
+        return try PixelFilterHelper.applyCI(name: "CIEdges", params: ["inputIntensity": intensity], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum ComicFilter: Filter {
+    public static let name = "comic"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        try PixelFilterHelper.applyCI(name: "CIComicEffect", params: [:], to: image, on: layer, humanName: name)
+    }
+}
+
+public enum AdjustFilter: Filter {
+    public static let name = "adjust"
+    public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
+    public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
+        var params: [String: Any] = [:]
+        for a in args {
+            if case .keyed(let k, let v) = a, let d = Double(v) {
+                switch k.lowercased() {
+                case "brightness": params["inputBrightness"] = d
+                case "contrast":   params["inputContrast"]   = d
+                case "saturation": params["inputSaturation"] = d
+                default: break
+                }
+            }
+        }
+        return try PixelFilterHelper.applyCI(name: "CIColorControls", params: params, to: image, on: layer, humanName: name)
+    }
+}

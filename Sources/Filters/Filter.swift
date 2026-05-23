@@ -47,6 +47,34 @@ public enum FilterDispatch {
         switch name.lowercased() {
         case GrayscaleFilter.name:
             return try GrayscaleFilter.apply(args: args, to: image, on: layer)
+        case DesaturateFilter.name:
+            return try DesaturateFilter.apply(args: args, to: image, on: layer)
+        case NegateFilter.name:
+            return try NegateFilter.apply(args: args, to: image, on: layer)
+        case SepiaFilter.name:
+            return try SepiaFilter.apply(args: args, to: image, on: layer)
+        case GammaFilter.name:
+            return try GammaFilter.apply(args: args, to: image, on: layer)
+        case ExposureFilter.name:
+            return try ExposureFilter.apply(args: args, to: image, on: layer)
+        case HueFilter.name:
+            return try HueFilter.apply(args: args, to: image, on: layer)
+        case VibranceFilter.name:
+            return try VibranceFilter.apply(args: args, to: image, on: layer)
+        case BlurFilter.name:
+            return try BlurFilter.apply(args: args, to: image, on: layer)
+        case BoxBlurFilter.name:
+            return try BoxBlurFilter.apply(args: args, to: image, on: layer)
+        case SharpenFilter.name:
+            return try SharpenFilter.apply(args: args, to: image, on: layer)
+        case PosterizeFilter.name:
+            return try PosterizeFilter.apply(args: args, to: image, on: layer)
+        case EdgesFilter.name:
+            return try EdgesFilter.apply(args: args, to: image, on: layer)
+        case ComicFilter.name:
+            return try ComicFilter.apply(args: args, to: image, on: layer)
+        case AdjustFilter.name:
+            return try AdjustFilter.apply(args: args, to: image, on: layer)
         // Cases added per filter ticket in S3..S8.
         default:
             // Unreachable when the registry manifest agrees with this dispatch.
