@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint-readme lint-docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint-readme lint-docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -164,9 +164,29 @@ print-release-sha256:
 readme-images: install
 	bash scripts/make-readme-examples.sh
 
-# Full release gate: bump → test → install → regenerate README images →
+# Regenerate the 49 single-filter showcase images on the red-panda fixture
+# plus the five hero before/after pairs.
+filter-images: install
+	BIN=$(PREFIX)/bin/$(BINARY) bash scripts/make-filter-showcase.sh
+
+# Regenerate the per-filter yoga + parastoo 4-panel comparisons
+# (original | bg | fg | all).
+panel-images: install
+	BIN=$(PREFIX)/bin/$(BINARY) bash scripts/make-perfilter-panels.sh
+
+# Regenerate the 49 per-filter markdown pages (docs/filters/*.md).
+filter-docs:
+	bash scripts/gen-filter-docs.sh
+
+# Regenerate EVERY shipped image: filter showcase, per-filter panels,
+# per-filter docs, README examples. Required after every change per
+# CLAUDE.md "every release regenerates every image".
+all-images: filter-images panel-images filter-docs readme-images
+	@echo "all-images: 49 per-filter + 96 panels + 49 docs + README composites regenerated"
+
+# Full release gate: bump → test → install → regenerate EVERY image →
 # package. Use this for every public release; never tag without it.
-release: test install readme-images performance-100 package-release-asset
+release: test install all-images performance-100 package-release-asset
 	@v=$$(cat $(VERSION_FILE)); \
 	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
 	echo ""; \
@@ -174,3 +194,50 @@ release: test install readme-images performance-100 package-release-asset
 	echo "  version : $$v"; \
 	echo "  binary  : $(PREFIX)/bin/$(BINARY) ($$($(PREFIX)/bin/$(BINARY) --version))"; \
 	echo "  tarball : $$asset ($$(shasum -a 256 $$asset | awk '{print $$1}'))"
+
+# Single end-to-end deploy: release gate -> stage all -> commit -> tag ->
+# push -> GitHub release -> homebrew tap bump. The ONE command that
+# ships a new version. Aborts if the working tree contains changes that
+# don't belong in the deploy commit (commit them first).
+#
+# Required env: gh authenticated. Optional: DEPLOY_MESSAGE="..." sets the
+# commit/tag subject; defaults to "vX.Y.Z - release".
+deploy: release
+	@set -e; \
+	v=$$(cat $(VERSION_FILE)); \
+	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
+	sha=$$(shasum -a 256 "$$asset" | awk '{print $$1}'); \
+	msg="$${DEPLOY_MESSAGE:-v$$v - release}"; \
+	echo ""; \
+	echo "deploy: v$$v"; \
+	echo "  asset : $$asset"; \
+	echo "  sha256: $$sha"; \
+	echo ""; \
+	echo "==> staging changes"; \
+	git add -A; \
+	if git diff --cached --quiet; then \
+		echo "deploy: working tree clean - skipping commit"; \
+	else \
+		git commit -m "$$msg" -m "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"; \
+	fi; \
+	echo "==> tagging v$$v"; \
+	if git tag --list "v$$v" | grep -q "v$$v"; then \
+		echo "deploy: tag v$$v already exists - skipping tag"; \
+	else \
+		git tag -a "v$$v" -m "$$msg"; \
+	fi; \
+	echo "==> pushing main + tag"; \
+	git push origin main; \
+	git push origin "v$$v" || true; \
+	echo "==> creating GitHub release"; \
+	if gh release view "v$$v" >/dev/null 2>&1; then \
+		echo "deploy: GitHub release v$$v already exists - skipping create"; \
+	else \
+		gh release create "v$$v" "$$asset" \
+			--title "v$$v" \
+			--notes "Automated deploy. SHA-256: $$sha"; \
+	fi; \
+	echo "==> updating homebrew tap"; \
+	bash scripts/update-homebrew-tap.sh "$$v" "$$sha" || echo "deploy: homebrew tap update failed - update manually"; \
+	echo ""; \
+	echo "deploy complete: https://github.com/Arthur-Ficial/bgbgone/releases/tag/v$$v"

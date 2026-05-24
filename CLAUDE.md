@@ -32,6 +32,20 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
 External communication (emails, PRs to other projects, posts) still needs
 Franz's explicit approval — only the local repo work is autonomous.
 
+## Panels always lead with the original
+
+Every panel strip (per-filter yoga + parastoo comparisons, README
+showcase strips, recipe walkthroughs) MUST start with the unmodified
+source on the left, then the filter variants to the right. The reader
+needs the input as the visual anchor to read every downstream effect.
+A strip that opens with a transformed panel forces the reader to
+hunt for "what did this start from" — that is a UX bug.
+
+For the per-filter panel script the order is:
+`original | bg:<filter> | fg:<filter> | all:<filter>`
+(or `original | <variant>` for fg-only, mask-only, and composite-only
+filters).
+
 ## Every release regenerates EVERY image — no stale assets
 
 After any change that lands on `main` and gets tagged/deployed, **every

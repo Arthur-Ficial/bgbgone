@@ -90,6 +90,10 @@ panel_for_subject() {
         [ -z "$name" ] && continue
         local out="$PANEL_OUT/${tag}-${name}.jpg"
         local tmp; tmp=$(mktemp -d)
+        # Every panel starts with the ORIGINAL source so the reader can see
+        # the input pixel state before any layer split. CLAUDE.md "panels
+        # always lead with original" rule.
+        label_under "$subj" "original" "$tmp/orig-l.jpg"
         case "$layers" in
             all)
                 "$BIN" "$subj" --algo person --filter "bg:${name}${args}" -o "$tmp/bg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
@@ -98,19 +102,22 @@ panel_for_subject() {
                 label_under "$tmp/bg.jpg"  "bg:${name}${args}"  "$tmp/bg-l.jpg"
                 label_under "$tmp/fg.jpg"  "fg:${name}${args}"  "$tmp/fg-l.jpg"
                 label_under "$tmp/all.jpg" "all:${name}${args}" "$tmp/all-l.jpg"
-                magick "$tmp/bg-l.jpg" "$tmp/fg-l.jpg" "$tmp/all-l.jpg" +append "$out"
+                magick "$tmp/orig-l.jpg" "$tmp/bg-l.jpg" "$tmp/fg-l.jpg" "$tmp/all-l.jpg" +append "$out"
                 ;;
             all-only)
                 "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                label_under "$tmp/all.jpg" "all:${name}${args}" "$out"
+                label_under "$tmp/all.jpg" "all:${name}${args}" "$tmp/all-l.jpg"
+                magick "$tmp/orig-l.jpg" "$tmp/all-l.jpg" +append "$out"
                 ;;
             fg-only)
                 "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                label_under "$tmp/fg.jpg" "fg:${name}${args}" "$out"
+                label_under "$tmp/fg.jpg" "fg:${name}${args}" "$tmp/fg-l.jpg"
+                magick "$tmp/orig-l.jpg" "$tmp/fg-l.jpg" +append "$out"
                 ;;
             mask-only)
                 "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "mask:${name}${args}" -o "$tmp/mask.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                label_under "$tmp/mask.jpg" "mask:${name}${args}" "$out"
+                label_under "$tmp/mask.jpg" "mask:${name}${args}" "$tmp/mask-l.jpg"
+                magick "$tmp/orig-l.jpg" "$tmp/mask-l.jpg" +append "$out"
                 ;;
         esac
         trash_path "$tmp"
