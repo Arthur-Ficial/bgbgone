@@ -217,6 +217,32 @@ else
     fail "T4i fg-only auto-promote bg" "rc=$rc out=$(echo "$out" | head -1)"
 fi
 
+# Vision returns segmentation masks at a downsampled resolution. The filter
+# pipeline must resample the mask up to the source extent before
+# CIBlendWithMask, otherwise the mask projects to the bottom-left quadrant
+# and every layer split (bg:/fg:/all:) puts the matte in the wrong place.
+# Use --algo person on the multi-person yoga fixture: bg:duotone should land
+# the duotone on the FULL scene (so the centre-top crop is duotone-blue,
+# not the orange floor), while the same fixture under fg:duotone should
+# leave the top crop UNTOUCHED (still orange floor).
+YOGA_FIX="$FIX/showcase/franz-yoga.jpg"
+out=$("$BIN" "$YOGA_FIX" --algo person --filter "bg:duotone=dark=#003366:light=#ffcc00" -o "$OUT/t4j-bgduo-aligned.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ]; then
+    rgb=$(mean_rgb_crop "$OUT/t4j-bgduo-aligned.jpg" "200x200+1200+200") || rgb="255 255 255"
+    read -r r g b <<< "$rgb"
+    # Top-centre crop is sky/wall in the original (warm orange highlights).
+    # bg:duotone with dark=navy should turn this region blue-dominant
+    # (B > R) — if mask were misaligned to bottom-left, this region would
+    # still be the original orange (R > B).
+    if [ "$b" -gt "$r" ]; then
+        pass "T4j bg:duotone mask aligns to source extent (top crop is duotone-blue)"
+    else
+        fail "T4j bg:duotone mask alignment" "top crop R=$r G=$g B=$b — expected B>R after duotone"
+    fi
+else
+    fail "T4j bg:duotone mask alignment" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
 # --- Filters T5..T53 (one test per filter, all RED) ---
 
 # Tone & colour
