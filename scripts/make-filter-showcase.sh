@@ -86,16 +86,22 @@ magick "$OUT/feather/panel-f0.jpg" "$OUT/feather/panel-f8.jpg" "$OUT/feather/pan
 echo "  ok  feather-progression.jpg"
 
 echo "-- feather close-up: hard edge vs soft matte, 400x300 crop around the ear --"
-magick "$OUT/feather/corgi-f0.png" -background "#1a2233" -alpha background -flatten -crop 400x300+700+400 +repage "$OUT/feather/zoom-f0.jpg"
-magick "$OUT/feather/corgi-f16.png" -background "#1a2233" -alpha background -flatten -crop 400x300+700+400 +repage "$OUT/feather/zoom-f16.jpg"
+# HYPOTHESIS: corgi is at ~(1200..2400, 800..3500) in the 3126x4682 source.
+# Crop an 800x600 window starting at (1200,800) which captures the ears
+# where the matte boundary against the navy plate is most obvious.
+magick "$OUT/feather/corgi-f0.png" -background "#1a2233" -alpha background -flatten -crop 800x600+1200+800 +repage "$OUT/feather/zoom-f0.jpg"
+magick "$OUT/feather/corgi-f16.png" -background "#1a2233" -alpha background -flatten -crop 800x600+1200+800 +repage "$OUT/feather/zoom-f16.jpg"
 magick "$OUT/feather/zoom-f0.jpg" "$OUT/feather/zoom-f16.jpg" +append "$OUT/feather-zoom.jpg"
 echo "  ok  feather-zoom.jpg"
 
-echo "-- showcase 5: dramatic composite (yoga on Matterhorn, fg+bg colour-graded) --"
-"$BIN" "$YOGA" --bg "image:$MATTERHORN" -o "$OUT/05-yoga-matterhorn-before.jpg" >/dev/null
-"$BIN" "$YOGA" --bg "image:$MATTERHORN" \
-  --filter "bg:adjust=brightness=-0.18:saturation=0.7; fg:adjust=saturation=1.25:brightness=0.05" \
-  -o "$OUT/05-yoga-matterhorn-graded.jpg" >/dev/null
+echo "-- showcase 5b: yoga with --algo person (isolates the main subject from neighbours) --"
+# HYPOTHESIS: the yoga photo has several people on adjacent mats. Default
+# vn-mask picks up multiple instances. --algo person uses VNGeneratePerson
+# SegmentationRequest which is tuned for human subjects and prefers the
+# largest / most prominent person.
+cp "$YOGA" "$OUT/05-yoga-before.jpg"
+"$BIN" "$YOGA" --algo person --filter "bg:blur=40" -o "$OUT/05-yoga-person-portrait.jpg" >/dev/null
+"$BIN" "$YOGA" --algo person --filter "bg:grayscale,adjust=brightness=-0.1" -o "$OUT/05-yoga-person-colourpop.jpg" >/dev/null
 
 # ============ One example per filter for docs/filters/<name>.md ============
 # Each filter rendered against the same canonical subject (Red Panda over its
