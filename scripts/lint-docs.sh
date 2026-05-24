@@ -7,7 +7,7 @@
 # Catches: misspelled filter names, missing args, invalid layers, wrong
 # argument keys. Run by `make release` so a typo never ships.
 
-set -euo pipefail
+set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
@@ -36,13 +36,18 @@ for f in $MD_FILES; do
     # canonical doc form). One per line.
     while IFS= read -r chain; do
         [ -z "$chain" ] && continue
+        # Skip grammar placeholders / shell-variable references.
+        case "$chain" in
+            \<*\>|\$*) continue ;;
+        esac
         checked=$((checked + 1))
-        out=$("$BIN" "$FIX" --filter "$chain" -o "$TMP_DIR/o.png" 2>&1); rc=$?
-        # rc=0 OK, rc=1 user-error (file/io), rc=2 PARSER error (syntax bug),
-        # rc=3 framework. We fail on 2 only.
+        # Use --filters-list as a parse-only target: bgbgone runs the
+        # ConfigBuilder which validates the chain, then short-circuits to
+        # printing the catalogue without invoking Vision. Sub-second per chain.
+        out=$("$BIN" --filter "$chain" --filters-list 2>&1); rc=$?
         if [ $rc -eq 2 ]; then
             echo "  FAIL ${f#$ROOT/} -- chain: '$chain'"
-            echo "       $(echo "$out" | head -2 | tail -1)"
+            echo "       $(echo "$out" | head -4 | tail -3)"
             fails=$((fails + 1))
         fi
     done < <(grep -oE '\-\-filter +"[^"]*"' "$f" 2>/dev/null | sed -E 's/^--filter +"//; s/"$//')

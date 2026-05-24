@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -524,8 +524,8 @@ MATTE / EDGE:
   --crop-margin <1|2|4 values>          API-style crop margins (px or %)
   --crop                                tight-crop to subject bbox
   --roi "x1 y1 x2 y2"                   region of interest, px or %
-  --filter "fg:scale=F"                 scale subject on the canvas (replaces removed --scale)
-  --filter "fg:translate=dx,dy"         place subject on canvas (replaces removed --position)
+  --filter fg:scale=F                   scale subject on the canvas (replaces removed --scale)
+  --filter fg:translate=X,Y             place subject on canvas (replaces removed --position)
   --semitransparency true|false         keep or harden semi-transparent matte pixels
   --shadow                              drop shadow under cutout
   --shadow-type auto|drop|3D|car|none   shadow compatibility selector
@@ -586,7 +586,7 @@ Config
    │
    ▼                        BgBgOne pipeline
    ├─→ ForegroundMask       Algorithms/: VNMask, Person, Saliency
-   ├─→ MaskPostProcess      ROI, crop, padding (mask shape/edge via --filter "mask:..." / "fg:matte")
+   ├─→ MaskPostProcess      ROI, crop, padding (mask shape/edge via mask: filters and fg:matte)
    ├─→ Compositor           SolidColor + ImageBg
    └─→ Output               ImageIO: PNG/JPG/HEIC/AVIF/TIFF + ZIP package
 HTTP server ───────────────→ same pipeline, multipart/JSON/form uploads, JSON/base64 option
