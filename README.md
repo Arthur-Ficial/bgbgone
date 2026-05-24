@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.1.13](https://img.shields.io/badge/version-1.1.13-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.1.15](https://img.shields.io/badge/version-1.1.15-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -425,11 +425,13 @@ bgbgone red-panda.jpg --filter "bg:blur=60" -o portrait.jpg
 
 `CIGaussianBlur` at radius 60 runs on the background plate only; the foreground stays pin-sharp. Note: no `--bg` flag needed — when a chain uses the `bg` layer, bgbgone auto-promotes the source image as the background plate. Phone-camera portrait mode in one shell command.
 
-### 3. Sticker style — die-cut white border with rounded corners + drop shadow
+### 3. Sticker style — die-cut white border + drop shadow
+
+**Sticker spec.** A real die-cut sticker has a HARD opaque edge — no soft halo, no semi-transparent gradient, no green photo-background bleed-through between subject and border. The border is solid white. The drop shadow lives entirely behind the sticker. The way bgbgone achieves that without bleed is to let the `outline` filter dilate the matte internally and fill the ring with the chosen colour, instead of dilating the mask upstream with `mask:expand` (which would pull the original photo's edge pixels into the ring):
 
 ```bash
 bgbgone corgi.jpg --bg color:#1a2233 \
-  --filter "mask:expand=24,feather=12; fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=28" \
+  --filter "fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=30" \
   -o corgi-sticker.jpg
 ```
 
@@ -437,7 +439,9 @@ bgbgone corgi.jpg --bg color:#1a2233 \
 |---|---|
 | ![corgi original](docs/images/showcase/03-corgi-before.jpg) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.jpg) |
 
-Two-stage chain. **Stage 1 — mask shape:** `mask:expand=24` dilates the matte 24 px outward (so the sticker paper extends beyond the subject), then `mask:feather=12` Gaussian-blurs the expanded matte so the contour is rounded — no jagged shape-following. **Stage 2 — fg styling:** `shadow=blur=40:offset=22,22:opacity=0.7` lays a soft drop shadow under the rounded silhouette; `outline=color=#fff:width=28` paints the thick white "paper" border. The dark navy plate (`--bg color:#1a2233`) makes both the white border and the shadow clearly visible.
+Single-stage `fg:` chain on a sharp matte. `shadow=blur=40:offset=22,22:opacity=0.7` lays a soft drop shadow under the cut-out silhouette; `outline=color=#fff:width=30` dilates the matte internally and fills the 30-px ring with solid white — the white reaches the navy plate directly, no halo. The dark navy plate (`--bg color:#1a2233`) makes both the solid white border and the shadow clearly visible.
+
+If you instead want rounded sticker corners that ignore subject detail (e.g. ear tips), use `mask:expand=N,feather=M,threshold=0.5` BEFORE the `fg:` stage — `mask:threshold` re-binarises the feathered matte so the rounded contour still ends in a hard alpha edge and there is no soft halo.
 
 ### 4. Vintage backdrop, modern subject — fg/bg colour split (Parastoo in a library)
 
@@ -611,7 +615,7 @@ make test-performance-100
 bash Tests/performance/run-100.sh .build/release/bgbgone
 ```
 
-Average over 5 release-binary runs: **100 images in 1.229 s, 81.38 images/s, 12.3 ms/image** with 95,487,542 output bytes verified per run. On-device, no network, no GPU contention with another process.
+Average over 5 release-binary runs: **100 images in 1.218 s, 82.12 images/s, 12.2 ms/image** with 95,487,542 output bytes verified per run. On-device, no network, no GPU contention with another process.
 
 ### Optional sustained-throughput tests (1k / 10k)
 
