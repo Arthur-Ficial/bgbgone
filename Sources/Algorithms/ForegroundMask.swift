@@ -88,7 +88,7 @@ enum ForegroundMask {
                 "Vision generateScaledMask failed: \(error.localizedDescription)"
             )
         }
-        return try resultFromMaskPixelBuffer(maskPixelBuffer, algoLabel: algoLabel)
+        return try resultFromMaskPixelBuffer(maskPixelBuffer, source: image, algoLabel: algoLabel)
     }
 
     private static func runForegroundInstanceMaskPerInstance(on image: CGImage, algoLabel: String) throws -> [MaskedResult] {
@@ -130,7 +130,7 @@ enum ForegroundMask {
                     context: ["index": String(idx)]
                 )
             }
-            outputs.append(try resultFromMaskPixelBuffer(maskOnly, algoLabel: algoLabel + "+multi"))
+            outputs.append(try resultFromMaskPixelBuffer(maskOnly, source: image, algoLabel: algoLabel + "+multi"))
         }
         if outputs.isEmpty {
             throw BgBgOneError.noResult(
@@ -167,7 +167,7 @@ enum ForegroundMask {
                 hint: "try --algo vn-mask or --algo saliency"
             )
         }
-        return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.person.rawValue)
+        return try resultFromMaskPixelBuffer(result.pixelBuffer, source: image, algoLabel: Algo.person.rawValue)
     }
 
     private static func runObjectnessSaliency(on image: CGImage) throws -> MaskedResult {
@@ -187,15 +187,40 @@ enum ForegroundMask {
                 "no salient object detected"
             )
         }
-        return try resultFromMaskPixelBuffer(result.pixelBuffer, algoLabel: Algo.saliency.rawValue)
+        return try resultFromMaskPixelBuffer(result.pixelBuffer, source: image, algoLabel: Algo.saliency.rawValue)
     }
 
+    /// Convert the Vision pixel-buffer mask into a CGImage at the SOURCE
+    /// image's resolution. Vision requests routinely return masks at a
+    /// downsampled resolution (e.g. 2016x1512 for a 3781x2389 source);
+    /// every downstream consumer (FilterPipeline, MaskPostProcess, ROI,
+    /// bounding box, `--channels alpha`) assumes the mask shares the
+    /// source's coordinate space, so we resample here at the boundary.
+    /// Doing it here means there is exactly one place that owns mask
+    /// resolution, and every later step gets a mask in lock-step with
+    /// the foreground/background extent without further patching.
     private static func resultFromMaskPixelBuffer(
         _ pixelBuffer: CVPixelBuffer,
+        source: CGImage,
         algoLabel: String
     ) throws -> MaskedResult {
         let maskCI = CIImage(cvPixelBuffer: pixelBuffer)
-        guard let maskCG = ciContext.createCGImage(maskCI, from: maskCI.extent) else {
+        let targetW = source.width
+        let targetH = source.height
+        let maskCI2: CIImage
+        if Int(maskCI.extent.width.rounded()) == targetW && Int(maskCI.extent.height.rounded()) == targetH {
+            maskCI2 = maskCI
+        } else {
+            let sx = CGFloat(targetW) / maskCI.extent.width
+            let sy = CGFloat(targetH) / maskCI.extent.height
+            maskCI2 = maskCI
+                .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+                .cropped(to: CGRect(x: 0, y: 0, width: targetW, height: targetH))
+        }
+        guard let maskCG = ciContext.createCGImage(
+            maskCI2,
+            from: CGRect(x: 0, y: 0, width: targetW, height: targetH)
+        ) else {
             throw BgBgOneError.frameworkError(
                 ErrorCodes.frameworkCGImageFail,
                 "cannot convert mask to CGImage"

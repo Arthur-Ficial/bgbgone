@@ -32,6 +32,57 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
 External communication (emails, PRs to other projects, posts) still needs
 Franz's explicit approval — only the local repo work is autonomous.
 
+## Every release regenerates EVERY image — no stale assets
+
+After any change that lands on `main` and gets tagged/deployed, **every
+image in `README.md`, `docs/`, the per-filter docs, and the panels MUST
+be regenerated from the freshly-installed binary, in the same commit**.
+No exceptions, no "this change probably doesn't affect images." Even a
+parser tweak, a CLI rename, or a "non-visual" refactor can shift pixel
+output through a code path you did not anticipate — and a stale asset
+makes a real regression invisible until a user files it.
+
+Mandatory regen sequence on every release:
+
+1. `make install` (bumps patch + installs)
+2. `BIN=<installed> bash scripts/make-filter-showcase.sh`
+3. `BIN=<installed> bash scripts/make-perfilter-panels.sh`
+4. `bash scripts/gen-filter-docs.sh`
+5. `make readme-images` (already part of `make release`)
+6. AI-vision-review at least one asset per script (yoga panel for layer
+   correctness; one filter showcase; one README strip) before commit.
+
+`make release` already chains test → install → readme-images →
+packaging, but the filter-showcase + per-filter-panels + gen-filter-docs
+steps are NOT in that chain yet; until they are, run them manually
+before tagging.
+
+If a commit touches Swift sources or any regen script and ships
+without re-running these, the docs are lying about the binary — that
+is a shipping bug, full stop.
+
+## Root-cause fixes only — never downstream patches
+
+**Fix every bug at its single source of truth. Never paper over it
+downstream.** If a Vision request returns a mask at the wrong resolution,
+fix `ForegroundMask.resultFromMaskPixelBuffer` so it always emits at
+source extent — do not scale the mask inside `FilterPipeline`, the
+compositor, the mask-only output path, and the bounding-box helper one
+by one. If a CLI flag parses inconsistently, fix the parser, not each
+consumer. If a filter's keyed arg drifts from its positional arg, fix
+the arg-decoder once.
+
+The test is simple: ask "if I add a NEW consumer of this thing tomorrow,
+do they automatically get the fix?" If no, the fix is in the wrong
+place. Push it upstream until the answer is yes. Defensive downstream
+guards are allowed only as no-op safety nets after the upstream fix
+lands; they must not be the load-bearing fix.
+
+This rule is non-negotiable. A bug fixed in N downstream call-sites
+will reappear at the N+1st site the moment a new caller shows up,
+and the codebase rots into a maze of half-aware workarounds. One bug,
+one fix, one place.
+
 ## Hypothesis-then-AI-review for every image asset
 
 Every image shipped in `README.md`, `docs/`, or any other surface MUST be:
