@@ -60,12 +60,13 @@ echo "-- showcase 3: real die-cut sticker (mask:expand+feather rounds corners; o
 # Before = the ORIGINAL photo (cp, no processing) so the user sees what
 # the source actually looks like.
 cp "$CORGI" "$OUT/03-corgi-before.jpg"
-# Mask shape chain: expand (grow) → feather (round corners via Gaussian) →
-# threshold (re-binarise the soft Gaussian so the border is SOLID like a
-# real die-cut sticker, not a soft halo). Then drop shadow + thick white
-# outline give the lifted-off-the-page look.
+# Sticker = subject + SOLID white border + drop shadow. NO mask:expand
+# upstream - that would dilate the matte so the photo's natural background
+# bleeds into the ring area (visible as a green/coloured halo between
+# subject and outline). The outline filter dilates internally and fills
+# the ring with the chosen colour, so subject stays clean.
 "$BIN" "$CORGI" --bg "color:#1a2233" \
-  --filter "mask:expand=28,feather=16,threshold=0.5; fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=28" \
+  --filter "fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=30" \
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 rm -f "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
