@@ -37,14 +37,12 @@ public struct BgBgOneCommand: ParsableCommand {
     // Output
     @Option(name: [.customShort("o"), .customLong("output")]) public var output: String?
     @Option(name: .customLong("out-dir")) public var outDir: String?
-    @Option(name: [.customLong("to"), .customLong("format")]) public var outputFormatRaw: String?
+    @Option(name: .customLong("format")) public var outputFormatRaw: String?
     @Option(name: .customLong("size")) public var size: String?
     @Option(name: .customLong("quality")) public var quality: Int?
 
     // Background
     @Option(name: .customLong("bg")) public var bg: String?
-    @Option(name: .customLong("bg-color")) public var bgColor: String?
-    @Option(name: .customLong("bg-image")) public var bgImage: String?
     @Option(name: .customLong("bg-fit")) public var bgFit: String?
 
     // Matte / edge — --mask-only, --feather, --threshold, --scale, --position
@@ -55,14 +53,13 @@ public struct BgBgOneCommand: ParsableCommand {
     //   --filter "fg:scale=F"           instead of --scale F
     //   --filter "fg:translate=X,Y"     instead of --position X% Y%
     @Option(name: .customLong("channels")) public var channels: String?
-    @Option(name: .customLong("padding")) public var padding: String?
     @Option(name: .customLong("crop-margin")) public var cropMargin: String?
     @Flag(name: .customLong("crop")) public var crop: Bool = false
     @Option(name: .customLong("roi")) public var roi: String?
     @Option(name: .customLong("semitransparency")) public var semitransparency: String?
 
-    // Algorithm
-    @Option(name: .customLong("algo")) public var algo: String?
+    // Algorithm selector. Same name as the server `type` field; CLI and HTTP
+    // share one vocabulary. See ParameterParser.parseForegroundType for values.
     @Option(name: .customLong("type")) public var type: String?
 
     // Multi-instance
@@ -70,7 +67,6 @@ public struct BgBgOneCommand: ParsableCommand {
     @Option(name: .customLong("instance-naming")) public var instanceNaming: String?
 
     // Shadow
-    @Flag(name: .customLong("shadow")) public var shadow: Bool = false
     @Option(name: .customLong("shadow-type")) public var shadowType: String?
     @Option(name: .customLong("shadow-opacity")) public var shadowOpacity: String?
 

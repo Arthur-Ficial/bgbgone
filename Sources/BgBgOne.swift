@@ -31,12 +31,10 @@ enum BgBgOne {
         let baseStem = (((input as NSString).lastPathComponent) as NSString).deletingPathExtension
         var outputs: [RunResult] = []
         for (i, r) in results.enumerated() {
-            var processedMask = try preparedMask(r.mask, cfg: cfg)
+            let processedMask = try preparedMask(r.mask, cfg: cfg)
             let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
-            let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
-            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
             var final = try Compositor.compose(
-                masked: positionedMasked,
+                masked: maskedImg,
                 background: effectiveBackground(cfg, input: input),
                 bgFit: cfg.bgFit,
                 dropShadow: cfg.dropShadow,
@@ -88,11 +86,10 @@ enum BgBgOne {
         // 1. produce a mask + masked image
         let maskedResult = try ForegroundMask.maskedImage(from: cgImage, algo: cfg.algo)
 
-        // 1a. optional --mask-only short-circuit (emit the grayscale matte as the output)
+        // 1a. optional --channels alpha short-circuit (emit the grayscale matte)
         var processedMask = try preparedMask(maskedResult.mask, cfg: cfg)
 
         if cfg.maskOnly {
-            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
             processedMask = try ImageTransforms.downscaleIfNeeded(processedMask, maxMegapixels: cfg.maxOutputMegapixels)
             let outputPath = try Output.write(cgImage: processedMask, cfg: cfg, inputPath: input)
             return RunResult(
@@ -119,7 +116,7 @@ enum BgBgOne {
                 throw BgBgOneError.userError(
                     ErrorCodes.userJpegAlphaLoss,
                     "alpha-producing filter chain cannot output to JPEG (JPEG has no alpha channel)",
-                    hint: "use PNG output (-o out.png / --to png) or add --bg color:white to flatten onto a solid background"
+                    hint: "use PNG output (-o out.png / --format png) or add --bg color:white to flatten onto a solid background"
                 )
             }
         }
@@ -140,11 +137,9 @@ enum BgBgOne {
             )
         } else {
             let maskedImg = try MaskPostProcess.apply(mask: processedMask, to: cgImage)
-            let positionedMasked = try ImageTransforms.position(maskedImg, scalePercent: cfg.scalePercent, position: cfg.position)
-            processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
             // 2. compose with background (transparent = just emit the masked image)
             final = try Compositor.compose(
-                masked: positionedMasked,
+                masked: maskedImg,
                 background: effectiveBackground(cfg, input: input),
                 bgFit: cfg.bgFit,
                 dropShadow: cfg.dropShadow,
@@ -206,17 +201,12 @@ enum BgBgOne {
     }
 
     private static func cropIfNeeded(_ image: CGImage, mask: CGImage, cfg: Config) throws -> CGImage {
-        guard cfg.cropToSubject || cfg.padding != nil || cfg.cropMargins != nil else {
+        guard cfg.cropToSubject || cfg.cropMargins != nil else {
             return image
         }
         let subject = try MaskPostProcess.subjectBoundingBox(fromMask: mask)
         let imageSize = CGSize(width: image.width, height: image.height)
-        let bbox: CGRect
-        if let cropMargins = cfg.cropMargins {
-            bbox = MaskPostProcess.paddedRect(subject, in: imageSize, margins: cropMargins)
-        } else {
-            bbox = MaskPostProcess.paddedRect(subject, in: imageSize, padding: cfg.padding, isPercent: cfg.paddingIsPercent)
-        }
+        let bbox = MaskPostProcess.paddedRect(subject, in: imageSize, margins: cfg.cropMargins)
         return try MaskPostProcess.crop(image, to: bbox)
     }
 }
@@ -229,9 +219,14 @@ struct RunResult: Sendable {
     let width: Int
     let height: Int
 
-    func toJSON() -> String {
+    func toJSON(filters: [FilterChain], outputOverride: String? = nil, imageBase64: String? = nil) -> String {
+        let filterValues = filters
+            .map { "\"\(JSONEscaper.escape($0.normalizedString))\"" }
+            .joined(separator: ",")
+        let renderedOutput = outputOverride ?? output
+        let imageField = imageBase64.map { ",\"image_b64\":\"\(JSONEscaper.escape($0))\"" } ?? ""
         return """
-        {"input":"\(JSONEscaper.escape(input))","output":"\(JSONEscaper.escape(output))","algo":"\(JSONEscaper.escape(algo))","format":"\(format.rawValue)","width":\(width),"height":\(height)}
+        {"ok":true,"schema":"bgbgone.run.v\(CLIContract.jsonSchemaVersion)","result":{"input":"\(JSONEscaper.escape(input))","output":"\(JSONEscaper.escape(renderedOutput))","algo":"\(JSONEscaper.escape(algo))","format":"\(format.rawValue)","width":\(width),"height":\(height),"filters":[\(filterValues)]\(imageField)}}
         """
     }
 }

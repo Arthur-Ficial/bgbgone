@@ -5,7 +5,7 @@ import Foundation
 ///
 ///   chain  := stage (";" stage)*
 ///   stage  := [layer ":"] filter ("," filter)*
-///   layer  := "fg" | "bg" | "all" | "mask"
+///   layer  := "fg" | "bg" | "all" | "mask" | "composite"
 ///   filter := name ("=" arg (":" arg)*)?
 ///   arg    := value | key "=" value
 ///
@@ -71,7 +71,7 @@ public enum FilterParser {
         try validateName(name, stage: stage, originalChain: originalChain)
         let argsBody = String(s[s.index(after: eqIdx)...])
 
-        let argTokens = splitTopLevel(argsBody, by: ":")
+        let argTokens = splitFilterArgs(argsBody)
         var args: [FilterArg] = []
         for tok in argTokens {
             let t = tok.trimmingCharacters(in: .whitespaces)
@@ -114,6 +114,31 @@ public enum FilterParser {
         s.split(separator: delimiter, omittingEmptySubsequences: false).map(String.init)
     }
 
+    /// Split filter args on `:` while preserving colour mini-languages that also
+    /// use a colon (`rgb:0,128,255`, `rgba:0,128,255,200`). This keeps the
+    /// public colour grammar identical between `--bg color:<spec>`, server
+    /// fields, and filter args such as `fg:outline=color=rgb:255,255,255`.
+    private static func splitFilterArgs(_ s: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        for c in s {
+            if c == ":" {
+                let marker = current.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if marker.hasSuffix("=rgb") || marker.hasSuffix("=rgba") ||
+                   marker == "rgb" || marker == "rgba" {
+                    current.append(c)
+                } else {
+                    tokens.append(current)
+                    current = ""
+                }
+            } else {
+                current.append(c)
+            }
+        }
+        tokens.append(current)
+        return tokens
+    }
+
     /// Split the body of a stage into filter tokens. The `,` character serves
     /// double-duty in the grammar: between filters (`grayscale,blur=10`) AND
     /// inside value pairs (`offset=4,4`). Disambiguate: a `,` is a filter
@@ -150,7 +175,7 @@ public enum FilterParser {
             message,
             origin: "--filter",
             context: context,
-            hint: "grammar: chain := stage (\";\" stage)* ; stage := [layer:]filter (\",\" filter)* ; layer in fg|bg|all|mask"
+            hint: "grammar: chain := stage (\";\" stage)* ; stage := [layer:]filter (\",\" filter)* ; layer in fg|bg|all|mask|composite"
         )
     }
 }

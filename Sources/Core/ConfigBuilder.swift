@@ -39,10 +39,7 @@ public enum ConfigBuilder {
         try resolveOutputFormat(cfg: &cfg, isStdoutTTY: isStdoutTTY, stdoutPath: stdoutPath, explicitFormat: explicitOutputFormat)
         try resolveAutoFileOutput(cfg: &cfg, isStdoutTTY: isStdoutTTY)
         try resolveSize(rawSize: cmd.size, cfg: &cfg)
-        if cfg.position == nil, cfg.scalePercent != nil {
-            cfg.position = .center
-        }
-        try validate(cfg)
+        try validate(cfg, isStdoutTTY: isStdoutTTY)
         return cfg
     }
 
@@ -166,14 +163,18 @@ public enum ConfigBuilder {
 
     private static func resolveSize(rawSize: String?, cfg: inout Config) throws {
         guard let raw = rawSize else { return }
-        cfg.maxOutputMegapixels = try mapAPIParserError {
-            try ServerCompatibilityParser.parseSize(raw, outputFormat: cfg.outputFormat)
+        cfg.maxOutputMegapixels = try mapParameterParserError("--size", code: ErrorCodes.parseFlagValueInvalid) {
+            try ParameterParser.parseSize(raw, outputFormat: cfg.outputFormat)
         }
     }
 
-    static func mapAPIParserError<T>(_ block: () throws -> T) throws -> T {
-        do { return try block() } catch let e as ServerAPIError {
-            throw BgBgOneError.parser(ErrorCodes.parseCropMarginInvalid, e.title, origin: "--crop-margin")
+    static func mapParameterParserError<T>(_ origin: String, code: String, _ block: () throws -> T) throws -> T {
+        do { return try block() } catch let e as ParameterParseError {
+            var context: [String: String] = ["field_code": e.code]
+            if let detail = e.detail, !detail.isEmpty {
+                context["detail"] = detail
+            }
+            throw BgBgOneError.parser(code, e.message, origin: origin, context: context)
         }
     }
 }

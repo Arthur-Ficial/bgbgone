@@ -22,15 +22,9 @@ public struct ServerRemovalRequest: Sendable, Equatable {
         backgroundImagePath: String?,
         acceptHeader: String? = nil
     ) throws -> ServerRemovalRequest {
+        try validateKnownFields(form)
         try validateSourceCount(form)
         try validateBackgroundSourceCount(form)
-
-        if present(form.fields["image_url"]) {
-            throw ServerAPIError.notImplementable("remote image_url cannot be fetched by the local no-network runtime")
-        }
-        if present(form.fields["bg_image_url"]) {
-            throw ServerAPIError.notImplementable("remote bg_image_url cannot be fetched by the local no-network runtime")
-        }
 
         let input = try parseInput(form)
         var cfg = Config(mode: .process)
@@ -47,34 +41,26 @@ public struct ServerRemovalRequest: Sendable, Equatable {
         try parseChannels(form: form, cfg: &cfg)
 
         let rawSize = form.fields["size"]
-        cfg.maxOutputMegapixels = try ServerCompatibilityParser.parseSize(rawSize, outputFormat: cfg.outputFormat)
-        cfg.quality = try ServerCompatibilityParser.parseQuality(form.fields["quality"])
-        if let bgFit = try ServerCompatibilityParser.parseBgFit(form.fields["bg_fit"]) {
+        cfg.maxOutputMegapixels = try ParameterParser.parseSize(rawSize, outputFormat: cfg.outputFormat)
+        cfg.quality = try ParameterParser.parseQuality(form.fields["quality"])
+        if let bgFit = try ParameterParser.parseBgFit(form.fields["bg-fit"]) {
             cfg.bgFit = bgFit
-        }
-        if let feather = try ServerCompatibilityParser.parseFeather(form.fields["feather"]) {
-            cfg.feather = feather
-        }
-        if let threshold = try ServerCompatibilityParser.parseThreshold(form.fields["threshold"]) {
-            cfg.threshold = threshold
         }
 
         let typeValue = try parseAlgorithmAndType(form: form, cfg: &cfg)
         let typeHeader = try parseTypeHeader(form: form, typeValue: typeValue)
 
-        cfg.roi = try ServerCompatibilityParser.parseROI(form.fields["roi"])
-        let crop = try ServerCompatibilityParser.parseBoolean(
+        cfg.roi = try ParameterParser.parseROI(form.fields["roi"])
+        let crop = try ParameterParser.parseBoolean(
             form.fields["crop"],
             default: false,
             code: "invalid_crop",
             title: "Invalid crop parameter given"
         )
         cfg.cropToSubject = crop
-        cfg.cropMargins = try ServerCompatibilityParser.parseCropMargins(form.fields["crop_margin"])
+        cfg.cropMargins = try ParameterParser.parseCropMargins(form.fields["crop-margin"])
 
-        cfg.scalePercent = try ServerCompatibilityParser.parseScale(form.fields["scale"])
-        cfg.position = try ServerCompatibilityParser.parsePosition(form.fields["position"], scalePercent: cfg.scalePercent)
-        cfg.semitransparency = try ServerCompatibilityParser.parseBoolean(
+        cfg.semitransparency = try ParameterParser.parseBoolean(
             form.fields["semitransparency"],
             default: true,
             code: "invalid_semitransparency",
@@ -90,45 +76,70 @@ public struct ServerRemovalRequest: Sendable, Equatable {
                 try FilterRegistry.validate(chain)
                 if !chain.isEmpty { cfg.filters.append(chain) }
             } catch let e as BgBgOneError {
-                throw ServerAPIError.invalid("invalid_filter", e.message)
+                throw ParameterParseError.invalid("invalid_filter", e.message)
             }
         }
 
         return ServerRemovalRequest(input: input, config: cfg, responseKind: responseKind, typeHeaderValue: typeHeader)
     }
 
+    private static func validateKnownFields(_ form: ServerForm) throws {
+        let allowedFields: Set<String> = [
+            "image_file",
+            "bg",
+            "format",
+            "channels",
+            "size",
+            "quality",
+            "bg-fit",
+            "type",
+            "type-level",
+            "roi",
+            "crop",
+            "crop-margin",
+            "semitransparency",
+            "shadow-type",
+            "shadow-opacity",
+            "filter",
+        ]
+        let allowedFiles: Set<String> = ["image_file", "bg"]
+        if let unknown = form.fields.keys.first(where: { !allowedFields.contains($0) }) {
+            throw ParameterParseError.invalid("unknown_field", "Unknown field '\(unknown)'")
+        }
+        if let unknown = form.files.keys.first(where: { !allowedFiles.contains($0) }) {
+            throw ParameterParseError.invalid("unknown_file_field", "Unknown file field '\(unknown)'")
+        }
+    }
+
     private static func validateSourceCount(_ form: ServerForm) throws {
         let sources = [
             form.files["image_file"] != nil,
-            present(form.fields["image_file_b64"]),
-            present(form.fields["image_url"])
+            present(form.fields["image_file"])
         ].filter { $0 }.count
         if sources == 0 {
-            throw ServerAPIError.invalid(
+            throw ParameterParseError.invalid(
                 "missing_source",
                 "No image given",
-                detail: "Please provide the source image in the image_url, image_file or image_file_b64 parameter."
+                detail: "Provide image_file as a multipart file or base64 text field."
             )
         }
         if sources > 1 {
-            throw ServerAPIError.invalid(
+            throw ParameterParseError.invalid(
                 "multiple_sources",
-                "Multiple image sources given: Please provide either the image_url, image_file or image_file_b64 parameter."
+                "Multiple image sources given: provide image_file as either a file part or a base64 text field."
             )
         }
     }
 
     private static func validateBackgroundSourceCount(_ form: ServerForm) throws {
         let sources = [
-            present(form.fields["bg_color"]),
-            form.files["bg_image_file"] != nil,
-            present(form.fields["bg_image_file_b64"]),
-            present(form.fields["bg_image_url"])
+            present(form.fields["bg"]),
+            form.files["bg"] != nil
         ].filter { $0 }.count
         if sources > 1 {
-            throw ServerAPIError.invalid(
+            throw ParameterParseError.invalid(
                 "multiple_bg_sources",
-                "Multiple background sources given: Please provide either the bg_color, the bg_image_url or the bg_image_file parameter."
+                "Multiple background sources given: provide either bg=<color:...|image:...> or a bg file part."
             )
         }
     }
@@ -136,47 +147,41 @@ public struct ServerRemovalRequest: Sendable, Equatable {
     private static func parseInput(_ form: ServerForm) throws -> ServerInputSource {
         if let file = form.files["image_file"] {
             guard !file.data.isEmpty else {
-                throw ServerAPIError.invalid("invalid_file", "image_file is empty")
+                throw ParameterParseError.invalid("invalid_file", "image_file is empty")
             }
             return .uploaded(file.data, filename: file.filename.isEmpty ? "image" : file.filename)
         }
-        if let encoded = form.fields["image_file_b64"], !encoded.isEmpty {
+        if let encoded = form.fields["image_file"], !encoded.isEmpty {
             guard let data = Data(base64Encoded: encoded), !data.isEmpty else {
-                throw ServerAPIError.invalid("invalid_file", "image_file_b64 is not valid base64 image data")
+                throw ParameterParseError.invalid("invalid_file", "image_file is not valid base64 image data")
             }
             return .uploaded(data, filename: "image")
         }
-        throw ServerAPIError.invalid("missing_source", "No image given")
+        throw ParameterParseError.invalid("missing_source", "No image given")
     }
 
     private static func parseBackground(form: ServerForm, backgroundImagePath: String?) throws -> Background {
-        if let bgColor = form.fields["bg_color"], !bgColor.isEmpty {
+        if let bg = form.fields["bg"], !bg.isEmpty {
             do {
-                return .solidColor(try ColourParser.parse(ServerCompatibilityParser.normalizedColor(bgColor)))
+                return try ConfigBuilder.parseBackground(bg)
             } catch {
-                throw ServerAPIError.invalid("invalid_bg_color", "Invalid bg_color parameter given")
+                throw ParameterParseError.invalid("invalid_bg", "Invalid bg parameter given")
             }
         }
-        if let bgFile = form.files["bg_image_file"] {
+        if let bgFile = form.files["bg"] {
             guard let backgroundImagePath else {
-                throw ServerAPIError.invalid("invalid_bg_image_file", "Missing background image file")
+                throw ParameterParseError.invalid("invalid_bg", "Missing background image file")
             }
             if bgFile.data.isEmpty {
-                throw ServerAPIError.invalid("invalid_bg_image_file", "bg_image_file is empty")
+                throw ParameterParseError.invalid("invalid_bg", "bg file is empty")
             }
             return .image(backgroundImagePath)
-        }
-        if let bgB64 = form.fields["bg_image_file_b64"], !bgB64.isEmpty {
-            guard backgroundImagePath != nil else {
-                throw ServerAPIError.invalid("invalid_bg_image_file", "bg_image_file_b64 is not valid base64 image data")
-            }
-            return .image(backgroundImagePath!)
         }
         return .transparent
     }
 
     private static func parseFormat(form: ServerForm, acceptHeader: String?, background: Background, cfg: inout Config) throws -> ServerResponseKind {
-        let rawFormat = ServerCompatibilityParser.normalize(form.fields["format"] ?? "auto")
+        let rawFormat = ParameterParser.normalize(form.fields["format"] ?? "auto")
         let wantsJSON = rawFormat == "json" || (acceptHeader ?? "").lowercased().contains("application/json")
         if wantsJSON {
             cfg.outputFormat = .png
@@ -187,72 +192,60 @@ public struct ServerRemovalRequest: Sendable, Equatable {
         case "", "auto":
             cfg.outputFormat = isOpaque(background: background) ? .jpeg : .png
             return .image
-        case "png":
-            cfg.outputFormat = .png
-            return .image
-        case "jpg", "jpeg":
-            cfg.outputFormat = .jpeg
-            return .image
         case "zip":
             cfg.outputFormat = .zip
             return .zip
-        case "webp":
-            throw ServerAPIError.notImplementable("webp output requires an encoder unavailable in this zero-dependency build")
-        case "heic", "heif", "avif", "tif", "tiff":
-            guard let format = OutputFormat.parse(rawFormat) else {
-                throw ServerAPIError.invalid("invalid_format", "Invalid format parameter given")
-            }
+        case "png", "jpg", "heic", "avif", "tiff":
+            let format = OutputFormat.parseCanonical(rawFormat)!
             cfg.outputFormat = format
             return .image
         default:
-            throw ServerAPIError.invalid("invalid_format", "Invalid format parameter given")
+            throw ParameterParseError.invalid("invalid_format", "Invalid format parameter given")
         }
     }
 
     private static func parseChannels(form: ServerForm, cfg: inout Config) throws {
-        switch ServerCompatibilityParser.normalize(form.fields["channels"] ?? "rgba") {
+        switch ParameterParser.normalize(form.fields["channels"] ?? "rgba") {
         case "", "rgba":
             break
         case "alpha":
             cfg.maskOnly = true
             cfg.outputFormat = .png
         default:
-            throw ServerAPIError.invalid("invalid_channels", "Invalid value for parameter 'channels'")
+            throw ParameterParseError.invalid("invalid_channels", "Invalid value for parameter 'channels'")
         }
     }
 
     private static func parseAlgorithmAndType(form: ServerForm, cfg: inout Config) throws -> String {
-        let parsed = try ServerCompatibilityParser.parseForegroundType(form.fields["type"])
+        let parsed = try ParameterParser.parseForegroundType(form.fields["type"])
         cfg.algo = parsed.algo
         return parsed.typeValue
     }
 
     private static func parseTypeHeader(form: ServerForm, typeValue: String) throws -> String? {
-        let level = ServerCompatibilityParser.normalize(form.fields["type_level"] ?? "1")
+        let level = ParameterParser.normalize(form.fields["type-level"] ?? "1")
         switch level {
         case "none":
             return nil
         case "", "1", "2", "latest":
             return typeValue
         default:
-            throw ServerAPIError.invalid("invalid_type_level", "Invalid type_level parameter given")
+            throw ParameterParseError.invalid("invalid_type_level", "Invalid type-level parameter given")
         }
     }
 
     private static func parseShadow(form: ServerForm, cfg: inout Config) throws {
-        let hasShadowType = present(form.fields["shadow_type"])
-        if hasShadowType {
-            switch ServerCompatibilityParser.normalize(form.fields["shadow_type"] ?? "") {
+        if let raw = form.fields["shadow-type"] {
+            switch ParameterParser.normalize(raw) {
             case "none":
                 cfg.dropShadow = false
             case "auto", "drop", "3d", "car":
                 cfg.dropShadow = true
             default:
-                throw ServerAPIError.invalid("invalid_shadow_type", "Invalid shadow_type parameter given")
+                throw ParameterParseError.invalid("invalid_shadow_type", "Invalid shadow-type parameter given")
             }
         }
-
-        cfg.shadowOpacity = try ServerCompatibilityParser.parseShadowOpacity(form.fields["shadow_opacity"])
+        cfg.shadowOpacity = try ParameterParser.parseShadowOpacity(form.fields["shadow-opacity"])
     }
 
     private static func isOpaque(background: Background) -> Bool {

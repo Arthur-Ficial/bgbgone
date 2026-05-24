@@ -18,12 +18,18 @@ public enum FilterArg: Sendable, Equatable {
     case keyed(key: String, value: String)
 }
 
-/// Layer prefix for a stage. `all` is the default when no prefix is given.
+/// Layer prefix for a stage.
+///
+/// `all` means "apply independently to foreground and background before
+/// compositing". Filters that operate on the already-flattened image must use
+/// `composite`; keeping those surfaces distinct avoids ffmpeg-style ambiguity
+/// around whether a filter sees layers or final pixels.
 public enum FilterLayer: String, Sendable, Equatable, CaseIterable {
     case fg
     case bg
     case all
     case mask
+    case composite
 }
 
 /// A stage = one layer + one or more comma-separated filters. Order matters.
@@ -44,4 +50,22 @@ public struct FilterChain: Sendable, Equatable {
     public init(stages: [FilterStage]) { self.stages = stages }
 
     public var isEmpty: Bool { stages.isEmpty }
+
+    public var normalizedString: String {
+        stages.map { stage in
+            let calls = stage.calls.map { call in
+                guard !call.args.isEmpty else { return call.name.lowercased() }
+                let args = call.args.map { arg in
+                    switch arg {
+                    case .value(let value):
+                        return value
+                    case .keyed(let key, let value):
+                        return "\(key)=\(value)"
+                    }
+                }.joined(separator: ":")
+                return "\(call.name.lowercased())=\(args)"
+            }.joined(separator: ",")
+            return "\(stage.layer.rawValue):\(calls)"
+        }.joined(separator: ";")
+    }
 }

@@ -10,9 +10,10 @@ Run `bgbgone --filters-list` to enumerate the catalogue from the registry itself
 --filter "<chain>"          repeatable
 chain  := stage (";" stage)*
 stage  := [layer ":"] filter ("," filter)*
-layer  := fg | bg | all | mask        (default: all)
+layer  := fg | bg | all | mask | composite
 filter := name ("=" arg (":" arg)*)?
 arg    := value | key "=" value
+colour := #hex | named | rgb:R,G,B | rgba:R,G,B,A
 ```
 
 ## Cross-cutting
@@ -29,7 +30,7 @@ arg    := value | key "=" value
 |---|---|---|---|
 | adjust | fg / bg / all | tone+colour | [adjust.md](adjust.md) |
 | blur | fg / bg / all | spatial | [blur.md](blur.md) |
-| bloom | all | composite | [bloom.md](bloom.md) |
+| bloom | composite | composite | [bloom.md](bloom.md) |
 | box-blur | fg / bg / all | spatial | [box-blur.md](box-blur.md) |
 | colorize | fg / bg / all | tone+colour | [colorize.md](colorize.md) |
 | comic | fg / bg / all | stylise | [comic.md](comic.md) |
@@ -46,7 +47,7 @@ arg    := value | key "=" value
 | feather | mask | mask-shape | [feather.md](feather.md) |
 | flip | fg | geometric | [flip.md](flip.md) |
 | gamma | fg / bg / all | tone+colour | [gamma.md](gamma.md) |
-| gloom | all | composite | [gloom.md](gloom.md) |
+| gloom | composite | composite | [gloom.md](gloom.md) |
 | glow | fg | mask-aware fg | [glow.md](glow.md) |
 | grayscale | fg / bg / all | tone+colour | [grayscale.md](grayscale.md) |
 | hue | fg / bg / all | tone+colour | [hue.md](hue.md) |
@@ -73,8 +74,8 @@ arg    := value | key "=" value
 | translate | fg | geometric | [translate.md](translate.md) |
 | unsharp | fg / bg / all | spatial | [unsharp.md](unsharp.md) |
 | vibrance | fg / bg / all | tone+colour | [vibrance.md](vibrance.md) |
-| vignette | all | composite | [vignette.md](vignette.md) |
-| vignette-effect | all | composite | [vignette-effect.md](vignette-effect.md) |
+| vignette | composite | composite | [vignette.md](vignette.md) |
+| vignette-effect | composite | composite | [vignette-effect.md](vignette-effect.md) |
 | zoom-blur | fg / bg / all | spatial | [zoom-blur.md](zoom-blur.md) |
 
 ## By category
@@ -83,7 +84,7 @@ arg    := value | key "=" value
 
 **spatial (6):** blur, box-blur, motion-blur, zoom-blur, sharpen, unsharp
 
-**stylise (9):** posterize, pixelate (alias mosaic), edges, edge-work, emboss, crystallize, pointillize, comic, noise
+**stylise (9):** posterize, pixelate, edges, edge-work, emboss, crystallize, pointillize, comic, noise
 
 **composite-only (4):** vignette, vignette-effect, bloom, gloom
 

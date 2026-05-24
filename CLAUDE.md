@@ -151,7 +151,7 @@ If the primary path doesn't work, fix the root cause, refactor the design,
 or remove the feature. Fallbacks pretend things work when they don't and rot
 the codebase.
 
-### One mode: UNIX tool
+### Primary surface: UNIX tool
 
 ```bash
 bgbgone in.jpg                          # transparent PNG to stdout (refuses TTY)
@@ -168,9 +168,21 @@ bgbgone *.jpg --out-dir ./out/          # batch
 - Respects `NO_COLOR`, `--quiet`, stdin/stdout TTY detection
 - Correct exit codes (0 success, 1 user error, 2 no subject, 3 framework error)
 
-### No server mode (by design)
+### Server mode is first-class, but not a second pipeline
 
-No `--serve` flag. The UNIX pipe IS the API.
+`--server` is part of the Golden Goal for browser apps, local demos,
+Postman collections, and tools that cannot speak UNIX pipes directly. It MUST
+expose the same logical surface as the UNIX CLI as far as the transport allows:
+same option names, same filter grammar, same validation, same errors, same
+local-only runtime.
+
+The server is not a fallback path, cloud API, legacy shim, or separate
+implementation. CLI and HTTP requests MUST resolve into the same `Config` and
+run the same Vision/Core Image pipeline. If an option exists in both surfaces,
+there is one canonical spelling and one parser/validator behind it.
+Old aliases are removed immediately. The contract lint fails public docs or
+source that reintroduce duplicate spellings, duplicate routes, or detached
+server-only parser paths.
 
 ### Non-negotiable principles
 

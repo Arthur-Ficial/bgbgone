@@ -36,7 +36,7 @@ bgbgone --server --cors --allowed-origins http://localhost:3000
 Preflight response:
 
 ```bash
-curl -X OPTIONS -D - http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X OPTIONS -D - http://127.0.0.1:8787/bgbgone \
     -H 'Origin: http://localhost:3000' \
     -H 'Access-Control-Request-Headers: Content-Type, Authorization' \
     -o /dev/null
@@ -64,13 +64,19 @@ bgbgone --server --token "$(openssl rand -hex 16)"
 Request:
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8787/v1.0/account
+curl -H "Authorization: Bearer $TOKEN" \
+    -F image_file=@photo.jpg \
+    http://127.0.0.1:8787/bgbgone \
+    -o cutout.png
 ```
 
 The same token is also accepted through `X-API-Key` for clients that already send that header:
 
 ```bash
-curl -H "X-API-Key: $TOKEN" http://127.0.0.1:8787/v1.0/account
+curl -H "X-API-Key: $TOKEN" \
+    -F image_file=@photo.jpg \
+    http://127.0.0.1:8787/bgbgone \
+    -o cutout.png
 ```
 
 Environment variable:

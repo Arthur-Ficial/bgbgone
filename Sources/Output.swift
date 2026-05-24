@@ -28,6 +28,10 @@ enum Output {
 
         // Resolve destination
         if let outPath = cfg.output {
+            if outPath == "-" {
+                try writeToStdout(cgImage: cgImage, utType: utType, opts: opts)
+                return "-"
+            }
             try writeToFile(cgImage: cgImage, path: outPath, utType: utType, opts: opts)
             return outPath
         }
@@ -54,6 +58,10 @@ enum Output {
 
     private static func writeData(_ data: Data, cfg: Config, inputPath: String, format: OutputFormat) throws -> String {
         if let outPath = cfg.output {
+            if outPath == "-" {
+                FileHandle.standardOutput.write(data)
+                return "-"
+            }
             try writeDataToFile(data, path: outPath)
             return outPath
         }

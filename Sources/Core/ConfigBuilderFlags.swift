@@ -51,8 +51,8 @@ extension ConfigBuilder {
         if let o = cmd.output { cfg.output = o; saw = true }
         if let d = cmd.outDir { cfg.outputDir = d; saw = true }
         if let f = cmd.outputFormatRaw {
-            guard let fmt = OutputFormat.parse(f) else {
-                throw flagInvalid("unknown --to value: \(f) (allowed: png, jpg/jpeg, zip, heic, avif, tiff)", origin: "--to", value: f)
+            guard let fmt = OutputFormat.parseCanonical(f) else {
+                throw flagInvalid("unknown --format value: \(f) (allowed: \(CLIContract.outputFormats.joined(separator: ", ")))", origin: "--format", value: f)
             }
             cfg.outputFormat = fmt; saw = true
         }
@@ -63,19 +63,14 @@ extension ConfigBuilder {
             cfg.quality = q; saw = true
         }
         if let bg = cmd.bg { cfg.background = try parseBackground(bg); saw = true }
-        if let c = cmd.bgColor {
-            cfg.background = .solidColor(try ColourParser.parse(ServerCompatibilityParser.normalizedColor(c)))
-            saw = true
-        }
-        if let p = cmd.bgImage { cfg.background = .image(p); saw = true }
         if let v = cmd.bgFit {
             guard let f = BgFit(rawValue: v) else {
-                throw flagInvalid("unknown --bg-fit value: \(v) (allowed: cover, contain, tile, center)", origin: "--bg-fit", value: v)
+                throw flagInvalid("unknown --bg-fit value: \(v) (allowed: \(CLIContract.bgFits.joined(separator: ", ")))", origin: "--bg-fit", value: v)
             }
             cfg.bgFit = f; saw = true
         }
         if let ch = cmd.channels {
-            let v = ServerCompatibilityParser.normalize(ch)
+            let v = ParameterParser.normalize(ch)
             switch v {
             case "rgba": cfg.maskOnly = false
             case "alpha": cfg.maskOnly = true; cfg.outputFormat = .png
@@ -84,29 +79,18 @@ extension ConfigBuilder {
             }
             saw = true
         }
-        if let p = cmd.padding {
-            let parsed = try parsePadding(p)
-            cfg.padding = parsed.value; cfg.paddingIsPercent = parsed.isPercent; saw = true
-        }
         if let m = cmd.cropMargin {
-            cfg.cropMargins = try mapAPIParserError { try ServerCompatibilityParser.parseCropMargins(m) }; saw = true
+            cfg.cropMargins = try mapParameterParserError("--crop-margin", code: ErrorCodes.parseCropMarginInvalid) { try ParameterParser.parseCropMargins(m) }; saw = true
         }
         if cmd.crop { cfg.cropToSubject = true; saw = true }
-        if let r = cmd.roi { cfg.roi = try mapAPIParserError { try ServerCompatibilityParser.parseROI(r) }; saw = true }
-        if let v = cmd.algo {
-            guard let a = Algo(rawValue: v) else {
-                throw flagInvalid("unknown --algo value: \(v) (allowed: auto, vn-mask, person, saliency)", origin: "--algo", value: v)
-            }
-            cfg.algo = a; saw = true
-        }
+        if let r = cmd.roi { cfg.roi = try mapParameterParserError("--roi", code: ErrorCodes.parseRoiInvalid) { try ParameterParser.parseROI(r) }; saw = true }
         if let t = cmd.type {
-            cfg.algo = try mapAPIParserError { try ServerCompatibilityParser.parseForegroundType(t).algo }; saw = true
+            cfg.algo = try mapParameterParserError("--type", code: ErrorCodes.parseFlagValueInvalid) { try ParameterParser.parseForegroundType(t).algo }; saw = true
         }
         if cmd.multi { cfg.multiInstance = true; saw = true }
         if let n = cmd.instanceNaming { cfg.instanceNamingTemplate = n; saw = true }
-        if cmd.shadow { cfg.dropShadow = true; saw = true }
         if let s = cmd.shadowType {
-            switch ServerCompatibilityParser.normalize(s) {
+            switch ParameterParser.normalize(s) {
             case "none": cfg.dropShadow = false
             case "auto", "drop", "3d", "car": cfg.dropShadow = true
             default:
@@ -115,11 +99,11 @@ extension ConfigBuilder {
             saw = true
         }
         if let o = cmd.shadowOpacity {
-            cfg.shadowOpacity = try mapAPIParserError { try ServerCompatibilityParser.parseShadowOpacity(o) }; saw = true
+            cfg.shadowOpacity = try mapParameterParserError("--shadow-opacity", code: ErrorCodes.parseFlagValueInvalid) { try ParameterParser.parseShadowOpacity(o) }; saw = true
         }
         if let st = cmd.semitransparency {
-            cfg.semitransparency = try mapAPIParserError {
-                try ServerCompatibilityParser.parseBoolean(st, default: true, code: "invalid_semitransparency", title: "Invalid semitransparency parameter given")
+            cfg.semitransparency = try mapParameterParserError("--semitransparency", code: ErrorCodes.parseFlagValueInvalid) {
+                try ParameterParser.parseBoolean(st, default: true, code: "invalid_semitransparency", title: "Invalid semitransparency parameter given")
             }
             saw = true
         }
@@ -154,40 +138,45 @@ extension ConfigBuilder {
         throw flagInvalid("--bg must be color:<spec> or image:<path>, got: \(spec)", origin: "--bg", value: spec)
     }
 
-    static func parsePadding(_ raw: String) throws -> (value: Double, isPercent: Bool) {
-        if raw.hasSuffix("%") {
-            let body = String(raw.dropLast())
-            guard let n = Double(body), n >= 0 else {
-                throw flagInvalid("invalid --padding percent: \(raw)", origin: "--padding", value: raw)
-            }
-            return (n / 100.0, true)
-        }
-        guard let n = Double(raw), n >= 0 else {
-            throw flagInvalid("invalid --padding: \(raw)", origin: "--padding", value: raw)
-        }
-        return (n, false)
-    }
-
     static func flagInvalid(_ message: String, origin: String, value: String?) -> BgBgOneError {
         var ctx: [String: String] = [:]
         if let v = value { ctx["value"] = v }
         return BgBgOneError.parser(ErrorCodes.parseFlagValueInvalid, message, origin: origin, context: ctx)
     }
 
-    static func validate(_ cfg: Config) throws {
+    static func validate(_ cfg: Config, isStdoutTTY: Bool) throws {
         let readsFromStdin = cfg.inputs.contains("-")
         if cfg.output != nil && cfg.outputDir != nil {
             throw BgBgOneError.userError(ErrorCodes.userBatchOutputConflict, "use either -o/--output or --out-dir, not both")
         }
+        if cfg.output == "-" {
+            if cfg.outputMode != .standard {
+                throw BgBgOneError.userError(
+                    ErrorCodes.userOutputPathInvalid,
+                    "-o - cannot be combined with --json/--ndjson because image bytes and metadata would share stdout",
+                    hint: "write image bytes to a file or omit --json/--ndjson"
+                )
+            }
+            if isStdoutTTY {
+                throw BgBgOneError.userError(
+                    ErrorCodes.userStdoutTTYRefuse,
+                    "refusing to write binary image data to a terminal. Redirect stdout or pass a real -o path.",
+                    hint: "use -o out.png or redirect stdout"
+                )
+            }
+        }
         if cfg.inputs.count > 1 && cfg.output != nil {
             throw BgBgOneError.userError(ErrorCodes.userBatchOutputConflict, "-o cannot be used with multiple inputs; use --out-dir", hint: "use --out-dir <dir>")
+        }
+        if let outDir = cfg.outputDir {
+            try validateBatchOutputNames(inputs: cfg.inputs, outDir: outDir, format: cfg.outputFormat)
         }
         if cfg.multiInstance {
             if cfg.output != nil {
                 throw BgBgOneError.userError(ErrorCodes.userBatchOutputConflict, "--multi can emit multiple files; use --out-dir or omit output to write next to the input")
             }
             if cfg.maskOnly {
-                throw BgBgOneError.userError(ErrorCodes.parseFlagDuplicate, "--multi and --mask-only are mutually exclusive")
+                throw BgBgOneError.userError(ErrorCodes.parseFlagDuplicate, "--multi and --channels alpha are mutually exclusive")
             }
             if readsFromStdin {
                 throw BgBgOneError.userError(ErrorCodes.userInputCountMismatch, "--multi cannot read from stdin because instance filenames need a file input stem")
@@ -195,6 +184,23 @@ extension ConfigBuilder {
         }
         if readsFromStdin && cfg.outputDir != nil {
             throw BgBgOneError.userError(ErrorCodes.userOutputPathInvalid, "stdin input has no output filename; use -o <file> instead of --out-dir", hint: "use -o <file>")
+        }
+    }
+
+    static func validateBatchOutputNames(inputs: [String], outDir: String, format: OutputFormat) throws {
+        var seen: [String: String] = [:]
+        for input in inputs where input != "-" {
+            guard let path = OutputNaming.batchOutputPath(inputPath: input, outDir: outDir, format: format) else { continue }
+            if let first = seen[path] {
+                throw BgBgOneError.userError(
+                    ErrorCodes.userBatchOutputConflict,
+                    "batch output filename collision: \(first) and \(input) both write \(path)",
+                    origin: "--out-dir",
+                    context: ["first": first, "second": input, "output": path],
+                    hint: "rename one input or use separate output directories"
+                )
+            }
+            seen[path] = input
         }
     }
 

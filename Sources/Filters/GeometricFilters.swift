@@ -35,7 +35,8 @@ public enum TranslateFilter: Filter {
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var dx = 0.0, dy = 0.0
         for a in args {
-            if case .value(let v) = a {
+            switch a {
+            case .value(let v), .keyed(_, let v):
                 let parts = v.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
                 if parts.count == 2 { dx = parts[0]; dy = parts[1] }
             }
@@ -66,7 +67,10 @@ public enum FlipFilter: Filter {
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var axis = "horizontal"
         for a in args {
-            if case .value(let v) = a { axis = v.lowercased() }
+            switch a {
+            case .value(let v), .keyed(_, let v):
+                axis = v.lowercased()
+            }
         }
         let t: CGAffineTransform
         switch axis {

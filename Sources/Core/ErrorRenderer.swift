@@ -30,7 +30,7 @@ public enum ErrorRenderer {
     }
 
     /// Stable JSON envelope: `{"ok":false,"error":{...}}`. Used by `--json`
-    /// CLI output and by the HTTP `/v1.0/bgbgone` surface on error.
+    /// CLI output and by the HTTP `/bgbgone` surface on error.
     public static func jsonEnvelope(_ e: BgBgOneError) -> String {
         var fields: [(String, String)] = []
         fields.append(("code", quote(e.code)))
@@ -51,14 +51,16 @@ public enum ErrorRenderer {
             fields.append(("hint", quote(hint)))
         }
         let inner = fields.map { "\(quote($0.0)):\($0.1)" }.joined(separator: ",")
-        return "{\"ok\":false,\"error\":{\(inner)}}"
+        return "{\"ok\":false,\"schema\":\"bgbgone.run.v\(CLIContract.jsonSchemaVersion)\",\"error\":{\(inner)}}"
     }
 
-    /// HTTP status code derived from category. Parser / no-result / user -> 400;
-    /// framework -> 500. UNIX exit codes (0/1/2/3) remain unchanged - this is HTTP-only.
+    /// HTTP status code derived from category. Parser/user -> 400,
+    /// no-result -> 422, framework -> 500. UNIX exit codes (0/1/2/3)
+    /// remain unchanged - this is HTTP-only.
     public static func httpStatus(_ e: BgBgOneError) -> Int {
         switch e.category {
-        case .parser, .noResult, .user: return 400
+        case .parser, .user: return 400
+        case .noResult: return 422
         case .framework: return 500
         }
     }

@@ -108,7 +108,7 @@ private final class ServerConnection: @unchecked Sendable {
             case .success(let request):
                 response = await self.handle(request)
             case .failure(let error):
-                response = .json(status: error.status, body: errorJSON(error.message, type: error.type))
+                response = .json(status: error.status, body: ErrorRenderer.jsonEnvelope(error.error))
             }
             self.send(response)
         }
@@ -120,15 +120,32 @@ private final class ServerConnection: @unchecked Sendable {
         while true {
             let n = recv(fileDescriptor, &chunk, chunk.count, 0)
             if n <= 0 {
-                return .failure(RequestReadError(status: 400, message: "cannot read request", type: "invalid_request_error"))
+                return .failure(RequestReadError(
+                    status: 400,
+                    error: BgBgOneError.parser(ErrorCodes.parseHttpRequestInvalid, "cannot read request")
+                ))
             }
             buffer.append(chunk, count: n)
             if buffer.count > config.maxBodyBytes + 64 * 1024 {
-                return .failure(RequestReadError(status: 413, message: "request body is too large", type: "request_too_large"))
+                return .failure(RequestReadError(
+                    status: 413,
+                    error: BgBgOneError.parser(
+                        ErrorCodes.parseHttpRequestBodyTooLarge,
+                        "request body is too large",
+                        context: ["max_bytes": String(config.maxBodyBytes)]
+                    )
+                ))
             }
             if let request = HTTPRequest.parse(buffer) {
                 if request.body.count > config.maxBodyBytes {
-                    return .failure(RequestReadError(status: 413, message: "request body is too large", type: "request_too_large"))
+                    return .failure(RequestReadError(
+                        status: 413,
+                        error: BgBgOneError.parser(
+                            ErrorCodes.parseHttpRequestBodyTooLarge,
+                            "request body is too large",
+                            context: ["max_bytes": String(config.maxBodyBytes)]
+                        )
+                    ))
                 }
                 return .success(request)
             }
@@ -142,7 +159,12 @@ private final class ServerConnection: @unchecked Sendable {
 
         let origin = request.header("origin")
         if config.originCheckEnabled && !ServerSecurityPolicy.isAllowedOrigin(origin, allowedOrigins: config.allowedOrigins) {
-            return json(status: 403, body: errorJSON("Origin '\(origin ?? "unknown")' is not allowed.", type: "forbidden"), origin: origin)
+            let error = BgBgOneError.userError(
+                ErrorCodes.userHttpOriginForbidden,
+                "Origin '\(origin ?? "unknown")' is not allowed.",
+                origin: "Origin"
+            )
+            return json(status: 403, body: ErrorRenderer.jsonEnvelope(error), origin: origin)
         }
 
         if shouldCheckToken(for: request.path),
@@ -153,7 +175,11 @@ private final class ServerConnection: @unchecked Sendable {
            ) {
             return json(
                 status: 401,
-                body: apiErrorJSON(code: "authentication_error", title: "Invalid or missing token."),
+                body: ErrorRenderer.jsonEnvelope(BgBgOneError.userError(
+                    ErrorCodes.userHttpAuthenticationInvalid,
+                    "Invalid or missing token.",
+                    origin: "Authorization"
+                )),
                 origin: origin,
                 extraHeaders: ["WWW-Authenticate": "Bearer"]
             )
@@ -162,15 +188,15 @@ private final class ServerConnection: @unchecked Sendable {
         switch (request.method, request.path) {
         case ("GET", "/health"):
             return json(status: 200, body: healthJSON(), origin: origin)
-        case ("GET", "/v1.0/account"), ("GET", "/account"):
-            return json(status: 200, body: accountJSON(), origin: origin)
-        case ("POST", "/v1.0/bgbgone"), ("POST", "/bgbgone"):
+        case ("POST", "/bgbgone"):
             return await handleBgbgone(request, origin: origin)
-        case ("POST", "/v1.0/improve"), ("POST", "/improve"):
-            let error = ServerAPIError.notImplementable("image improvement submissions require a remote training program")
-            return json(status: error.status, body: error.json(), origin: origin)
         default:
-            return json(status: 404, body: apiErrorJSON(code: "not_found", title: "not found"), origin: origin)
+            let error = BgBgOneError.parser(
+                ErrorCodes.parseHttpRouteUnknown,
+                "not found",
+                context: ["method": request.method, "path": request.path]
+            )
+            return json(status: 404, body: ErrorRenderer.jsonEnvelope(error), origin: origin)
         }
     }
 
@@ -204,15 +230,13 @@ private final class ServerConnection: @unchecked Sendable {
             case .image:
                 return binary(status: 200, body: imageData, contentType: contentType(for: removal.config.outputFormat), origin: origin, extraHeaders: metadata)
             case .json:
-                let body = """
-                {"data":{"result_b64":"\(imageData.base64EncodedString())","foreground_top":0,"foreground_left":0,"foreground_width":\(result.width),"foreground_height":\(result.height)}}
-                """
+                let body = result.toJSON(filters: removal.config.filters, outputOverride: "-", imageBase64: imageData.base64EncodedString())
                 return json(status: 200, body: body, origin: origin, extraHeaders: metadata)
             case .zip:
                 return binary(status: 200, body: imageData, contentType: "application/zip", origin: origin, extraHeaders: metadata)
             }
-        } catch let error as ServerAPIError {
-            return json(status: error.status, body: error.json(), origin: origin)
+        } catch let error as ParameterParseError {
+            return json(status: 400, body: ErrorRenderer.jsonEnvelope(error.bgError()), origin: origin)
         } catch let error as BgBgOneError {
             return json(status: ErrorRenderer.httpStatus(error), body: ErrorRenderer.jsonEnvelope(error), origin: origin)
         } catch {
@@ -249,24 +273,15 @@ private final class ServerConnection: @unchecked Sendable {
         if let file = form.files["image_file"] {
             return try writeFile(data: file.data, filename: file.filename, tempDir: tempDir, fallbackName: "input")
         }
-        if form.fields["image_url"] != nil {
-            return tempDir.appendingPathComponent("remote-url-placeholder.img")
-        }
-        if let encoded = form.fields["image_file_b64"], let data = Data(base64Encoded: encoded) {
+        if let encoded = form.fields["image_file"], let data = Data(base64Encoded: encoded) {
             return try writeFile(data: data, filename: "input", tempDir: tempDir, fallbackName: "input")
         }
         return tempDir.appendingPathComponent("missing-input-placeholder.img")
     }
 
     private func writeBackgroundFileIfPresent(form: ServerForm, tempDir: URL) throws -> URL? {
-        if let file = form.files["bg_image_file"] {
+        if let file = form.files["bg"] {
             return try writeFile(data: file.data, filename: file.filename, tempDir: tempDir, fallbackName: "background")
-        }
-        if form.fields["bg_image_url"] != nil {
-            return nil
-        }
-        if let encoded = form.fields["bg_image_file_b64"], let data = Data(base64Encoded: encoded) {
-            return try writeFile(data: data, filename: "background", tempDir: tempDir, fallbackName: "background")
         }
         return nil
     }
@@ -353,8 +368,7 @@ private final class ServerConnection: @unchecked Sendable {
 
 private struct RequestReadError: Error {
     let status: Int
-    let message: String
-    let type: String
+    let error: BgBgOneError
 }
 
 private struct HTTPRequest {
@@ -448,47 +462,9 @@ private func multipartBoundary(from contentType: String) -> String? {
     return nil
 }
 
-private func statusCode(for error: BgBgOneError) -> Int {
-    switch error.category {
-    case .parser, .user:
-        return 400
-    case .noResult:
-        return 422
-    case .framework:
-        return 500
-    }
-}
-
-private func errorType(for error: BgBgOneError) -> String {
-    switch error.category {
-    case .parser, .user:
-        return "invalid_request_error"
-    case .noResult:
-        return "no_result"
-    case .framework:
-        return "server_error"
-    }
-}
-
-private func errorJSON(_ message: String, type: String) -> String {
-    """
-    {"error":{"message":"\(JSONEscaper.escape(message))","type":"\(type)"}}
-    """
-}
-
-private func apiErrorJSON(code: String, title: String, detail: String? = nil) -> String {
-    ServerAPIError(status: 400, code: code, title: title, detail: detail).json()
-}
-
 private func healthJSON() -> String {
     """
     {"status":"ok","version":"\(buildVersion)","api":"bgbgone","local":true}
-    """
-}
-
-private func accountJSON() -> String {
-    """
-    {"data":{"attributes":{"credits":{"total":0,"subscription":0,"payg":0,"enterprise":0},"api":{"free_calls":0,"sizes":"all"}}}}
     """
 }
 

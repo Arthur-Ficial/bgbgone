@@ -26,36 +26,30 @@ bgbgone --server                        # local HTTP API on 127.0.0.1:8787
 # background replacement
 --bg color:<spec>                       # solid colour: #fff | white | rgb:255,0,0
 --bg image:<path>                       # image background
---bg-color <spec>                       # shared solid colour field
---bg-image <path>                       # shared background image field
 --bg-fit cover|contain|tile|center      # how the bg fits the canvas
 
 # matte / edge tuning
---mask-only                             # output the alpha mask only
 --channels rgba|alpha                   # finalized image or alpha mask
---feather <px>                          # edge softening (default 1)
---threshold <0..1>                      # mask binarisation threshold
---padding <px|%>                        # extra space around subject
---crop-margin <1|2|4 values>            # API-style crop margins, px or %
 --crop                                  # tight-crop to subject bbox
+--crop-margin <1|2|4 px or %>           # margins around the crop
 --roi "x1 y1 x2 y2"                     # region of interest, px or %
---scale <10%..100%|original>            # scale subject on canvas
---position <center|x% y%|original>      # position scaled subject
+--filter "mask:feather=<N>"             # matte edge softening
+--filter "mask:threshold=<N>"           # mask binarisation threshold
+--filter "fg:scale=<F>,translate=<X>,<Y>"   # subject geometry
 --semitransparency true|false           # keep or harden semi-transparent matte pixels
---shadow                                # drop shadow under cutout
---shadow-type auto|drop|3D|car|none     # shadow compatibility selector
+--shadow-type auto|drop|3D|car|none     # shadow preset (none = no shadow)
 --shadow-opacity <0..100|auto>          # shadow darkness
 
-# algorithm
---algo auto|vn-mask|person|saliency  (default: auto)
---type auto|person|product|car|animal|graphic|transportation
+# algorithm (single canonical selector, same name on the CLI and server)
+--type auto|person|product|car|animal|graphic|transportation|saliency|vn-mask
+                                        # default: auto (VNGenerateForegroundInstanceMaskRequest)
 
 # multi-instance
 --multi                                 # one output per detected subject
 --instance-naming "{base}-{n}.{ext}"
 
 # output
---to, --format png|jpg|zip|heic|avif|tiff  (default: png)
+--format png|jpg|zip|heic|avif|tiff            (default: png)
 --size preview|full|50MP|auto
 --quality 1..100             (default: 92 for lossy)
 -o, --output <path>
@@ -83,7 +77,7 @@ Routing constraints are enforced before image processing starts:
 - `-o` and `--out-dir` are mutually exclusive.
 - Multiple file inputs cannot use `-o`; use `--out-dir` or let bgbgone write beside each input.
 - Stdin input has no stable filename, so `--out-dir` is rejected; use stdout or `-o`.
-- `--multi` always writes files, requires a file input stem, and cannot combine with `-o` or `--mask-only`.
+- `--multi` always writes files, requires a file input stem, and cannot combine with `-o` or `--channels alpha`.
 
 ## Defaults
 
@@ -93,9 +87,9 @@ Routing constraints are enforced before image processing starts:
 - Single instance: cutout = union of all detected subjects (use `--multi` for one-per-instance).
 - Format: PNG by default; ZIP is a stored package containing `color.jpg` and `alpha.png`.
 - Quality: 92 for lossy formats (JPEG, HEIC, AVIF).
-- Feather: 1px.
+- Matte edge: hard by default; soften via `--filter "mask:feather=<N>"`.
 - Colour space: pass through input.
-- Shadow / padding / crop: off.
+- Shadow / crop / crop-margin: off until explicitly enabled.
 - Server: binds to `127.0.0.1:8787`, accepts local uploads only, and uses the same processing pipeline as the CLI.
 
 ## Exit codes
@@ -146,8 +140,8 @@ Fields:
 Wire formats:
 
 - **stderr (default):** multi-line. Honours `NO_COLOR` (no ANSI today; future) and `--quiet` (single-line message only).
-- **`--json`:** stable envelope `{"ok":false,"error":{...}}`. Sibling of the success body.
-- **HTTP `/v1.0/bgbgone`:** same JSON envelope. Status code: `parser` / `user` / `no_result` -> `400`; `framework` -> `500`.
+- **`--json`:** stable envelope `{"ok":false,"schema":"bgbgone.run.v1","error":{...}}`. Sibling of the success body.
+- **HTTP `/bgbgone`:** same JSON envelope. Status code: `parser` / `user` -> `400`; `no_result` -> `422`; `framework` -> `500`.
 
 Adding a new code: append to `ErrorCodes.swift` (alphabetised) and use it at the throw site. Never invent ad-hoc codes inline.
 
@@ -170,7 +164,7 @@ Adding a new code: append to `ErrorCodes.swift` (alphabetised) and use it at the
  Vision/CoreImage  CIImage           ImageIO
                                      CGImageDestination
 
-HTTP Server (/v1.0/*) ───────────────┘
+HTTP Server (/bgbgone) ──────────────┘
   multipart/JSON/form uploads, optional JSON/base64 response, same Config pipeline
 ```
 
@@ -195,41 +189,21 @@ HTTP Server (/v1.0/*) ───────────────┘
 
 ## Server API
 
-The server exists for tools that need HTTP instead of a UNIX pipe. It is not a cloud client and does not fetch remote image URLs. `image_url` and `bg_image_url` return a structured `501 NOT IMPLEMENTABLE` response so the runtime no-network promise remains true.
+`--server` exposes the same Config + pipeline as the CLI over local HTTP. Two routes (`GET /health`, `POST /bgbgone`); every HTTP field is just the long-form CLI flag name (`format`, `bg`, `bg-fit`, `filter`, `channels`, `crop`, `crop-margin`, `padding`, `roi`, `quality`, `size`, `type`, `type-level`, `shadow-type`, `shadow-opacity`, `semitransparency`). One canonical spelling per concept; unknown fields and unknown routes return `400` / `404` with the standard JSON envelope. No remote URL fetching, no duplicate aliases.
 
-Endpoints:
-
-- `GET /health`
-- `GET /account`
-- `GET /v1.0/account`
-- `POST /bgbgone`
-- `POST /v1.0/bgbgone`
-- `POST /improve` and `/v1.0/improve` return `501 NOT IMPLEMENTABLE`
-
-Supported request fields for `POST /v1.0/bgbgone`:
-
-- Input: `image_file` multipart upload or `image_file_b64`.
-- Output: `format=auto|png|jpg|jpeg|zip|heic|avif|tiff|json`; `webp` returns `501 NOT IMPLEMENTABLE` on this zero-dependency encoder stack.
-- Matte: `channels=rgba|alpha`.
-- Background: `bg_color`, `bg_image_file`, `bg_image_file_b64`.
-- Geometry: `roi`, `crop=true`, `crop_margin`, `scale`, `position`.
-- Shared image controls: `quality`, `bg_fit`, `feather`, `threshold`, `shadow_type`, `shadow_opacity`, `semitransparency`.
-- Subject hint: `type=auto|person|product|car|animal|graphic|transportation|saliency|vn-mask`, plus `type_level`.
-- Size cap: `size=preview|full|auto|50MP`.
-
-See `docs/server/` for the full wire contract and security matrix.
+Full wire contract, response shapes, and security matrix: [`docs/server/`](server/).
 
 ## Algorithms
 
-| Algo | API | macOS floor | Best for |
-| ---- | --- | ----------- | -------- |
-| `vn-mask` | `VNGenerateForegroundInstanceMaskRequest` | 14+ | General purpose foreground subjects |
-| `person` | `VNGeneratePersonSegmentationRequest` | 12+ | Portraits, people, talking-head frames |
-| `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ | Objectness heat-map matte |
+Underlying Vision requests, selected via `--type` (CLI) / `type` (server).
 
-`--algo auto` uses the public foreground-instance mask API (`vn-mask`).
-Any other algorithm name is rejected by the parser with exit code 2 — there
-is no hidden fallback.
+| Internal | `--type` values that resolve to it | Vision API | macOS floor |
+| --- | --- | --- | --- |
+| `vn-mask` | `auto`, `vn-mask`, `product`, `car`, `animal`, `graphic`, `transportation` | `VNGenerateForegroundInstanceMaskRequest` | 14+ |
+| `person` | `person` | `VNGeneratePersonSegmentationRequest` | 12+ |
+| `saliency` | `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ |
+
+`--type auto` resolves to `vn-mask` (the public foreground-instance mask API). Subject hints `product`, `car`, `animal`, `graphic`, `transportation` also resolve to `vn-mask`. `--type person` uses person segmentation; `--type saliency` uses objectness saliency. Any other value is rejected by the parser with exit code 2 — there is no hidden fallback.
 
 ## Backgrounds
 
@@ -247,8 +221,8 @@ it via `--bg image:<path>`.
 
 Four layers, all green-or-fail in `make release`:
 
-1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing for every CLI flag (~190 cases), colour parsing, output naming, format inference, JSON escaping, routing validation, server compatibility request parsing, server-side security policy (origin/Bearer/X-API-Key/loopback), geometry / size / shadow / type / channels config mapping, NetworkPolicy.
-2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; CLI invocations across every shared flag (`--type`, `--shadow-type`, `--scale`/`--position`, `--size`, `--semitransparency`, `--crop-margin` variants, `--roi`, all output formats, `--bg-image`/`--bg-color`); live HTTP server scenarios — CORS preflight, multi-source rejection, body limit `413`, `--no-origin-check`, `--footgun`, Bearer/X-API-Key auth, `X-Type` header policy, JSON/form/multipart bodies, ZIP output, accepted not-implementable cases.
+1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing for every CLI flag (~190 cases), colour parsing, output naming, format inference, JSON escaping, routing validation, server request parsing, server-side security policy (origin/Bearer/X-API-Key/loopback), geometry / size / shadow / type / channels config mapping, NetworkPolicy.
+2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; CLI invocations across every shared flag (`--type`, `--shadow-type`, `--filter fg:scale`, `--filter fg:translate`, `--size`, `--semitransparency`, `--crop-margin` variants, `--roi`, all output formats, `--bg color:...`, `--bg image:...`); live HTTP server scenarios — CORS preflight, multi-source rejection, body limit `413`, `--no-origin-check`, `--footgun`, Bearer/X-API-Key auth, `X-Type` header policy, JSON/form/multipart bodies, ZIP output, and unknown-field rejection.
 3. **README image regeneration** (`scripts/make-readme-examples.sh`) — visual regression surface generated from the freshly installed binary.
 4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs five batch processes, verifies 100 outputs per run, updates the README average, and reports throughput.
 
@@ -279,7 +253,7 @@ Current local measurement: 100 images in 8.075s, 12.38 images/s, 80.7 ms/image.
 ```bash
 bgbgone in.jpg | auge --classify                   # classify the cutout (cleaner result, no bg distractors)
 bgbgone in.jpg | kern --embed-image                # cleaner embeddings
-find ~/photos -name '*.heic' | bgbgone --bg color:white --to jpg --out-dir ./catalog
+find ~/photos -name '*.heic' | bgbgone --bg color:white --format jpg --out-dir ./catalog
 ```
 
 ## Release process

@@ -55,7 +55,7 @@ enum ForegroundMask {
             throw BgBgOneError.frameworkError(
                 ErrorCodes.frameworkVisionFail,
                 "foreground-instance mask requires macOS 14+",
-                hint: "upgrade macOS or use --algo person/saliency"
+                hint: "upgrade macOS or use --type person/saliency"
             )
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
@@ -72,7 +72,7 @@ enum ForegroundMask {
             throw BgBgOneError.noResult(
                 ErrorCodes.noResultNoSubject,
                 "no foreground subject detected",
-                hint: "try --algo person for portraits or --algo saliency for arbitrary subjects"
+                hint: "try --type person for portraits or --type saliency for arbitrary subjects"
             )
         }
 
@@ -96,7 +96,7 @@ enum ForegroundMask {
             throw BgBgOneError.frameworkError(
                 ErrorCodes.frameworkVisionFail,
                 "foreground-instance mask requires macOS 14+",
-                hint: "upgrade macOS or use --algo person/saliency"
+                hint: "upgrade macOS or use --type person/saliency"
             )
         }
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
@@ -113,7 +113,7 @@ enum ForegroundMask {
             throw BgBgOneError.noResult(
                 ErrorCodes.noResultNoSubject,
                 "no foreground subject detected",
-                hint: "try --algo person for portraits or --algo saliency for arbitrary subjects"
+                hint: "try --type person for portraits or --type saliency for arbitrary subjects"
             )
         }
 
@@ -164,7 +164,7 @@ enum ForegroundMask {
             throw BgBgOneError.noResult(
                 ErrorCodes.noResultNoSubject,
                 "no person detected",
-                hint: "try --algo vn-mask or --algo saliency"
+                hint: "try --type vn-mask or --type saliency"
             )
         }
         return try resultFromMaskPixelBuffer(result.pixelBuffer, source: image, algoLabel: Algo.person.rawValue)

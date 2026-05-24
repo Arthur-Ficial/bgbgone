@@ -32,6 +32,19 @@ public enum FilterPipeline {
         for chain in chains {
             for stage in chain.stages {
                 for call in stage.calls {
+                    if stage.layer == .composite {
+                        if layered.composite == nil {
+                            layered.composite = try flattenCI(layered)
+                        }
+                    } else if layered.composite != nil {
+                        throw BgBgOneError.parser(
+                            ErrorCodes.parseFlagValueInvalid,
+                            "layer \(stage.layer.rawValue) cannot run after composite: the foreground/background split is already flattened",
+                            origin: "--filter",
+                            context: ["layer": stage.layer.rawValue, "filter": call.name],
+                            hint: "move fg:/bg:/all:/mask: stages before the composite: stage"
+                        )
+                    }
                     layered = try FilterDispatch.apply(
                         name: call.name,
                         args: call.args,
@@ -44,9 +57,7 @@ public enum FilterPipeline {
         return try flatten(layered)
     }
 
-    /// Composite `LayeredImage` into a single `CGImage`:
-    /// paint background; over that, paint foreground with the mask as alpha.
-    static func flatten(_ layered: LayeredImage) throws -> CGImage {
+    static func flattenCI(_ layered: LayeredImage) throws -> CIImage {
         let blendFilter = CIFilter(name: "CIBlendWithMask")!
         blendFilter.setValue(layered.foreground, forKey: kCIInputImageKey)
         blendFilter.setValue(layered.background, forKey: kCIInputBackgroundImageKey)
@@ -57,7 +68,13 @@ public enum FilterPipeline {
                 "filter pipeline flatten: CIBlendWithMask produced no output"
             )
         }
-        let cropped = out.cropped(to: layered.canvas)
+        return out.cropped(to: layered.canvas)
+    }
+
+    /// Composite `LayeredImage` into a single `CGImage`:
+    /// paint background; over that, paint foreground with the mask as alpha.
+    static func flatten(_ layered: LayeredImage) throws -> CGImage {
+        let cropped = try layered.composite ?? flattenCI(layered)
         guard let cg = ciContext.createCGImage(cropped, from: layered.canvas) else {
             throw BgBgOneError.frameworkError(
                 ErrorCodes.frameworkComposeFail,

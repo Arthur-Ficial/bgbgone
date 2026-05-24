@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint-readme lint-docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint lint-readme lint-docs lint-contract performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -32,7 +32,7 @@ install: build
 
 # --- Tests ---
 
-test: test-unit test-integration
+test: lint-readme lint-contract test-unit test-integration
 
 test-unit: check-toolchain generate-build-info
 	swift run bgbgone-tests
@@ -43,9 +43,14 @@ test-integration: build
 lint-readme:
 	bash scripts/lint-readme.sh
 
+lint-contract:
+	bash scripts/lint-contract.sh
+
 lint-docs: check-toolchain generate-build-info
 	swift build -c release
 	bash scripts/lint-docs.sh
+
+lint: lint-readme lint-contract lint-docs
 
 performance-100:
 	bash Tests/performance/run-100.sh .build/release/$(BINARY)
@@ -186,7 +191,7 @@ all-images: filter-images panel-images filter-docs readme-images
 
 # Full release gate: bump → test → install → regenerate EVERY image →
 # package. Use this for every public release; never tag without it.
-release: test install all-images performance-100 package-release-asset
+release: lint test install all-images performance-100 package-release-asset
 	@v=$$(cat $(VERSION_FILE)); \
 	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
 	echo ""; \

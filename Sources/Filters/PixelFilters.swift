@@ -25,8 +25,25 @@ public enum PixelFilterHelper {
             out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
         case .mask:
             throw rejectMask(humanName)
+        case .composite:
+            throw BgBgOneError.parser(
+                ErrorCodes.parseFlagValueInvalid,
+                "filter \(humanName) does not accept layer composite",
+                origin: "--filter",
+                context: ["name": humanName, "layer": "composite"]
+            )
         }
         return out
+    }
+
+    public static func applyCIToImage(
+        name ciName: String,
+        params: [String: Any],
+        image: CIImage,
+        humanName: String,
+        forceOpaque: Bool = false
+    ) throws -> CIImage {
+        try transform(image, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
     }
 
     private static func transform(_ image: CIImage, ciName: String, params: [String: Any], humanName: String, forceOpaque: Bool) throws -> CIImage {
@@ -84,6 +101,18 @@ public enum PixelFilterHelper {
         return def
     }
 
+    public static func requireRange(_ value: Double, _ range: ClosedRange<Double>, name: String, filter: String) throws -> Double {
+        guard range.contains(value) else {
+            throw BgBgOneError.parser(
+                ErrorCodes.parseFlagValueInvalid,
+                "filter \(filter): \(name) must be \(range.lowerBound)..\(range.upperBound), got \(value)",
+                origin: "--filter",
+                context: ["filter": filter, "arg": name, "value": String(value)]
+            )
+        }
+        return value
+    }
+
     private static func badArg(value: String, name: String) -> BgBgOneError {
         BgBgOneError.parser(
             ErrorCodes.parseFlagValueInvalid,
@@ -100,8 +129,13 @@ public enum DesaturateFilter: Filter {
     public static let name = "desaturate"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        let amount = try PixelFilterHelper.floatArg(args, default: 1.0)
-        let saturation = max(0, min(1, 1.0 - amount))
+        let amount = try PixelFilterHelper.requireRange(
+            PixelFilterHelper.floatArg(args, default: 1.0),
+            0.0...1.0,
+            name: "amount",
+            filter: name
+        )
+        let saturation = 1.0 - amount
         return try PixelFilterHelper.applyCI(name: "CIColorControls", params: ["inputSaturation": saturation], to: image, on: layer, humanName: name)
     }
 }

@@ -15,12 +15,16 @@ public struct LayeredImage {
     public var background: CIImage
     /// Canvas rect in pixel space.
     public var canvas: CGRect
+    /// Flattened image after a `composite:` stage. Once present, foreground /
+    /// background / mask stages may not follow because the layer split is gone.
+    public var composite: CIImage?
 
-    public init(foreground: CIImage, foregroundMask: CIImage, background: CIImage, canvas: CGRect) {
+    public init(foreground: CIImage, foregroundMask: CIImage, background: CIImage, canvas: CGRect, composite: CIImage? = nil) {
         self.foreground = foreground
         self.foregroundMask = foregroundMask
         self.background = background
         self.canvas = canvas
+        self.composite = composite
     }
 }
 
@@ -83,7 +87,7 @@ public enum FilterDispatch {
             return try ZoomBlurFilter.apply(args: args, to: image, on: layer)
         case UnsharpFilter.name:
             return try UnsharpFilter.apply(args: args, to: image, on: layer)
-        case PixelateFilter.name, "mosaic":
+        case PixelateFilter.name:
             return try PixelateFilter.apply(args: args, to: image, on: layer)
         case EdgeWorkFilter.name:
             return try EdgeWorkFilter.apply(args: args, to: image, on: layer)

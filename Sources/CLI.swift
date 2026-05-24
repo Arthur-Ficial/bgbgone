@@ -19,7 +19,7 @@ enum CLI {
         DEFAULTS:
           • \(appName) photo.jpg writes photo_bgbgone.png when stdout is a terminal
           • \(appName) photo.jpg > out.png writes image bytes to stdout
-          • -o out.jpg or > out.jpg selects JPEG when macOS exposes the stdout file path
+          • -o out.jpg, -o -, or > out.jpg select the destination
           • opaque-only formats use a white background unless --bg is set
 
         EXAMPLES:
@@ -36,47 +36,46 @@ enum CLI {
         BACKGROUND:
           --bg color:<#hex|named|rgb:r,g,b>     solid colour
           --bg image:<path>                     image file
-          --bg-color <spec>                     shared solid colour field
-          --bg-image <path>                     shared background image field
           --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
         MATTE / EDGE:
           --channels rgba|alpha                 finalized image or alpha mask
-          --padding <px|N%>                     extra space around subject
-          --crop-margin <1|2|4 values>          API-style crop margins (px or %)
           --crop                                tight-crop to subject bbox
+          --crop-margin <1|2|4 px or %>         margins around the crop
           --roi "x1 y1 x2 y2"                   keep detections inside region of interest
           --semitransparency true|false         keep or harden semi-transparent matte pixels
-          --shadow                              drop shadow under cutout
-          --shadow-type auto|drop|3D|car|none   shadow compatibility selector
+          --shadow-type auto|drop|3D|car|none   shadow preset (none = no shadow)
           --shadow-opacity <0..100|auto>        shadow darkness
-          (use --filter "mask:feather=N", "mask:threshold=N", or --channels alpha
-           in place of the removed --feather / --threshold / --mask-only flags;
-           --scale and --position were removed without replacement)
+          (use --filter "mask:feather=N", "mask:threshold=N", "fg:scale=F",
+           "fg:translate=X,Y", or --channels alpha in place of removed flags)
 
         ALGORITHM:
-          --algo auto|vn-mask|person|saliency   (default: auto)
-          --type auto|person|product|car|animal|graphic|transportation
-          auto uses the public foreground-instance mask API.
+          --type \(CLIContract.choices(CLIContract.subjectTypes))
+                                                (default: auto)
+          Subject hints (product/car/animal/graphic/transportation) and the
+          direct names (vn-mask/person/saliency) map to one Vision algorithm.
+          The same value is accepted by the server `type` field.
 
-        FILTER (epic #1, in progress):
+        FILTER:
           --filter "<chain>"                    FFmpeg-style filter chain (repeatable)
           chain  := stage (";" stage)*
           stage  := [layer ":"] filter ("," filter)*
-          layer  := fg | bg | all | mask        (default: all)
+          layer  := fg | bg | all | mask | composite
           filter := name ("=" arg (":" arg)*)?
+          colour args accept #hex, named colours, rgb:R,G,B, rgba:R,G,B,A
           examples:
             --filter "bg:grayscale"
             --filter "bg:blur=20"
             --filter "fg:outline=color=#fff:width=3,shadow=blur=12:opacity=0.5"
-          run `bgbgone --filters-list` to discover available filters.
+            --filter "bg:sepia=1;composite:vignette=1.8:1.1"
+          run `bgbgone --help filters` or `bgbgone --help filter=blur`.
 
         MULTI-INSTANCE:
           --multi                               one file per detected instance (file input only)
           --instance-naming "{base}-{n}.{ext}"  filename template
 
         OUTPUT:
-          --to, --format png|jpg|zip|heic|avif|tiff
+          --format \(CLIContract.choices(CLIContract.outputFormats))
                                                  output format (default: png)
           --size preview|full|50MP|auto         optional output megapixel cap
           --quality 1..100                      for lossy formats (default: 92)
@@ -90,14 +89,14 @@ enum CLI {
 
         SERVER:
           --server                             run local HTTP API
-          --host <addr>                        bind address (default: 127.0.0.1)
-          --port <n>                           bind port (default: 8787)
+          --host <addr>                        bind address (default: \(CLIContract.serverDefaultHost))
+          --port <n>                           bind port (default: \(CLIContract.serverDefaultPort))
           --cors                               enable CORS headers for allowed origins
           --allowed-origins <csv>              add allowed browser origins
           --no-origin-check | --footgun        disable browser origin checks
           --token <secret> | --token-auto      require Bearer token
           --public-health                      keep /health public on non-loopback binds
-          --max-body-mb <n>                    request body limit (default: 32)
+          --max-body-mb <n>                    request body limit (default: \(CLIContract.serverDefaultMaxBodyMB))
 
         META:
           --json | --ndjson                     structured output
@@ -122,16 +121,73 @@ enum CLI {
         let sorted = FilterRegistry.all.sorted { $0.name < $1.name }
         for entry in sorted {
             let layers = entry.validLayers.map { $0.rawValue }.sorted().joined(separator: "|")
-            let aliasStr = entry.aliases.isEmpty ? "" : " (aliases: \(entry.aliases.sorted().joined(separator: ", ")))"
-            print("  \(entry.name)\(aliasStr)")
+            print("  \(entry.name)")
             print("    layers:    \(layers)")
             print("    signature: \(entry.signature)")
             print("    doc:       \(entry.doc)")
+            let schema = FilterRegistry.schema(for: entry.name)
+            let args = schemaDescription(schema)
+            if !args.isEmpty {
+                print("    args:      \(args)")
+            }
+            if !schema.examples.isEmpty {
+                print("    examples:  \(schema.examples.joined(separator: " | "))")
+            }
             if entry.producesAlpha {
                 print("    note:      can introduce alpha; use PNG output or --bg")
             }
             print("")
         }
+    }
+
+    static func printFilterHelp(name raw: String) {
+        guard let entry = FilterRegistry.find(raw) else {
+            print("bgbgone: unknown filter \(raw)")
+            exit(2)
+        }
+        let layers = entry.validLayers.map { $0.rawValue }.sorted().joined(separator: "|")
+        let schema = FilterRegistry.schema(for: entry.name)
+        print("""
+        bgbgone filter: \(entry.name)
+          layers:    \(layers)
+          signature: \(entry.signature)
+          doc:       \(entry.doc)
+        """)
+        let args = schemaDescription(schema)
+        if !args.isEmpty {
+            print("  args:      \(args)")
+        }
+        if !schema.examples.isEmpty {
+            print("  examples:")
+            let exampleLayer = entry.validLayers.map { $0.rawValue }.sorted().first ?? "all"
+            for example in schema.examples {
+                print("    --filter \"\(exampleLayer):\(example)\"")
+            }
+        }
+    }
+
+    private static func schemaDescription(_ schema: FilterSchema) -> String {
+        let specs = (schema.positional + schema.keyed).map { spec -> String in
+            var text = spec.key ?? "<value>"
+            if let def = spec.defaultValue { text += " default=\(def)" }
+            if let range = spec.range { text += " range=\(format(range.lowerBound))..\(format(range.upperBound))" }
+            switch spec.kind {
+            case .number:
+                text += " type=number"
+            case .color:
+                text += " type=colour"
+            case .point:
+                text += " type=X,Y"
+            case .choice(let choices):
+                text += " choices=\(choices.joined(separator: "|"))"
+            }
+            return text
+        }
+        return specs.joined(separator: "; ")
+    }
+
+    private static func format(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(value)
     }
 
     static func printCheck() {
@@ -153,7 +209,7 @@ enum CLI {
           person               \(personAvailable ? "available" : "unavailable") (Vision person segmentation, macOS 12+)
           saliency             \(saliencyAvailable ? "available" : "unavailable") (Vision objectness saliency, macOS 10.15+)
 
-        Output formats:        png, jpg, zip, heic, avif, tiff
+        Output formats:        \(CLIContract.outputFormats.joined(separator: ", "))
 
         Backgrounds:
           color                always available

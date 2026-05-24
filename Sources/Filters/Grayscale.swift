@@ -25,6 +25,13 @@ public enum GrayscaleFilter: Filter {
                 origin: "--filter",
                 context: ["name": name, "layer": "mask"]
             )
+        case .composite:
+            throw BgBgOneError.parser(
+                ErrorCodes.parseFlagValueInvalid,
+                "filter grayscale does not accept layer composite",
+                origin: "--filter",
+                context: ["name": name, "layer": "composite"]
+            )
         }
         return out
     }

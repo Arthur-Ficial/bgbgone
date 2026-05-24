@@ -61,7 +61,7 @@ func runConfigParserTests() {
     }
 
     test("-- can appear after flags before dash-prefixed inputs") {
-        let cfg = try ConfigParser.parse(args: ["--to", "jpg", "--", "-portrait.png"], isStdinTTY: true, isStdoutTTY: false)
+        let cfg = try ConfigParser.parse(args: ["--format", "jpg", "--", "-portrait.png"], isStdinTTY: true, isStdoutTTY: false)
         try assertEqual(cfg.outputFormat, .jpeg)
         try assertEqual(cfg.inputs, ["-portrait.png"])
     }
@@ -82,8 +82,8 @@ func runConfigParserTests() {
         try assertEqual(cfg.outputFormat, .jpeg)
     }
 
-    test("explicit --to wins over output extension") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.jpg", "--to", "png"], isStdinTTY: true, isStdoutTTY: true)
+    test("explicit --format wins over output extension") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.jpg", "--format", "png"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.outputFormat, .png)
     }
 
@@ -149,33 +149,33 @@ func runConfigParserTests() {
         }
     }
 
-    test("--to png sets format") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "png"], isStdinTTY: true, isStdoutTTY: true)
+    test("--format png sets format") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--format", "png"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.outputFormat, .png)
     }
 
-    test("--to jpg") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "jpg"], isStdinTTY: true, isStdoutTTY: true)
+    test("--format jpg") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--format", "jpg"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.outputFormat, .jpeg)
     }
 
-    test("--to heic / avif / tiff") {
+    test("--format heic / avif / tiff") {
         try assertEqual(
-            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "heic"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
+            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--format", "heic"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
             .heic
         )
         try assertEqual(
-            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "avif"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
+            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--format", "avif"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
             .avif
         )
         try assertEqual(
-            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "tiff"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
+            try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--format", "tiff"], isStdinTTY: true, isStdoutTTY: true).outputFormat,
             .tiff
         )
     }
 
-    test("--to zip is accepted as a split color-and-alpha package") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.zip", "--to", "zip"], isStdinTTY: true, isStdoutTTY: true)
+    test("--format zip is accepted as a split color-and-alpha package") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out.zip", "--format", "zip"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(cfg.outputFormat, .zip)
     }
 
@@ -184,18 +184,18 @@ func runConfigParserTests() {
         try assertEqual(cfg.outputFormat, .zip)
     }
 
-    test("--to webp is rejected (not supported by ImageIO on this SDK)") {
+    test("--format webp is rejected (not supported by ImageIO on this SDK)") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--to", "webp"], isStdinTTY: true, isStdoutTTY: true)
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "x", "--format", "webp"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw — webp is not supported")
         } catch let e as BgBgOneError {
             if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
-    test("--to bogus throws parser error") {
+    test("--format bogus throws parser error") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "bmp"], isStdinTTY: true, isStdoutTTY: true)
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--format", "bmp"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
             if e.category != .parser { throw TestFailure("wrong error: \(e)") }
@@ -224,14 +224,12 @@ func runConfigParserTests() {
         }
     }
 
-    test("--bg-color parses the shared solid colour field") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-color", "fff"], isStdinTTY: true, isStdoutTTY: true)
-        if case .solidColor(let rgba) = cfg.background {
-            try assertEqual(rgba.r, 1.0)
-            try assertEqual(rgba.g, 1.0)
-            try assertEqual(rgba.b, 1.0)
-        } else {
-            throw TestFailure("expected .solidColor, got \(String(describing: cfg.background))")
+    test("--bg-color is not a CLI alias; use --bg color:<spec>") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-color", "fff"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -244,12 +242,12 @@ func runConfigParserTests() {
         }
     }
 
-    test("--bg-image parses the shared background image field") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-image", "./bg.jpg"], isStdinTTY: true, isStdoutTTY: true)
-        if case .image(let path) = cfg.background {
-            try assertEqual(path, "./bg.jpg")
-        } else {
-            throw TestFailure("expected .image, got \(String(describing: cfg.background))")
+    test("--bg-image is not a CLI alias; use --bg image:<path>") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-image", "./bg.jpg"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
@@ -274,14 +272,23 @@ func runConfigParserTests() {
         }
     }
 
-    test("--algo auto / vn-mask / person / saliency parses") {
-        for raw in ["auto", "vn-mask", "person", "saliency"] {
-            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", raw], isStdinTTY: true, isStdoutTTY: true)
-            try assertEqual(cfg.algo.rawValue, raw)
+    test("--algo is removed; --type is the single canonical algo selector") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", "vn-mask"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw for removed --algo")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
         }
     }
 
-    test("--type maps shared foreground type hints to local algorithms") {
+    test("--type direct Algo names (vn-mask / person / saliency / auto) map straight through") {
+        for (raw, expected): (String, Algo) in [("auto", .auto), ("vn-mask", .vnMask), ("person", .person), ("saliency", .saliency)] {
+            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", raw], isStdinTTY: true, isStdoutTTY: true)
+            try assertEqual(cfg.algo, expected)
+        }
+    }
+
+    test("--type subject hints map to local algorithms") {
         let person = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "person"], isStdinTTY: true, isStdoutTTY: true)
         try assertEqual(person.algo, .person)
 
@@ -289,20 +296,9 @@ func runConfigParserTests() {
         try assertEqual(product.algo, .auto)
     }
 
-    test("--algo vn-remove and --algo sky are rejected (not in public SDK)") {
-        for raw in ["vn-remove", "sky"] {
-            do {
-                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", raw], isStdinTTY: true, isStdoutTTY: true)
-                throw TestFailure("expected throw for --algo \(raw)")
-            } catch let e as BgBgOneError {
-                if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
-            }
-        }
-    }
-
-    test("--algo bogus throws") {
+    test("--type bogus throws a parser error") {
         do {
-            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--algo", "magic"], isStdinTTY: true, isStdoutTTY: true)
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "magic"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
         } catch let e as BgBgOneError {
             if e.category != .parser { throw TestFailure("wrong error: \(e)") }
@@ -316,8 +312,7 @@ func runConfigParserTests() {
     //   --filter "mask:threshold=N"     instead of --threshold N
     //   --filter "fg:scale=F"           instead of --scale F
     //   --filter "fg:translate=X,Y"     instead of --position X% Y%
-    // --channels still exists for kaleido.ai removebg compat (sets maskOnly via the
-    // server-form path), but the standalone --mask-only CLI flag is gone.
+    // --channels is the single transport-neutral selector for image vs alpha output.
 
     test("--channels alpha maps to the same mask-only output as the server") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--channels", "alpha"], isStdinTTY: true, isStdoutTTY: true)
@@ -330,16 +325,18 @@ func runConfigParserTests() {
         try assertFalse(cfg.maskOnly)
     }
 
-    test("--padding percent: 10% -> 0.10 percent mode") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", "10%"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.padding, 0.10)
-        try assertTrue(cfg.paddingIsPercent)
+    test("--padding is removed; use --crop-margin <single value>") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", "10%"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw for removed --padding")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
+        }
     }
 
-    test("--padding pixels: 24 -> 24px mode") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", "24"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.padding, 24.0)
-        try assertFalse(cfg.paddingIsPercent)
+    test("--crop-margin 10% replaces --padding 10%") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "10%"], isStdinTTY: true, isStdoutTTY: true)
+        try assertEqual(cfg.cropMargins, EdgeInsetsSpec(top: .percent(0.10), right: .percent(0.10), bottom: .percent(0.10), left: .percent(0.10)))
     }
 
     test("--crop sets crop true") {
@@ -347,8 +344,17 @@ func runConfigParserTests() {
         try assertTrue(cfg.cropToSubject)
     }
 
-    test("--shadow sets shadow true") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow"], isStdinTTY: true, isStdoutTTY: true)
+    test("--shadow is removed; use --shadow-type drop") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw for removed --shadow")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
+        }
+    }
+
+    test("--shadow-type drop enables the drop shadow (replaces --shadow)") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-type", "drop"], isStdinTTY: true, isStdoutTTY: true)
         try assertTrue(cfg.dropShadow)
     }
 
@@ -369,8 +375,8 @@ func runConfigParserTests() {
             isStdoutTTY: true
         )
         try assertEqual(cfg.maxOutputMegapixels, 25.0)
-        try assertEqual(cfg.roi, ServerRectSpec(x1: .percent(0.10), y1: .percent(0.20), x2: .percent(0.90), y2: .percent(0.80)))
-        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(10), right: .pixels(20), bottom: .pixels(30), left: .pixels(40)))
+        try assertEqual(cfg.roi, RectSpec(x1: .percent(0.10), y1: .percent(0.20), x2: .percent(0.90), y2: .percent(0.80)))
+        try assertEqual(cfg.cropMargins, EdgeInsetsSpec(top: .pixels(10), right: .pixels(20), bottom: .pixels(30), left: .pixels(40)))
         try assertFalse(cfg.semitransparency)
         try assertTrue(cfg.dropShadow)
         try assertEqual(cfg.shadowOpacity, 0.25)
@@ -511,9 +517,13 @@ func runConfigParserTests() {
         try assertEqual(cfg.inputs[0], "-")
     }
 
-    test("--to jpeg is accepted as a user-friendly alias for jpg") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--to", "jpeg"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.outputFormat, .jpeg)
+    test("--format jpeg is rejected; jpg is the canonical spelling") {
+        do {
+            _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--format", "jpeg"], isStdinTTY: true, isStdoutTTY: true)
+            throw TestFailure("expected throw")
+        } catch let e as BgBgOneError {
+            if e.category != .parser { throw TestFailure("wrong error: \(e)") }
+        }
     }
 
     test("png format reports alpha support and jpg reports opaque-only") {
@@ -548,6 +558,16 @@ func runConfigParserTests() {
         }
     }
 
+    test("CLIContract.subjectTypes is the SSOT — parser accepts every value, rejects everything else") {
+        // The help text and docs are formatted from CLIContract.subjectTypes.
+        // The parser is a switch in parseForegroundType. If the two diverge,
+        // help text lies. This test ties them together.
+        for raw in CLIContract.subjectTypes {
+            let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", raw], isStdinTTY: true, isStdoutTTY: true)
+            _ = cfg.algo  // any Algo result is acceptable; we only require no-throw
+        }
+    }
+
     test("--type bogus is rejected as a parser error") {
         do {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--type", "alien"], isStdinTTY: true, isStdoutTTY: true)
@@ -563,7 +583,7 @@ func runConfigParserTests() {
     }
 
     test("--shadow-type none clears the drop shadow flag") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow", "--shadow-type", "none"], isStdinTTY: true, isStdoutTTY: true)
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--shadow-type", "drop", "--shadow-type", "none"], isStdinTTY: true, isStdoutTTY: true)
         try assertFalse(cfg.dropShadow)
     }
 
@@ -623,7 +643,7 @@ func runConfigParserTests() {
 
     // --scale and --position tests deleted - flags hard-removed in T54.
     // Use --filter "fg:scale=F" / --filter "fg:translate=X,Y" instead.
-    // Server form fields scale=/position= still work for kaleido.ai removebg compat.
+    // HTTP uses the same fg:scale / fg:translate filter grammar.
 
     test("--scale removed: rc=2 with unknown-option diagnostic") {
         do {
@@ -645,7 +665,7 @@ func runConfigParserTests() {
 
     test("--roi with mixed % and px values parses dimensions correctly") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--roi", "10px 20% 80% 200px"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.roi, ServerRectSpec(x1: .pixels(10), y1: .percent(0.20), x2: .percent(0.80), y2: .pixels(200)))
+        try assertEqual(cfg.roi, RectSpec(x1: .pixels(10), y1: .percent(0.20), x2: .percent(0.80), y2: .pixels(200)))
     }
 
     test("--roi malformed (only three values) is rejected") {
@@ -659,12 +679,12 @@ func runConfigParserTests() {
 
     test("--crop-margin with one value applies to all four sides") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "12px"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
+        try assertEqual(cfg.cropMargins, EdgeInsetsSpec(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
     }
 
     test("--crop-margin with two values applies (vertical, horizontal)") {
         let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", "5% 10%"], isStdinTTY: true, isStdoutTTY: true)
-        try assertEqual(cfg.cropMargins, ServerEdgeInsets(top: .percent(0.05), right: .percent(0.10), bottom: .percent(0.05), left: .percent(0.10)))
+        try assertEqual(cfg.cropMargins, EdgeInsetsSpec(top: .percent(0.05), right: .percent(0.10), bottom: .percent(0.05), left: .percent(0.10)))
     }
 
     test("--crop-margin with three values is rejected (only 1, 2, or 4 allowed)") {
@@ -714,18 +734,18 @@ func runConfigParserTests() {
         }
     }
 
-    test("--threshold out-of-range is rejected") {
+    test("--threshold is removed and rejected") {
         for raw in ["-0.1", "1.1", "abc"] {
             do {
                 _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--threshold", raw], isStdinTTY: true, isStdoutTTY: true)
-                throw TestFailure("expected throw for --threshold \(raw)")
+                throw TestFailure("expected throw for removed --threshold \(raw)")
             } catch let e as BgBgOneError {
                 if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
 
-    test("--feather negative is rejected") {
+    test("--feather is removed and rejected") {
         do {
             _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--feather", "-3"], isStdinTTY: true, isStdoutTTY: true)
             throw TestFailure("expected throw")
@@ -734,19 +754,19 @@ func runConfigParserTests() {
         }
     }
 
-    test("--padding invalid syntax is rejected") {
+    test("--crop-margin invalid syntax is rejected") {
         for raw in ["-1", "1%%", "wat"] {
             do {
-                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--padding", raw], isStdinTTY: true, isStdoutTTY: true)
-                throw TestFailure("expected throw for --padding \(raw)")
+                _ = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--crop-margin", raw], isStdinTTY: true, isStdoutTTY: true)
+                throw TestFailure("expected throw for --crop-margin \(raw)")
             } catch let e as BgBgOneError {
                 if e.category != .parser { throw TestFailure("wrong error for \(raw): \(e)") }
             }
         }
     }
 
-    test("--bg-color rgb:r,g,b parses the rgb triple") {
-        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg-color", "rgb:0,128,255"], isStdinTTY: true, isStdoutTTY: true)
+    test("--bg color:rgb:r,g,b parses the rgb triple") {
+        let cfg = try ConfigParser.parse(args: ["in.jpg", "-o", "out", "--bg", "color:rgb:0,128,255"], isStdinTTY: true, isStdoutTTY: true)
         if case .solidColor(let rgba) = cfg.background {
             try assertEqual(rgba.r, 0.0)
             try assertEqual(rgba.g, 128.0 / 255.0)

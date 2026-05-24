@@ -56,7 +56,7 @@ public enum FilterCatalogue {
         // T25 #27 unsharp - SHIPPED
         .init(name: "unsharp", validLayers: [.fg, .bg, .all], signature: "unsharp=radius:intensity", doc: "unsharp mask (CIUnsharpMask)"),
         // T27 #29 pixelate - SHIPPED
-        .init(name: "pixelate", validLayers: [.fg, .bg, .all], aliases: ["mosaic"], signature: "pixelate=size", doc: "block pixelation, alias mosaic (CIPixellate)"),
+        .init(name: "pixelate", validLayers: [.fg, .bg, .all], signature: "pixelate=size", doc: "block pixelation (CIPixellate)"),
         // T29 #31 edge-work - SHIPPED
         .init(name: "edge-work", validLayers: [.fg, .bg, .all], signature: "edge-work=radius", doc: "line-art edges (CIEdgeWork)"),
         // T31 #33 crystallize - SHIPPED
@@ -68,13 +68,13 @@ public enum FilterCatalogue {
         // T34 #36 noise - SHIPPED
         .init(name: "noise", validLayers: [.fg, .bg, .all], signature: "noise=amount", doc: "additive film grain (CIRandomGenerator + composite)"),
         // T35 #37 vignette - SHIPPED (composite-only)
-        .init(name: "vignette", validLayers: [.all], signature: "vignette=intensity:radius", doc: "darken edges, composite only (CIVignette)"),
+        .init(name: "vignette", validLayers: [.composite], signature: "vignette=intensity:radius", doc: "darken edges, composite only (CIVignette)"),
         // T36 #38 vignette-effect - SHIPPED (composite-only)
-        .init(name: "vignette-effect", validLayers: [.all], signature: "vignette-effect=center=X,Y:radius=R:intensity=I", doc: "positioned vignette (CIVignetteEffect)"),
+        .init(name: "vignette-effect", validLayers: [.composite], signature: "vignette-effect=center=X,Y:radius=R:intensity=I", doc: "positioned vignette, composite only (CIVignetteEffect)"),
         // T37 #39 bloom - SHIPPED (composite-only)
-        .init(name: "bloom", validLayers: [.all], signature: "bloom=intensity:radius", doc: "soft glow on highlights (CIBloom)"),
+        .init(name: "bloom", validLayers: [.composite], signature: "bloom=intensity:radius", doc: "soft glow on highlights, composite only (CIBloom)"),
         // T38 #40 gloom - SHIPPED (composite-only)
-        .init(name: "gloom", validLayers: [.all], signature: "gloom=intensity:radius", doc: "dark-glow inverse of bloom (CIGloom)"),
+        .init(name: "gloom", validLayers: [.composite], signature: "gloom=intensity:radius", doc: "dark-glow inverse of bloom, composite only (CIGloom)"),
         // T50 #52 feather - SHIPPED (mask-only)
         .init(name: "feather", validLayers: [.mask], signature: "feather=radius", doc: "soften matte edge (CIGaussianBlur on mask)"),
         // T51 #53 threshold - SHIPPED (mask-only)

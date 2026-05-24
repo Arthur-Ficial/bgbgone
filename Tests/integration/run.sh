@@ -92,8 +92,8 @@ out=$("$BIN" --help 2>&1) ; rc=$?
     || fail "--help" "rc=$rc"
 
 out=$("$BIN" -h 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -qi "USAGE:" && pass "-h alias" \
-    || fail "-h alias" "rc=$rc"
+[ $rc -eq 0 ] && echo "$out" | grep -qi "USAGE:" && pass "-h short help" \
+    || fail "-h short help" "rc=$rc"
 
 out=$("$BIN" --check 2>&1) ; rc=$?
 [ $rc -eq 0 ] && echo "$out" | grep -qi "macOS" && pass "--check" \
@@ -139,7 +139,7 @@ headers="$TMP/preflight.headers"
 code=$(curl -sS -o /dev/null -D "$headers" -w "%{http_code}" -X OPTIONS \
     -H "Origin: http://localhost:3000" \
     -H "Access-Control-Request-Headers: Content-Type, Authorization" \
-    "$SERVER_BASE/v1.0/bgbgone")
+    "$SERVER_BASE/bgbgone")
 if [ "$code" = "204" ] && grep -qi "Access-Control-Allow-Origin: http://localhost:3000" "$headers"; then
     pass "CORS preflight for allowed localhost origin"
 else
@@ -147,11 +147,11 @@ else
 fi
 
 dst="$OUT/server-einstein.png"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=png" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "POST /v1.0/bgbgone multipart image_file -> PNG" \
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "POST /bgbgone multipart image_file -> PNG" \
     || fail "server multipart PNG" "rc=$rc out=$out"
 
 dst="$OUT/server-einstein-key-header.png"
@@ -167,13 +167,13 @@ if [ $rc -eq 0 ] && check_png_rgba "$dst" \
     && grep -qi '^X-Height:' "$headers" \
     && grep -qi '^X-Credits-Charged: 0' "$headers" \
     && grep -qi '^X-Foreground-Width:' "$headers"; then
-    pass "server /bgbgone alias accepts placeholder X-API-Key and emits metadata"
+    pass "server /bgbgone accepts placeholder X-API-Key and emits metadata"
 else
-    fail "server alias/auth metadata" "rc=$rc out=$out headers=$(cat "$headers" 2>/dev/null)"
+    fail "server auth metadata" "rc=$rc out=$out headers=$(cat "$headers" 2>/dev/null)"
 fi
 
 dst="$OUT/server-einstein-alpha.png"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "channels=alpha" \
     -o "$dst" 2>&1) ; rc=$?
@@ -181,29 +181,28 @@ out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
     || fail "server alpha" "rc=$rc out=$out"
 
 dst="$OUT/server-einstein-white.jpg"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=jpg" \
-    -F "bg_color=ffffff" \
+    -F "bg=color:#ffffff" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server format=jpg bg_color -> JPEG" \
-    || fail "server jpg bg_color" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server format=jpg bg -> JPEG" \
+    || fail "server jpg bg" "rc=$rc out=$out"
 
 dst="$OUT/server-shared-controls.jpg"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=jpg" \
-    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg" \
-    -F "bg_fit=tile" \
-    -F "feather=3" \
-    -F "threshold=0.45" \
+    -F "bg=@$FIX/03-nasa-earthrise.jpg" \
+    -F "bg-fit=tile" \
+    -F "filter=mask:feather=3,threshold=0.45" \
     -F "quality=70" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_jpeg "$dst" && pass "server shared image controls -> JPEG" \
     || fail "server shared image controls" "rc=$rc out=$out"
 
 json="$OUT/server-json-response.json"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=json" \
     -o "$json" 2>&1) ; rc=$?
@@ -213,7 +212,7 @@ if [ $rc -eq 0 ]; then
 import base64, json
 from pathlib import Path
 data = json.loads(Path("$json").read_text())
-Path("$decoded").write_bytes(base64.b64decode(data["data"]["result_b64"]))
+Path("$decoded").write_bytes(base64.b64decode(data["result"]["image_b64"]))
 PY
     check_png_rgba "$decoded" && pass "server format=json wraps base64 image" \
         || fail "server json response" "decoded output is not PNG"
@@ -225,49 +224,49 @@ python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-json-body.json" <<'PY'
 import base64, json, sys
 src, dst = sys.argv[1:3]
 payload = {
-    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "image_file": base64.b64encode(open(src, "rb").read()).decode("ascii"),
     "format": "jpg",
-    "bg_color": "ffffff",
+    "bg": "color:#ffffff",
     "size": "preview",
     "crop": True,
-    "crop_margin": "5%",
-    "shadow_type": "drop",
-    "shadow_opacity": "25"
+    "crop-margin": "5%",
+    "shadow-type": "drop",
+    "shadow-opacity": "25"
 }
 open(dst, "w").write(json.dumps(payload))
 PY
 dst="$OUT/server-json-body.jpg"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -H "Content-Type: application/json" \
     --data-binary "@$TMP/server-json-body.json" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server application/json image_file_b64 -> JPEG" \
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server application/json image_file -> JPEG" \
     || fail "server json body" "rc=$rc out=$out"
 
 python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-urlencoded-body.txt" <<'PY'
 import base64, sys, urllib.parse
 src, dst = sys.argv[1:3]
 payload = {
-    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "image_file": base64.b64encode(open(src, "rb").read()).decode("ascii"),
     "format": "png",
     "channels": "rgba"
 }
 open(dst, "w").write(urllib.parse.urlencode(payload))
 PY
 json="$OUT/server-accept-json-response.json"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -H "Accept: application/json" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     --data-binary "@$TMP/server-urlencoded-body.txt" \
     -o "$json" 2>&1) ; rc=$?
-if [ $rc -eq 0 ] && grep -q '"foreground_width"' "$json"; then
-    pass "server Accept application/json wraps result and foreground metadata"
+if [ $rc -eq 0 ] && grep -q '"ok":true' "$json" && grep -q '"image_b64"' "$json"; then
+    pass "server Accept application/json uses run JSON envelope"
 else
     fail "server accept json" "rc=$rc out=$out body=$(cat "$json" 2>/dev/null)"
 fi
 
 zip="$OUT/server-result.zip"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=zip" \
     -o "$zip" 2>&1) ; rc=$?
@@ -283,59 +282,59 @@ else
     fail "server zip" "rc=$rc out=$out"
 fi
 
-out=$(curl -fsS "$SERVER_BASE/account" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && echo "$out" | grep -q '"free_calls"' && pass "server /account compatibility shape" \
-    || fail "server account shape" "rc=$rc out=$out"
+code=$(curl -sS -o "$TMP/server-account.json" -w "%{http_code}" "$SERVER_BASE/account")
+[ "$code" = "404" ] && grep -q '"BGBG_PARSE_HTTP_ROUTE_UNKNOWN"' "$TMP/server-account.json" && pass "server rejects /account endpoint" \
+    || fail "server account rejection" "code=$code body=$(cat "$TMP/server-account.json" 2>/dev/null)"
 
-code=$(curl -sS -o "$TMP/server-image-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-image-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -d "image_url=https://example.com/in.jpg")
-[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-image-url.json" && pass "server marks network-backed image_url not implementable" \
+[ "$code" = "400" ] && grep -q '"unknown_field"' "$TMP/server-image-url.json" && pass "server rejects network-backed image_url as unknown" \
     || fail "server image_url rejection" "code=$code body=$(cat "$TMP/server-image-url.json" 2>/dev/null)"
 
-code=$(curl -sS -o "$TMP/server-bg-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-bg-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
-    -F "bg_image_url=https://example.com/bg.jpg")
-[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-bg-url.json" && pass "server marks bg_image_url not implementable" \
-    || fail "server bg_image_url rejection" "code=$code body=$(cat "$TMP/server-bg-url.json" 2>/dev/null)"
+    -F "bg_url=https://example.com/bg.jpg")
+[ "$code" = "400" ] && grep -q '"unknown_field"' "$TMP/server-bg-url.json" && pass "server rejects bg_url as unknown" \
+    || fail "server bg_url rejection" "code=$code body=$(cat "$TMP/server-bg-url.json" 2>/dev/null)"
 
-code=$(curl -sS -o "$TMP/server-webp.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-webp.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=webp")
-[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-webp.json" && pass "server marks webp output not implementable" \
-    || fail "server webp not implementable" "code=$code body=$(cat "$TMP/server-webp.json" 2>/dev/null)"
+[ "$code" = "400" ] && grep -q '"invalid_format"' "$TMP/server-webp.json" && pass "server rejects webp as invalid format" \
+    || fail "server webp invalid format" "code=$code body=$(cat "$TMP/server-webp.json" 2>/dev/null)"
 
 code=$(curl -sS -o "$TMP/server-improve.json" -w "%{http_code}" -X POST "$SERVER_BASE/improve" \
     -F "image_file=@$FIX/07-einstein-1921.jpg")
-[ "$code" = "501" ] && grep -q "NOT IMPLEMENTABLE" "$TMP/server-improve.json" && pass "server /improve not implementable" \
-    || fail "server improve not implementable" "code=$code body=$(cat "$TMP/server-improve.json" 2>/dev/null)"
+[ "$code" = "404" ] && grep -q '"BGBG_PARSE_HTTP_ROUTE_UNKNOWN"' "$TMP/server-improve.json" && pass "server rejects /improve endpoint" \
+    || fail "server improve rejection" "code=$code body=$(cat "$TMP/server-improve.json" 2>/dev/null)"
 
 code=$(curl -sS -o "$TMP/server-unknown.json" -w "%{http_code}" "$SERVER_BASE/totally-made-up")
-[ "$code" = "404" ] && grep -q '"not_found"' "$TMP/server-unknown.json" && pass "unknown endpoint returns 404 not_found" \
+[ "$code" = "404" ] && grep -q '"BGBG_PARSE_HTTP_ROUTE_UNKNOWN"' "$TMP/server-unknown.json" && pass "unknown endpoint returns 404 route error" \
     || fail "unknown endpoint" "code=$code body=$(cat "$TMP/server-unknown.json" 2>/dev/null)"
 
-# /v1.0/account is aliased to /account
-out=$(curl -fsS "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "/v1.0/account is aliased to /account" \
-    || fail "v1.0/account alias" "rc=$rc out=$out"
+# /v1.0/account is not part of the bgbgone API.
+code=$(curl -sS -o "$TMP/server-v1-account.json" -w "%{http_code}" "$SERVER_BASE/v1.0/account")
+[ "$code" = "404" ] && grep -q '"BGBG_PARSE_HTTP_ROUTE_UNKNOWN"' "$TMP/server-v1-account.json" && pass "server rejects /v1.0/account endpoint" \
+    || fail "v1.0/account rejection" "code=$code body=$(cat "$TMP/server-v1-account.json" 2>/dev/null)"
 
-# Multi-source rejection: image_file plus image_file_b64
+# Multi-source rejection: image_file plus image_file
 b64=$(python3 -c "import base64; print(base64.b64encode(open('$FIX/07-einstein-1921.jpg','rb').read()).decode())")
-code=$(curl -sS -o "$TMP/server-multi-source.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-multi-source.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
-    -F "image_file_b64=$b64")
+    -F "image_file=$b64")
 [ "$code" = "400" ] && grep -q '"multiple_sources"' "$TMP/server-multi-source.json" && pass "server rejects multiple image sources" \
     || fail "multi source rejection" "code=$code body=$(cat "$TMP/server-multi-source.json" 2>/dev/null)"
 
-# Multi-bg-source rejection: bg_color + bg_image_file
-code=$(curl -sS -o "$TMP/server-multi-bg.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+# Multi-bg-source rejection: bg + bg
+code=$(curl -sS -o "$TMP/server-multi-bg.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
-    -F "bg_color=ffffff" \
-    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg")
+	    -F "bg=color:#ffffff" \
+    -F "bg=@$FIX/03-nasa-earthrise.jpg")
 [ "$code" = "400" ] && grep -q '"multiple_bg_sources"' "$TMP/server-multi-bg.json" && pass "server rejects multiple background sources" \
     || fail "multi bg rejection" "code=$code body=$(cat "$TMP/server-multi-bg.json" 2>/dev/null)"
 
 # Missing source: no input at all
-code=$(curl -sS -o "$TMP/server-missing.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-missing.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -F "format=png")
 [ "$code" = "400" ] && grep -q '"missing_source"' "$TMP/server-missing.json" && pass "server rejects request with no image source" \
     || fail "missing source" "code=$code body=$(cat "$TMP/server-missing.json" 2>/dev/null)"
@@ -343,7 +342,7 @@ code=$(curl -sS -o "$TMP/server-missing.json" -w "%{http_code}" -X POST "$SERVER
 # X-Type header policy: type=person emits X-Type: person
 headers="$TMP/server-xtype.headers"
 dst="$OUT/server-einstein-xtype.png"
-curl -fsS -D "$headers" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "type=person" \
     -o "$dst" >/dev/null 2>&1
@@ -353,61 +352,60 @@ else
     fail "server X-Type" "headers=$(cat "$headers" 2>/dev/null)"
 fi
 
-# X-Type header policy: type_level=none suppresses X-Type
+# X-Type header policy: type-level=none suppresses X-Type
 headers="$TMP/server-xtype-none.headers"
 dst="$OUT/server-einstein-xtype-none.png"
-curl -fsS -D "$headers" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "type=person" \
-    -F "type_level=none" \
+    -F "type-level=none" \
     -o "$dst" >/dev/null 2>&1
 if grep -qi '^X-Type:' "$headers"; then
-    fail "X-Type suppress" "type_level=none should not emit X-Type"
+    fail "X-Type suppress" "type-level=none should not emit X-Type"
 else
-    pass "type_level=none suppresses X-Type header"
+    pass "type-level=none suppresses X-Type header"
 fi
 
-# bg_image_file (uploaded background) composes onto a real fixture
+# bg (uploaded background) composes onto a real fixture
 dst="$OUT/server-einstein-on-earth.png"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
-    -F "bg_image_file=@$FIX/03-nasa-earthrise.jpg" \
+    -F "bg=@$FIX/03-nasa-earthrise.jpg" \
     -F "format=png" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server bg_image_file uploads a background and composes the result" \
-    || fail "server bg_image_file" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server bg uploads a background and composes the result" \
+    || fail "server bg" "rc=$rc out=$out"
 
-# bg_color rgb:r,g,b triple via multipart
+# bg color:rgb:r,g,b triple via multipart
 dst="$OUT/server-einstein-rgb.jpg"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -F "image_file=@$FIX/07-einstein-1921.jpg" \
     -F "format=jpg" \
-    -F "bg_color=rgb:0,128,255" \
+    -F "bg=color:rgb:0,128,255" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server bg_color accepts rgb:r,g,b triples" \
-    || fail "server bg_color rgb triple" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "server bg accepts color:rgb:r,g,b triples" \
+    || fail "server bg rgb triple" "rc=$rc out=$out"
 
-# scale + position via JSON body
+# scale + translate via the shared filter grammar in a JSON body
 python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-scale-pos.json" <<'PY'
 import base64, json, sys
 src, dst = sys.argv[1:3]
 payload = {
-    "image_file_b64": base64.b64encode(open(src, "rb").read()).decode("ascii"),
+    "image_file": base64.b64encode(open(src, "rb").read()).decode("ascii"),
     "format": "png",
-    "bg_color": "ffffff",
-    "scale": "60%",
-    "position": "25% 75%",
+    "bg": "color:#ffffff",
+    "filter": "fg:scale=0.6,translate=25,75",
     "semitransparency": "false"
 }
 open(dst, "w").write(json.dumps(payload))
 PY
 dst="$OUT/server-scale-position.png"
-out=$(curl -fsS -X POST "$SERVER_BASE/v1.0/bgbgone" \
+out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     -H "Content-Type: application/json" \
     --data-binary "@$TMP/server-scale-pos.json" \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && [ -s "$dst" ] && pass "server scale+position+semitransparency via JSON body" \
-    || fail "server scale/position JSON" "rc=$rc out=$out"
+[ $rc -eq 0 ] && [ -s "$dst" ] && pass "server fg:scale+translate+semitransparency via JSON body" \
+    || fail "server filter geometry JSON" "rc=$rc out=$out"
 
 # OPTIONS preflight without --cors returns 204 but does NOT set the Allow-Origin header
 # We are currently running the server with --cors; skip and re-test in the next process.
@@ -429,7 +427,7 @@ fi
 # 1 MiB limit; send a 2 MiB body and expect 413
 big="$TMP/big-payload.txt"
 dd if=/dev/zero bs=1024 count=2048 of="$big" >/dev/null 2>&1
-code=$(curl -sS -o "$TMP/server-too-big.json" -w "%{http_code}" -X POST "$SERVER_BASE/v1.0/bgbgone" \
+code=$(curl -sS -o "$TMP/server-too-big.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
     -H "Content-Type: application/octet-stream" \
     --data-binary "@$big")
 [ "$code" = "413" ] && grep -q "too large" "$TMP/server-too-big.json" && pass "server returns 413 when body exceeds --max-body-mb" \
@@ -489,11 +487,11 @@ else
     fail "--server token auth start" "log=$(cat "$SERVER_LOG" 2>/dev/null)"
 fi
 
-code=$(curl -sS -o "$TMP/server-wrong-bearer.json" -w "%{http_code}" -H "Authorization: Bearer wrong-token" "$SERVER_BASE/v1.0/account")
+code=$(curl -sS -o "$TMP/server-wrong-bearer.json" -w "%{http_code}" -X POST -H "Authorization: Bearer wrong-token" "$SERVER_BASE/bgbgone")
 [ "$code" = "401" ] && pass "wrong Bearer token -> 401" \
     || fail "wrong Bearer" "expected 401, got $code"
 
-code=$(curl -sS -o "$TMP/server-wrong-apikey.json" -w "%{http_code}" -H "X-API-Key: wrong-token" "$SERVER_BASE/v1.0/account")
+code=$(curl -sS -o "$TMP/server-wrong-apikey.json" -w "%{http_code}" -X POST -H "X-API-Key: wrong-token" "$SERVER_BASE/bgbgone")
 [ "$code" = "401" ] && pass "wrong X-API-Key -> 401" \
     || fail "wrong X-API-Key" "expected 401, got $code"
 
@@ -515,17 +513,17 @@ else
     fail "--server --token start" "server did not become healthy; log=$(cat "$SERVER_LOG" 2>/dev/null)"
 fi
 
-code=$(curl -sS -o "$TMP/server-no-token.json" -w "%{http_code}" "$SERVER_BASE/v1.0/account")
+code=$(curl -sS -o "$TMP/server-no-token.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone")
 [ "$code" = "401" ] && grep -q "token" "$TMP/server-no-token.json" && pass "server token rejects missing Authorization" \
     || fail "server token missing" "code=$code body=$(cat "$TMP/server-no-token.json" 2>/dev/null)"
 
-out=$(curl -fsS -H "Authorization: Bearer secret-token" "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "server token accepts Bearer Authorization" \
-    || fail "server token auth" "rc=$rc out=$out"
+code=$(curl -sS -o "$TMP/server-bearer-accepted.json" -w "%{http_code}" -X POST -H "Authorization: Bearer secret-token" "$SERVER_BASE/bgbgone")
+[ "$code" = "400" ] && grep -q '"missing_source"' "$TMP/server-bearer-accepted.json" && pass "server token accepts Bearer Authorization" \
+    || fail "server token auth" "code=$code body=$(cat "$TMP/server-bearer-accepted.json" 2>/dev/null)"
 
-out=$(curl -fsS -H "X-API-Key: secret-token" "$SERVER_BASE/v1.0/account" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && echo "$out" | grep -q '"credits"' && pass "server token accepts X-API-Key Authorization" \
-    || fail "server X-API-Key auth" "rc=$rc out=$out"
+code=$(curl -sS -o "$TMP/server-apikey-accepted.json" -w "%{http_code}" -X POST -H "X-API-Key: secret-token" "$SERVER_BASE/bgbgone")
+[ "$code" = "400" ] && grep -q '"missing_source"' "$TMP/server-apikey-accepted.json" && pass "server token accepts X-API-Key Authorization" \
+    || fail "server X-API-Key auth" "code=$code body=$(cat "$TMP/server-apikey-accepted.json" 2>/dev/null)"
 
 stop_server
 
@@ -607,7 +605,7 @@ echo "e2e: --bg color replacement"
 
 src="$FIX/07-einstein-1921.jpg"
 dst="$OUT/einstein-on-white.jpg"
-out=$("$BIN" "$src" --bg "color:#ffffff" --to jpg -o "$dst" 2>&1) ; rc=$?
+out=$("$BIN" "$src" --bg "color:#ffffff" --format jpg -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--bg color:#fff (einstein)" || fail "--bg color" "rc=$rc out=$out"
 
 # --- e2e: --json output ---
@@ -653,33 +651,33 @@ echo "e2e: --bg image replacement"
 src="$FIX/02-nasa-mccandless-eva.jpg"
 bg="$FIX/04-nasa-hubble-ngc1300.jpg"
 dst="$OUT/eva-on-galaxy.jpg"
-out=$("$BIN" "$src" --bg "image:$bg" --to jpg -o "$dst" 2>&1) ; rc=$?
+out=$("$BIN" "$src" --bg "image:$bg" --format jpg -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--bg image (eva on galaxy)" || fail "--bg image" "rc=$rc out=$out"
 
 # Variants of --bg-fit shouldn't break the pipeline
 for fit in cover contain center tile; do
     dst="$OUT/eva-fit-$fit.jpg"
-    out=$("$BIN" "$src" --bg "image:$bg" --bg-fit "$fit" --to jpg -o "$dst" 2>&1) ; rc=$?
+    out=$("$BIN" "$src" --bg "image:$bg" --bg-fit "$fit" --format jpg -o "$dst" 2>&1) ; rc=$?
     [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--bg-fit $fit" || fail "--bg-fit $fit" "rc=$rc"
 done
 
-# --- e2e: --to format conversions ---
+# --- e2e: --format format conversions ---
 echo ""
-echo "e2e: --to format conversions"
+echo "e2e: --format format conversions"
 
 src="$FIX/07-einstein-1921.jpg"
 for fmt in png jpg heic avif tiff; do
     dst="$OUT/einstein.$fmt"
-    out=$("$BIN" "$src" --bg "color:white" --to "$fmt" -o "$dst" 2>&1) ; rc=$?
+    out=$("$BIN" "$src" --bg "color:white" --format "$fmt" -o "$dst" 2>&1) ; rc=$?
     if [ $rc -eq 0 ] && [ -s "$dst" ]; then
-        pass "--to $fmt"
+        pass "--format $fmt"
     else
-        fail "--to $fmt" "rc=$rc out=$out"
+        fail "--format $fmt" "rc=$rc out=$out"
     fi
 done
 
 dst="$OUT/einstein.zip"
-out=$("$BIN" "$src" --to zip -o "$dst" 2>&1) ; rc=$?
+out=$("$BIN" "$src" --format zip -o "$dst" 2>&1) ; rc=$?
 if [ $rc -eq 0 ] && python3 - "$dst" <<'PY'
 import sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as z:
@@ -687,23 +685,28 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     assert {"color.jpg", "alpha.png"} <= names, names
 PY
 then
-    pass "--to zip contains color.jpg and alpha.png"
+    pass "--format zip contains color.jpg and alpha.png"
 else
-    fail "--to zip" "rc=$rc out=$out"
+    fail "--format zip" "rc=$rc out=$out"
 fi
 
 # Removed formats and algorithms must be rejected with a parser error, not silently
 # accepted then failed at framework level. They never existed for the user.
 for fmt in webp bmp gif; do
-    out=$("$BIN" "$src" --to "$fmt" -o "$OUT/dummy.$fmt" 2>&1) ; rc=$?
-    [ $rc -eq 2 ] && pass "--to $fmt rejected at parse (rc=2)" \
-        || fail "--to $fmt rejection" "expected rc=2, got rc=$rc out=$out"
+    out=$("$BIN" "$src" --format "$fmt" -o "$OUT/dummy.$fmt" 2>&1) ; rc=$?
+    [ $rc -eq 2 ] && pass "--format $fmt rejected at parse (rc=2)" \
+        || fail "--format $fmt rejection" "expected rc=2, got rc=$rc out=$out"
 done
-for algo in vn-remove sky bogus; do
-    out=$("$BIN" "$src" --algo "$algo" -o "$OUT/dummy.png" 2>&1) ; rc=$?
-    [ $rc -eq 2 ] && pass "--algo $algo rejected at parse (rc=2)" \
-        || fail "--algo $algo rejection" "expected rc=2, got rc=$rc out=$out"
+for type in vn-remove sky bogus alien; do
+    out=$("$BIN" "$src" --type "$type" -o "$OUT/dummy.png" 2>&1) ; rc=$?
+    [ $rc -eq 2 ] && pass "--type $type rejected at parse (rc=2)" \
+        || fail "--type $type rejection" "expected rc=2, got rc=$rc out=$out"
 done
+
+# --algo is removed: any --algo invocation must rc=2 (unknown option)
+out=$("$BIN" "$src" --algo vn-mask -o "$OUT/dummy.png" 2>&1) ; rc=$?
+[ $rc -eq 2 ] && pass "--algo is removed (CLI uses --type only)" \
+    || fail "--algo removal" "expected rc=2, got rc=$rc out=$out"
 
 # --- e2e: --quality knob honored for jpg ---
 echo ""
@@ -712,8 +715,8 @@ echo "e2e: --quality"
 src="$FIX/05-nasa-apollo11-crew.jpg"
 d_low="$OUT/crew-q10.jpg"
 d_high="$OUT/crew-q95.jpg"
-"$BIN" "$src" --bg "color:black" --to jpg --quality 10 -o "$d_low" 2>/dev/null
-"$BIN" "$src" --bg "color:black" --to jpg --quality 95 -o "$d_high" 2>/dev/null
+"$BIN" "$src" --bg "color:black" --format jpg --quality 10 -o "$d_low" 2>/dev/null
+"$BIN" "$src" --bg "color:black" --format jpg --quality 95 -o "$d_high" 2>/dev/null
 if [ -s "$d_low" ] && [ -s "$d_high" ]; then
     s_low=$(stat -f '%z' "$d_low")
     s_high=$(stat -f '%z' "$d_high")
@@ -823,19 +826,19 @@ out=$("$BIN" "$src" \
     --shadow-type drop \
     --shadow-opacity 25 \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI advanced compatibility options produce PNG" \
-    || fail "CLI advanced compatibility options" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI advanced shared options produce PNG" \
+    || fail "CLI advanced shared options" "rc=$rc out=$out"
 
 dst="$OUT/einstein-cli-shared.jpg"
 out=$("$BIN" "$src" \
     --format jpg \
-    --bg-color fff \
+    --bg color:#fff \
     --channels rgba \
     --type person \
     --quality 80 \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_jpeg "$dst" && pass "CLI shared compatibility flags produce JPEG" \
-    || fail "CLI shared compatibility flags" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_jpeg "$dst" && pass "CLI shared flags produce JPEG" \
+    || fail "CLI shared flags" "rc=$rc out=$out"
 
 dst="$OUT/einstein-cli-alpha.png"
 out=$("$BIN" "$src" --channels alpha --format png -o "$dst" 2>&1) ; rc=$?
@@ -844,12 +847,12 @@ out=$("$BIN" "$src" --channels alpha --format png -o "$dst" 2>&1) ; rc=$?
 
 dst="$OUT/einstein-cli-bg-image.png"
 out=$("$BIN" "$src" \
-    --bg-image "$FIX/03-nasa-earthrise.jpg" \
+    --bg "image:$FIX/03-nasa-earthrise.jpg" \
     --bg-fit contain \
     --format png \
     -o "$dst" 2>&1) ; rc=$?
-[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI --bg-image shared field produces PNG" \
-    || fail "CLI --bg-image shared field" "rc=$rc out=$out"
+[ $rc -eq 0 ] && check_png_rgba "$dst" && pass "CLI --bg image:<path> produces PNG" \
+    || fail "CLI --bg image:<path>" "rc=$rc out=$out"
 
 # --- e2e: --type hint maps to an algorithm (product run on a real fixture) ---
 echo ""
@@ -1020,13 +1023,13 @@ else
     fail "--crop" "outputs missing"
 fi
 
-# --- e2e: --padding enlarges cropped subject canvas ---
+# --- e2e: --crop-margin enlarges cropped subject canvas (replaces removed --padding) ---
 echo ""
-echo "e2e: --padding"
+echo "e2e: --crop-margin (uniform value, replaces --padding)"
 
 src="$FIX/02-nasa-mccandless-eva.jpg"
 "$BIN" "$src" --crop -o "$OUT/eva-crop-only.png" 2>/dev/null
-"$BIN" "$src" --crop --padding 10% -o "$OUT/eva-crop-padded.png" 2>/dev/null
+"$BIN" "$src" --crop --crop-margin 10% -o "$OUT/eva-crop-padded.png" 2>/dev/null
 if [ -s "$OUT/eva-crop-only.png" ] && [ -s "$OUT/eva-crop-padded.png" ]; then
     cmp=$(python3 - <<PY
 from PIL import Image
@@ -1035,26 +1038,26 @@ b = Image.open("$OUT/eva-crop-padded.png").size
 print("ok" if b[0] > a[0] and b[1] > a[1] else f"bad crop={a} padded={b}")
 PY
 )
-    [ "$cmp" = "ok" ] && pass "--padding 10% expands --crop canvas" || fail "--padding" "$cmp"
+    [ "$cmp" = "ok" ] && pass "--crop-margin 10% expands --crop canvas" || fail "--crop-margin" "$cmp"
 else
-    fail "--padding" "outputs missing"
+    fail "--crop-margin" "outputs missing"
 fi
 
-# --- e2e: --shadow adds visible pixels under the cutout ---
+# --- e2e: --shadow-type drop adds visible pixels under the cutout (replaces removed --shadow) ---
 echo ""
-echo "e2e: --shadow"
+echo "e2e: --shadow-type drop"
 
 src="$FIX/07-einstein-1921.jpg"
 "$BIN" "$src" --bg color:white -o "$OUT/einstein-no-shadow.png" 2>/dev/null
-"$BIN" "$src" --bg color:white --shadow -o "$OUT/einstein-shadow.png" 2>/dev/null
+"$BIN" "$src" --bg color:white --shadow-type drop -o "$OUT/einstein-shadow.png" 2>/dev/null
 if [ -s "$OUT/einstein-no-shadow.png" ] && [ -s "$OUT/einstein-shadow.png" ]; then
     if cmp -s "$OUT/einstein-no-shadow.png" "$OUT/einstein-shadow.png"; then
-        fail "--shadow" "shadow and non-shadow output were identical"
+        fail "--shadow-type drop" "shadow and non-shadow output were identical"
     else
-        pass "--shadow changes composited output"
+        pass "--shadow-type drop changes composited output"
     fi
 else
-    fail "--shadow" "outputs missing"
+    fail "--shadow-type drop" "outputs missing"
 fi
 
 # --- e2e: --bg-fit tile is distinct from cover ---

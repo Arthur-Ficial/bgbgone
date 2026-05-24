@@ -12,7 +12,7 @@ DOCS="$ROOT/docs/filters"
 mkdir -p "$DOCS"
 
 # Format: name ^ category ^ layers-kind ^ signature ^ backing ^ chain-example ^ one-liner
-# layers-kind: "all" / "all-only" / "fg-only" / "mask-only"
+# layers-kind: "all" / "composite-only" / "fg-only" / "mask-only"
 ROWS=$(cat <<'EOF'
 grayscale^tone+colour^all^grayscale^CIColorControls inputSaturation=0^bg:grayscale^Remove all colour saturation on the chosen layer.
 desaturate^tone+colour^all^desaturate=amount^CIColorControls inputSaturation=1-amount^bg:desaturate=0.8^Partial desaturation - 0 keeps colour, 1 equals grayscale.
@@ -36,7 +36,7 @@ zoom-blur^spatial^all^zoom-blur=center=X,Y:amount=A^CIZoomBlur^bg:zoom-blur=cent
 sharpen^spatial^all^sharpen=amount^CISharpenLuminance^all:sharpen=0.8^Luminance sharpen.
 unsharp^spatial^all^unsharp=radius:intensity^CIUnsharpMask^all:unsharp=radius=3:intensity=1.0^Classic unsharp mask.
 posterize^stylise^all^posterize=levels^CIColorPosterize^all:posterize=4^Quantise to N colour levels per channel.
-pixelate^stylise^all^pixelate=size (alias mosaic)^CIPixellate^bg:pixelate=25^Block pixelation. Alias: mosaic.
+pixelate^stylise^all^pixelate=size^CIPixellate^bg:pixelate=25^Block pixelation.
 edges^stylise^all^edges=intensity^CIEdges^all:edges=2.5^Edge detection.
 edge-work^stylise^all^edge-work=radius^CIEdgeWork^all:edge-work=3^Line-art edges with adjustable line weight.
 emboss^stylise^all^emboss^CIConvolution3X3 with emboss kernel^all:emboss^Raised relief.
@@ -44,10 +44,10 @@ crystallize^stylise^all^crystallize=radius^CICrystallize^bg:crystallize=30^Voron
 pointillize^stylise^all^pointillize=radius^CIPointillize^bg:pointillize=15^Seurat-style dot pattern.
 comic^stylise^all^comic^CIComicEffect^all:comic^Halftone comic-book line treatment.
 noise^stylise^all^noise=amount^CIRandomGenerator + CISourceOverCompositing^all:noise=0.3^Additive film grain.
-vignette^composite^all-only^vignette=intensity:radius^CIVignette^all:vignette=2:1^Darken the edges. Composite-only.
-vignette-effect^composite^all-only^vignette-effect=center=X,Y:radius=R:intensity=I^CIVignetteEffect^all:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5^Positioned vignette with explicit centre.
-bloom^composite^all-only^bloom=intensity:radius^CIBloom^all:bloom=1.0:18^Soft glow on highlights.
-gloom^composite^all-only^gloom=intensity:radius^CIGloom^all:gloom=1.0:18^Inverse of bloom - softens shadows.
+vignette^composite^composite-only^vignette=intensity:radius^CIVignette^composite:vignette=2:1^Darken the edges. Composite-only.
+vignette-effect^composite^composite-only^vignette-effect=center=X,Y:radius=R:intensity=I^CIVignetteEffect^composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5^Positioned vignette with explicit centre.
+bloom^composite^composite-only^bloom=intensity:radius^CIBloom^composite:bloom=1.0:18^Soft glow on highlights.
+gloom^composite^composite-only^gloom=intensity:radius^CIGloom^composite:gloom=1.0:18^Inverse of bloom - softens shadows.
 outline^mask-aware fg^fg-only^outline=color=#hex:width=N^CIMorphologyMaximum + subtract + tint composite^fg:outline=color=#ffaa00:width=6^Coloured outline just outside the matte boundary.
 glow^mask-aware fg^fg-only^glow=color=#hex:radius=R:intensity=I^CIGaussianBlur on mask + tint + composite^fg:glow=color=#ffff80:radius=25:intensity=0.8^Soft glow halo around the subject.
 shadow^mask-aware fg^fg-only^shadow=blur=B:offset=X,Y:opacity=O:color=#hex^Translate+blur+tint mask compose^fg:shadow=blur=14:offset=6,6:opacity=0.6:color=#000^Per-subject drop shadow.
@@ -75,27 +75,27 @@ echo "$ROWS" | while IFS='^' read -r name category layers signature backing chai
         all)
             layer_block=$(cat <<INNER
 \`\`\`bash
-bgbgone yoga.jpg --algo person --filter "bg:${name}"
-bgbgone yoga.jpg --algo person --filter "fg:${name}"
-bgbgone yoga.jpg --algo person --filter "all:${name}"
+bgbgone yoga.jpg --type person --filter "bg:${name}"
+bgbgone yoga.jpg --type person --filter "fg:${name}"
+bgbgone yoga.jpg --type person --filter "all:${name}"
 \`\`\`
 INNER
 )
             layers_human="fg / bg / all"
             ;;
-        all-only)
+        composite-only)
             layer_block=$(cat <<INNER
 \`\`\`bash
-bgbgone yoga.jpg --algo person --filter "all:${name}"
+bgbgone yoga.jpg --type person --filter "composite:${name}"
 \`\`\`
 INNER
 )
-            layers_human="all only (composite)"
+            layers_human="composite only"
             ;;
         fg-only)
             layer_block=$(cat <<INNER
 \`\`\`bash
-bgbgone yoga.jpg --algo person --bg color:#1a2233 --filter "fg:${name}"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:${name}"
 \`\`\`
 INNER
 )
@@ -104,7 +104,7 @@ INNER
         mask-only)
             layer_block=$(cat <<INNER
 \`\`\`bash
-bgbgone yoga.jpg --algo person --bg color:#1a2233 --filter "mask:${name}"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:${name}"
 \`\`\`
 INNER
 )
@@ -140,7 +140,7 @@ bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "${chain}"
 
 Asset regenerated by [\`scripts/make-filter-showcase.sh\`](../../scripts/make-filter-showcase.sh) against the [Red Panda fixture (CC0)](../../Tests/fixtures/showcase/Red_Panda__24986761703_.jpg).
 
-## Layer comparison — yoga (\`--algo person\`)
+## Layer comparison — yoga (\`--type person\`)
 
 Same filter on the valid layer(s), subject isolated via Apple Vision's person-segmentation model so neighbouring yogis don't interfere.
 
@@ -148,7 +148,7 @@ ${layer_block}
 
 ![${name} on yoga](../images/filters/panels/yoga-${name}.jpg)
 
-## Layer comparison — Parastoo Ahmadi (\`--algo person\`)
+## Layer comparison — Parastoo Ahmadi (\`--type person\`)
 
 Same chain against the [Parastoo Ahmadi portrait (CC0, Wikimedia Commons)](https://commons.wikimedia.org/wiki/File:Parastoo_Ahmadi.jpg) — different lighting, different background detail, same per-layer behaviour.
 

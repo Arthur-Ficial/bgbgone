@@ -93,7 +93,7 @@ func runServerConfigTests() {
     }
 
     test("--server rejects image-processing flags") {
-        for args in [["--server", "--to", "jpg"], ["--server", "--json"], ["--server", "-o", "out.png"]] {
+        for args in [["--server", "--format", "jpg"], ["--server", "--json"], ["--server", "-o", "out.png"]] {
             do {
                 _ = try ConfigParser.parse(args: args, isStdinTTY: true, isStdoutTTY: true)
                 throw TestFailure("expected throw for \(args)")

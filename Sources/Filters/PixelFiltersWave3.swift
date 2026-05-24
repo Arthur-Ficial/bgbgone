@@ -2,11 +2,37 @@ import Foundation
 import CoreImage
 import BgBgOneCore
 
-// MARK: composite-only (vignette family) — operate on the final composite via `all` layer.
+// MARK: composite-only (vignette family) — operate on the final composite via `composite` layer.
+
+private func compositeBase(_ image: LayeredImage, filter: String) throws -> CIImage {
+    guard let composite = image.composite else {
+        throw BgBgOneError.frameworkError(
+            ErrorCodes.frameworkInternalInvariant,
+            "filter \(filter) expected a flattened composite image"
+        )
+    }
+    return composite
+}
+
+private func applyCompositeCI(
+    _ ciName: String,
+    params: [String: Any],
+    to image: LayeredImage,
+    filter: String
+) throws -> LayeredImage {
+    var out = image
+    out.composite = try PixelFilterHelper.applyCIToImage(
+        name: ciName,
+        params: params,
+        image: try compositeBase(image, filter: filter),
+        humanName: filter
+    )
+    return out
+}
 
 public enum VignetteFilter: Filter {
     public static let name = "vignette"
-    public static let validLayers: Set<FilterLayer> = [.all]
+    public static let validLayers: Set<FilterLayer> = [.composite]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var intensity = 1.0, radius = 1.0
         var positional = 0
@@ -27,13 +53,13 @@ public enum VignetteFilter: Filter {
                 }
             }
         }
-        return try PixelFilterHelper.applyCI(name: "CIVignette", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, on: layer, humanName: name)
+        return try applyCompositeCI("CIVignette", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, filter: name)
     }
 }
 
 public enum VignetteEffectFilter: Filter {
     public static let name = "vignette-effect"
-    public static let validLayers: Set<FilterLayer> = [.all]
+    public static let validLayers: Set<FilterLayer> = [.composite]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var cx = 0.5, cy = 0.5, radius = 1.5, intensity = 1.0
         for a in args {
@@ -50,15 +76,22 @@ public enum VignetteEffectFilter: Filter {
                 }
             }
         }
-        let target = image.foreground.extent
+        let target = try compositeBase(image, filter: name).extent
         let center = CIVector(x: target.width * cx, y: target.height * (1 - cy))
-        return try PixelFilterHelper.applyCI(name: "CIVignetteEffect", params: ["inputCenter": center, "inputRadius": radius * Double(target.width) / 2, "inputIntensity": intensity], to: image, on: layer, humanName: name)
+        var out = image
+        out.composite = try PixelFilterHelper.applyCIToImage(
+            name: "CIVignetteEffect",
+            params: ["inputCenter": center, "inputRadius": radius * Double(target.width) / 2, "inputIntensity": intensity],
+            image: try compositeBase(image, filter: name),
+            humanName: name
+        )
+        return out
     }
 }
 
 public enum BloomFilter: Filter {
     public static let name = "bloom"
-    public static let validLayers: Set<FilterLayer> = [.all]
+    public static let validLayers: Set<FilterLayer> = [.composite]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var intensity = 0.5, radius = 10.0
         var positional = 0
@@ -79,13 +112,13 @@ public enum BloomFilter: Filter {
                 }
             }
         }
-        return try PixelFilterHelper.applyCI(name: "CIBloom", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, on: layer, humanName: name)
+        return try applyCompositeCI("CIBloom", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, filter: name)
     }
 }
 
 public enum GloomFilter: Filter {
     public static let name = "gloom"
-    public static let validLayers: Set<FilterLayer> = [.all]
+    public static let validLayers: Set<FilterLayer> = [.composite]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var intensity = 0.5, radius = 10.0
         var positional = 0
@@ -106,7 +139,7 @@ public enum GloomFilter: Filter {
                 }
             }
         }
-        return try PixelFilterHelper.applyCI(name: "CIGloom", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, on: layer, humanName: name)
+        return try applyCompositeCI("CIGloom", params: ["inputIntensity": intensity, "inputRadius": radius], to: image, filter: name)
     }
 }
 
@@ -142,7 +175,12 @@ public enum NoiseFilter: Filter {
     public static let name = "noise"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        let amount = max(0, min(1, try PixelFilterHelper.floatArg(args, default: 0.2)))
+        let amount = try PixelFilterHelper.requireRange(
+            PixelFilterHelper.floatArg(args, default: 0.2),
+            0.0...1.0,
+            name: "amount",
+            filter: name
+        )
         guard let randomFilter = CIFilter(name: "CIRandomGenerator"),
               let random = randomFilter.outputImage else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIRandomGenerator unavailable")
@@ -169,17 +207,30 @@ public enum NoiseFilter: Filter {
         }
         var out = image
         switch layer {
-        case .fg, .all:
+        case .fg:
             composite.setValue(grain, forKey: kCIInputImageKey)
             composite.setValue(out.foreground, forKey: kCIInputBackgroundImageKey)
             if let r = composite.outputImage { out.foreground = r.cropped(to: extent) }
-            fallthrough
         case .bg:
+            composite.setValue(grain, forKey: kCIInputImageKey)
+            composite.setValue(out.background, forKey: kCIInputBackgroundImageKey)
+            if let r = composite.outputImage { out.background = r.cropped(to: extent) }
+        case .all:
+            composite.setValue(grain, forKey: kCIInputImageKey)
+            composite.setValue(out.foreground, forKey: kCIInputBackgroundImageKey)
+            if let r = composite.outputImage { out.foreground = r.cropped(to: extent) }
             composite.setValue(grain, forKey: kCIInputImageKey)
             composite.setValue(out.background, forKey: kCIInputBackgroundImageKey)
             if let r = composite.outputImage { out.background = r.cropped(to: extent) }
         case .mask:
             throw PixelFilterHelper.rejectMask(name)
+        case .composite:
+            throw BgBgOneError.parser(
+                ErrorCodes.parseFlagValueInvalid,
+                "filter noise does not accept layer composite",
+                origin: "--filter",
+                context: ["name": name, "layer": "composite"]
+            )
         }
         return out
     }
@@ -208,7 +259,12 @@ public enum ThresholdFilter: Filter {
     public static let name = "threshold"
     public static let validLayers: Set<FilterLayer> = [.mask]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        let t = max(0, min(1, try PixelFilterHelper.floatArg(args, default: 0.5)))
+        let t = try PixelFilterHelper.requireRange(
+            PixelFilterHelper.floatArg(args, default: 0.5),
+            0.0...1.0,
+            name: "value",
+            filter: name
+        )
         // CIColorThreshold (macOS 14+) is the natural primitive.
         if let f = CIFilter(name: "CIColorThreshold") {
             f.setValue(image.foregroundMask, forKey: kCIInputImageKey)

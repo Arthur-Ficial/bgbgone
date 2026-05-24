@@ -37,9 +37,11 @@ for f in $MD_FILES; do
     # canonical doc form). One per line.
     while IFS= read -r chain; do
         [ -z "$chain" ] && continue
-        # Skip grammar placeholders / shell-variable references.
+        # Skip grammar placeholders (any chain containing <PLACEHOLDER>) and
+        # shell-variable references. A doc example with <N>, <F>, <X>, <Y>
+        # is documentation-as-prose, not a runnable invocation.
         case "$chain" in
-            \<*\>|\$*) continue ;;
+            *\<*\>*|\$*) continue ;;
         esac
         checked=$((checked + 1))
         # Use --filters-list as a parse-only target: bgbgone runs the

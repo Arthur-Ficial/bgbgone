@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.1.15](https://img.shields.io/badge/version-1.1.15-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.1.17](https://img.shields.io/badge/version-1.1.17-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -57,27 +57,6 @@ cat photo.jpg | bgbgone --bg color:white > on-white.png     # pipe through
 
 When stdout is a terminal and the input is a file, bgbgone writes `<stem>_bgbgone.<ext>` next to the input instead of dumping binary into the terminal. When stdout is redirected, bgbgone writes image bytes to stdout. For portable scripts, prefer `-o cutout.jpg` over `> cutout.jpg`.
 
-### Local HTTP API
-
-```bash
-bgbgone --server                                             # 127.0.0.1:8787, no auth, localhost only
-bgbgone --server --port 9000                                 # custom port
-bgbgone --server --token-auto                                # one-shot Bearer token, printed on startup
-bgbgone --server --token "$(openssl rand -hex 16)"           # explicit token
-bgbgone --server --cors --allowed-origins http://localhost:3000   # CORS for a trusted browser app
-bgbgone --server --host 0.0.0.0 --token-auto --public-health      # LAN-exposed, /health stays public
-bgbgone --server --max-body-mb 64                            # raise body limit (default 32 MiB)
-```
-
-```bash
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
-    -F image_file=@photo.jpg \
-    -F format=png \
-    -o cutout.png
-```
-
-The server is still 100% on-device: it accepts uploaded image bytes, runs the same Vision/Core Image pipeline as the CLI, and never fetches remote image URLs. It binds to `127.0.0.1:8787` by default, supports optional Bearer token auth (or `X-API-Key`), CORS for trusted local browser apps, an additive origin allowlist, JSON / multipart / urlencoded request bodies (also `image_file_b64`), ZIP output, `X-Width` / `X-Height` / `X-Foreground-*` / `X-Type` metadata headers, and a request body limit. Full details: [`docs/server/`](docs/server/).
-
 ---
 
 ## Examples
@@ -124,19 +103,19 @@ bgbgone mona-lisa.jpg --bg image:./mars-curiosity.jpg        -o mars.jpg
 
 ### Edge refinement (via `--filter`)
 
-Mask shape and edge softness are tuned via the `--filter` chain (the old `--feather` / `--threshold` / `--mask-only` / `--scale` / `--position` flags were hard-removed in v1.0.0). `--crop` tight-crops to the subject's bounding box. `--padding` and `--crop-margin` add breathing room. `--roi` limits detection to a region. `--shadow` and `--shadow-type drop` add a shadow under the cutout. `--semitransparency false` hardens the matte so soft edges become opaque.
+Mask shape and edge softness are tuned via the `--filter` chain — one surface, one grammar, no special-purpose flags. `--crop` tight-crops to the subject's bounding box, `--crop-margin` adds breathing room (uniform single value or per-edge), `--roi` limits detection to a region of interest, `--shadow-type drop` adds a drop shadow under the cutout, and `--semitransparency false` hardens the matte so soft edges become opaque.
 
 ```bash
 bgbgone in.jpg --bg color:white --filter "mask:feather=8"      -o soft.png
 bgbgone in.jpg --filter "mask:threshold=0.55"                  -o crisper.png
 bgbgone in.jpg --crop                                          -o tight.png
-bgbgone in.jpg --crop --padding 10%                            -o tight-padded.png
+bgbgone in.jpg --crop --crop-margin 10%                        -o tight-padded.png
 bgbgone in.jpg --crop --crop-margin "5% 10%"                   -o api-padded.png
 bgbgone in.jpg --crop --crop-margin "5% 10% 15% 20%"           -o four-sided.png
 bgbgone in.jpg --roi "0% 0% 100% 80%"                          -o top-region.png
 bgbgone in.jpg --filter "fg:scale=0.75"                        -o scaled.png
 bgbgone in.jpg --filter "fg:scale=0.5,translate=-200,200"      -o lower-left.png
-bgbgone in.jpg --bg color:white --shadow                       -o dropshadow.png
+bgbgone in.jpg --bg color:white --shadow-type drop             -o dropshadow.png
 bgbgone in.jpg --shadow-type drop --shadow-opacity 25          -o soft-shadow.png
 bgbgone in.jpg --shadow-type none                              -o no-shadow.png
 bgbgone in.jpg --semitransparency false                        -o hard-edge.png
@@ -147,7 +126,7 @@ bgbgone in.jpg --filter "mask:contract=6"                      -o thinner-mask.p
 
 See [`docs/filters/`](docs/filters/) for the full per-filter deep-dives, and the [Filter showcase](#filter-showcase----filter-chain-in-action) section below for five end-to-end before/after examples.
 
-Feather progression (matte edge softness, `--filter "mask:feather=N"`) from hard razor edge to obvious halo:
+Feather progression (matte edge softness, `--filter "mask:feather=<N>"`) from hard razor edge to obvious halo:
 
 ![mask:feather=0 / 8 / 16 / 32 on the corgi against a dark plate](docs/images/showcase/feather-progression.jpg)
 
@@ -155,46 +134,40 @@ Pixel-level close-up of the corgi's ear at `mask:feather=0` (hard edge) vs `mask
 
 ![feather close-up: hard edge vs soft matte](docs/images/showcase/feather-zoom.jpg)
 
-### Algorithm selection
+### Algorithm selection (`--type`)
+
+`--type` is the single canonical algorithm selector — same name and same vocabulary as the server's `type` field. It accepts subject hints (`person`, `product`, `car`, `animal`, `graphic`, `transportation`) and direct Vision algorithm names (`auto`, `vn-mask`, `person`, `saliency`):
 
 ```bash
-bgbgone in.jpg --algo auto       # public foreground-instance mask (default)
-bgbgone in.jpg --algo vn-mask    # VNGenerateForegroundInstanceMaskRequest (macOS 14+)
-bgbgone in.jpg --algo person     # VNGeneratePersonSegmentationRequest (macOS 12+)
-bgbgone in.jpg --algo saliency   # VNGenerateObjectnessBasedSaliencyImageRequest
-```
+bgbgone in.jpg --type auto             # default: VNGenerateForegroundInstanceMaskRequest
+bgbgone in.jpg --type vn-mask          # same Vision request, named explicitly (macOS 14+)
+bgbgone in.jpg --type person           # VNGeneratePersonSegmentationRequest (macOS 12+)
+bgbgone in.jpg --type saliency         # VNGenerateObjectnessBasedSaliencyImageRequest
 
-Three subjects with every supported algorithm side by side: a Mars rover, two figures in a meadow, and a painted Renaissance figure.
-
-![--algo vn-mask, person, saliency on three subjects](docs/images/showcase-algos.png)
-
-### Subject hints
-
-`--type` is the friendlier sibling of `--algo`. It accepts the same subject-hint vocabulary as the local HTTP API, then resolves to the best on-device algorithm:
-
-```bash
 bgbgone portrait.jpg     --type person          -o cutout.png
 bgbgone bottle.jpg       --type product         -o cutout.png
 bgbgone sedan.jpg        --type car             -o cutout.png
 bgbgone elephant.jpg     --type animal          -o cutout.png
 bgbgone logo.png         --type graphic         -o cutout.png
 bgbgone bicycle.jpg      --type transportation  -o cutout.png
-bgbgone busy-scene.jpg   --type saliency        -o cutout.png   # explicit objectness saliency
-bgbgone any.jpg          --type vn-mask         -o cutout.png   # explicit foreground-instance mask
 ```
+
+Three subjects with every supported algorithm side by side: a Mars rover, two figures in a meadow, and a painted Renaissance figure.
+
+![--type vn-mask, person, saliency on three subjects](docs/images/showcase-algos.png)
 
 ### Output formats
 
 ```bash
-bgbgone in.jpg --to png                              # transparent PNG (default)
-bgbgone in.jpg --to jpg --quality 92                 # white bg unless --bg is set
-bgbgone in.jpg --to zip                              # color.jpg + alpha.png package
+bgbgone in.jpg --format png                              # transparent PNG (default)
+bgbgone in.jpg --format jpg --quality 92                 # white bg unless --bg is set
+bgbgone in.jpg --format zip                              # color.jpg + alpha.png package
 bgbgone in.jpg -o out.jpg                            # extension infers JPEG
 bgbgone in.jpg -o out.heic                           # extension infers HEIC
-bgbgone in.jpg --to heic
-bgbgone in.jpg --to avif
-bgbgone in.jpg --to tiff
-bgbgone in.jpg --format png                          # --format is an alias of --to
+bgbgone in.jpg --format heic
+bgbgone in.jpg --format avif
+bgbgone in.jpg --format tiff
+bgbgone in.jpg -o - > out.png                        # explicit stdout destination
 ```
 
 ### Output size cap
@@ -202,10 +175,10 @@ bgbgone in.jpg --format png                          # --format is an alias of -
 `--size` caps the output by megapixels so a 12 MP source can land on the web in one call. PNG outputs are additionally clamped to 10 MP (alpha cost) just like the local API.
 
 ```bash
-bgbgone giant.jpg --size preview --to jpg -o thumb.jpg    # 0.25 MP cap
+bgbgone giant.jpg --size preview --format jpg -o thumb.jpg    # 0.25 MP cap
 bgbgone giant.jpg --size full                  -o full.png   # 25 MP cap (10 MP for PNG)
-bgbgone giant.jpg --size 50MP --to jpg          -o huge.jpg   # 50 MP cap
-bgbgone giant.jpg --size auto  --to jpg         -o auto.jpg   # same cap as full
+bgbgone giant.jpg --size 50MP --format jpg          -o huge.jpg   # 50 MP cap
+bgbgone giant.jpg --size auto  --format jpg         -o auto.jpg   # same cap as full
 ```
 
 ### Multi-instance
@@ -229,14 +202,16 @@ bgbgone in.jpg --json -o out.png
 ```
 
 ```json
-{"input":"in.jpg","output":"out.png","algo":"vn-mask","format":"png","width":1280,"height":960}
+{"ok":true,"schema":"bgbgone.run.v1","result":{"input":"in.jpg","output":"out.png","algo":"vn-mask","format":"png","width":1280,"height":960,"filters":[]}}
 ```
+
+Errors share the envelope: `{"ok":false,"schema":"bgbgone.run.v1","error":{"code":"BGBG_…","message":"…","where":"…","hint":"…"}}`. CLI `--json`, CLI `--ndjson`, and HTTP `/bgbgone` all use the same shape — one parser for downstream tools.
 
 NDJSON streams through `jq`:
 
 ```bash
 ls *.jpg | xargs -I{} bgbgone {} --ndjson --out-dir ./out/ \
-  | jq -s 'group_by(.algo) | map({algo: .[0].algo, n: length})'
+  | jq -s '.[] | select(.ok) | .result | group_by(.algo) | map({algo: .[0].algo, n: length})'
 ```
 
 ### Local HTTP API
@@ -259,36 +234,35 @@ Endpoints:
 
 ```bash
 curl http://127.0.0.1:8787/health                                # liveness JSON
-curl http://127.0.0.1:8787/v1.0/account                          # local account shape, zero credits
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -F image_file=@photo.jpg -F format=png -o cutout.png         # multipart, PNG
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
-    -F image_file=@photo.jpg -F format=jpg -F bg_color=ffffff \
+curl -X POST http://127.0.0.1:8787/bgbgone \
+    -F image_file=@photo.jpg -F format=jpg -F bg=color:#ffffff \
     -o on-white.jpg                                              # JPEG on white
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -F image_file=@photo.jpg -F channels=alpha -o matte.png      # mask-only
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -F image_file=@photo.jpg -F format=zip -o result.zip         # color.jpg + alpha.png
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -H "Accept: application/json" \
     -F image_file=@photo.jpg                                     # JSON-wrapped base64 PNG
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -H "Authorization: Bearer $TOKEN" \
-    -F image_file=@photo.jpg -F type=person -F type_level=2 \
+    -F image_file=@photo.jpg -F type=person -F type-level=2 \
     -o portrait.png                                              # token auth + subject hint
 
-curl -X POST http://127.0.0.1:8787/v1.0/bgbgone \
+curl -X POST http://127.0.0.1:8787/bgbgone \
     -H "Content-Type: application/json" \
-    -d '{"image_file_b64":"<base64>","format":"jpg","bg_color":"#0066cc","scale":"60%","position":"25% 75%"}'
+    -d '{"image_file":"<base64>","format":"jpg","bg":"color:#0066cc","filter":"fg:scale=0.6,translate=25,75"}'
 ```
 
-Successful image responses include `X-Width`, `X-Height`, `X-Credits-Charged: 0`, `X-Foreground-Top`, `X-Foreground-Left`, `X-Foreground-Width`, `X-Foreground-Height`, and (unless `type_level=none`) `X-Type`. Remote `image_url` / `bg_image_url` inputs respond `501 NOT IMPLEMENTABLE` so the no-network promise holds. Full wire contract and security matrix in [`docs/server/`](docs/server/).
+Successful image responses include `X-Width`, `X-Height`, `X-Credits-Charged: 0`, `X-Foreground-Top`, `X-Foreground-Left`, `X-Foreground-Width`, `X-Foreground-Height`, and (unless `type-level=none`) `X-Type`. Unknown fields are rejected with HTTP `400`. Full wire contract and security matrix in [`docs/server/`](docs/server/).
 
 ### Pipe into downstream AI
 
@@ -298,7 +272,7 @@ A clean cutout makes downstream classifiers, embedders, and OCR more accurate. W
 
 ```bash
 bgbgone Tests/fixtures/06-nasa-mars-curiosity-selfie.jpg \
-    --bg color:black --to jpg -o /tmp/cut.jpg
+    --bg color:black --format jpg -o /tmp/cut.jpg
 auge --classify /tmp/cut.jpg --top 5
 # machine: 52%
 # toy: 12%
@@ -329,7 +303,7 @@ Catalogue an entire photo library on a white background:
 
 ```bash
 for f in ~/products/*.heic; do
-    bgbgone "$f" --bg color:white --to jpg --quality 92 \
+    bgbgone "$f" --bg color:white --format jpg --quality 92 \
         --out-dir ~/catalogue/ --json
 done | jq -s 'group_by(.algo) | map({algo: .[0].algo, count: length})'
 ```
@@ -338,7 +312,7 @@ Brand-coloured profile picture, tight-cropped, soft edge, high-quality JPEG:
 
 ```bash
 bgbgone selfie.jpg --bg color:#0066cc --crop --filter "mask:feather=2" \
-    --to jpg --quality 95 -o linkedin-avatar.jpg
+    --format jpg --quality 95 -o linkedin-avatar.jpg
 ```
 
 Sticker pack from a group photo (one PNG per detected instance):
@@ -353,14 +327,14 @@ Doc-site product shot:
 
 ```bash
 bgbgone product.heic --bg color:white --crop --filter "mask:feather=1" \
-    --to jpg --quality 92 -o ./docs/product-shot.jpg
+    --format jpg --quality 92 -o ./docs/product-shot.jpg
 ```
 
 Chain with sibling tools. Remove the background, then classify or embed the cleaner cutout:
 
 ```bash
-bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && auge --classify /tmp/x.jpg
-bgbgone photo.jpg --bg color:black --to jpg -o /tmp/x.jpg && kern --embed-image /tmp/x.jpg
+bgbgone photo.jpg --bg color:black --format jpg -o /tmp/x.jpg && auge --classify /tmp/x.jpg
+bgbgone photo.jpg --bg color:black --format jpg -o /tmp/x.jpg && kern --embed-image /tmp/x.jpg
 ```
 
 Run a token-protected local server for a browser SPA on `localhost:3000`:
@@ -369,7 +343,7 @@ Run a token-protected local server for a browser SPA on `localhost:3000`:
 TOKEN="$(openssl rand -hex 16)"
 bgbgone --server --token "$TOKEN" --cors --allowed-origins http://localhost:3000 &
 # in the SPA:
-fetch("http://127.0.0.1:8787/v1.0/bgbgone", {
+fetch("http://127.0.0.1:8787/bgbgone", {
     method: "POST",
     headers: { Authorization: "Bearer " + token },
     body: formData
@@ -380,7 +354,7 @@ Drop a "remove background" hot folder onto your Mac with a one-liner watcher:
 
 ```bash
 fswatch -0 ~/Drop | while IFS= read -r -d '' f; do
-    bgbgone "$f" --bg color:white --to jpg --quality 92 \
+    bgbgone "$f" --bg color:white --format jpg --quality 92 \
         --out-dir ~/Drop/out/ --json --quiet
 done
 ```
@@ -446,8 +420,8 @@ If you instead want rounded sticker corners that ignore subject detail (e.g. ear
 ### 4. Vintage backdrop, modern subject — fg/bg colour split (Parastoo in a library)
 
 ```bash
-bgbgone parastoo.jpg --algo person \
-  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; vignette=1.8:1.1" \
+bgbgone parastoo.jpg --type person \
+  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; composite:vignette=1.8:1.1" \
   -o vintage.jpg
 ```
 
@@ -455,7 +429,7 @@ bgbgone parastoo.jpg --algo person \
 |---|---|
 | ![Parastoo original](docs/images/showcase/04-parastoo-before.jpg) | ![Parastoo vintage](docs/images/showcase/04-parastoo-vintage.jpg) |
 
-`--algo person` uses Apple Vision's person-segmentation model to isolate Parastoo cleanly from the warm wooden library bookshelves behind her. **Stage 1 (bg only):** `CISepiaTone` at 100% + `CIColorControls` brightness=-0.15, saturation=0.45 — the bookshelves become a darkened, desaturated old-library backdrop. **Stage 2 (composite):** `CIVignette` intensity 1.8 darkens the corners for film-style depth. Foreground stays untouched: floral dress, red lipstick, and skin tones keep their modern colour against the vintage backdrop.
+`--type person` uses Apple Vision's person-segmentation model to isolate Parastoo cleanly from the warm wooden library bookshelves behind her. **Stage 1 (bg only):** `CISepiaTone` at 100% + `CIColorControls` brightness=-0.15, saturation=0.45 — the bookshelves become a darkened, desaturated old-library backdrop. **Stage 2 (composite):** `CIVignette` intensity 1.8 darkens the corners for film-style depth. Foreground stays untouched: floral dress, red lipstick, and skin tones keep their modern colour against the vintage backdrop.
 
 ### 5. Dramatic composite — corgi in deep space, three-stage chain
 
@@ -520,33 +494,29 @@ DEFAULTS:
 BACKGROUND:
   --bg color:<#hex|named|rgb:r,g,b>     solid colour
   --bg image:<path>                     image file
-  --bg-color <spec>                     shared solid colour field
-  --bg-image <path>                     shared background image field
   --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
 MATTE / EDGE:
-  --channels rgba|alpha                 finalized image or alpha mask (server compat)
-  --padding <px|N%>                     extra space around subject
-  --crop-margin <1|2|4 values>          API-style crop margins (px or %)
+  --channels rgba|alpha                 finalized image or alpha mask
   --crop                                tight-crop to subject bbox
+  --crop-margin <1|2|4 px or %>         margins around the crop
   --roi "x1 y1 x2 y2"                   region of interest, px or %
   --filter fg:scale=F                   scale subject on the canvas (replaces removed --scale)
   --filter fg:translate=X,Y             place subject on canvas (replaces removed --position)
   --semitransparency true|false         keep or harden semi-transparent matte pixels
-  --shadow                              drop shadow under cutout
-  --shadow-type auto|drop|3D|car|none   shadow compatibility selector
+  --shadow-type auto|drop|3D|car|none   shadow preset (none = no shadow)
   --shadow-opacity <0..100|auto>        shadow darkness
 
 ALGORITHM:
-  --algo auto|vn-mask|person|saliency   (default: auto)
-  --type auto|person|product|car|animal|graphic|transportation
+  --type auto|person|product|car|animal|graphic|transportation|saliency|vn-mask
+                                        (default: auto)
 
 MULTI-INSTANCE:
   --multi                               one file per detected instance (file input only)
   --instance-naming "{base}-{n}.{ext}"  filename template (supports {n:NN})
 
 OUTPUT:
-  --to, --format png|jpg|zip|heic|avif|tiff
+  --format png|jpg|zip|heic|avif|tiff
                                          output format (default: png)
   --size preview|full|50MP|auto         optional output megapixel cap
   --quality 1..100                      for lossy formats (default: 92)

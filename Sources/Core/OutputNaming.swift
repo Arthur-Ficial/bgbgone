@@ -42,6 +42,18 @@ public extension OutputFormat {
         }
     }
 
+    static func parseCanonical(_ raw: String) -> OutputFormat? {
+        switch raw.lowercased() {
+        case "png": return .png
+        case "jpg": return .jpeg
+        case "zip": return .zip
+        case "heic": return .heic
+        case "avif": return .avif
+        case "tiff": return .tiff
+        default: return nil
+        }
+    }
+
     static func fromFileExtension(_ path: String) -> OutputFormat? {
         let ext = (path as NSString).pathExtension
         guard !ext.isEmpty else { return nil }

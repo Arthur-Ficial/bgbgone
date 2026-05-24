@@ -25,10 +25,10 @@ Every commit, every ticket, every contributor. No exceptions.
 5. **GitHub push after every meaningful unit.** Each filter / refactor / fix is its own commit and its own push. The remote is the source of truth.
 6. **`make release` green before every push.** Tests + install + README image regeneration against the freshly installed binary + packaging. Never skipped.
 7. **README regenerated on every visible-output change.** `scripts/make-readme-examples.sh` reruns in the same commit; assets ship with the commit.
-8. **100% UNIX style.** stdin/stdout, pipes, TTY refusal on binary stdout, `NO_COLOR`, `--quiet`, `--json`, correct exit codes (0/1/2/3). No GUI, no daemon, no runtime plugin loading.
+8. **100% UNIX style, with a first-class local server surface.** stdin/stdout, pipes, TTY refusal on binary stdout, `NO_COLOR`, `--quiet`, `--json`, correct exit codes (0/1/2/3). `--server` is allowed only as a local HTTP transport over the same `Config` and pipeline: no GUI, no cloud daemon, no runtime plugin loading.
 9. **100% local at runtime.** `NetworkGuard` hard-blocks `http`/`https`/`ws`/`wss`. SPM build-time package resolution is fine; runtime network access is not.
 10. **No performance regression.** No-filter run within 2% of current `main`. Chain rasterises once via one shared `CIContext`. Budgets in section 5.
-11. **Docs in the same commit as code.** `README.md`, `--help`, `docs/design.md`, `bgbgone --filters-list`, `Tests/fixtures/LICENSES.md` (if new fixtures) all updated in the same commit that introduces or changes behaviour.
+11. **Docs in the same commit as code.** `README.md`, `--help`, `docs/design.md`, `docs/server/`, `bgbgone --filters-list`, `Tests/fixtures/LICENSES.md` (if new fixtures) all updated in the same commit that introduces or changes behaviour. `make lint` must pass; `scripts/lint-contract.sh` guards the single CLI/server surface, SSOT defaults, and removed-alias drift.
 12. **Clean code.** Files <=150 lines, functions <=30 lines, no magic values, named exports, single responsibility, no boolean params, no >4 params, no commented-out code, no TODO comments, no clever code.
 13. **Industry-standard deps OK; do not reinvent.** Battle-tested system frameworks (Core Image, Vision, Accelerate, ImageIO) and Swift packages (`swift-argument-parser`, `CIFilterFactory`). No GPUImage. No ImageMagick. See section 6.
 
@@ -45,7 +45,7 @@ Per ticket, in order:
 
 **GREEN**
 4. Implement the minimum code to make the test pass. One Swift file per filter under `Sources/Filters/<Name>.swift`. Register in `FilterRegistry`. Use the shared `CIContext`.
-5. Run `make test`. All tests green, not only the new ones.
+5. Run `make test`. All tests and contract lints green, not only the new ones.
 
 **REFACTOR**
 6. Extract shared helpers if two implementations duplicate logic. Tests stay green.
@@ -54,7 +54,7 @@ Per ticket, in order:
 7. `README.md` filter section: add row. `--help` regenerates from the registry. `bgbgone --filters-list` auto-includes the new filter (after T58 #60). `scripts/make-readme-examples.sh` extended to render the showcase image - regenerate, visually review. `docs/design.md` catalogue table updated.
 
 **RELEASE GATE**
-8. `make release` green: tests + install + README image regen + packaging.
+8. `make release` green: lints + tests + install + README image regen + packaging.
 
 **PUSH**
 9. `git add -A && git commit -m "..."`. Review staged files; never `git add .` blindly. Commit message references the ticket id (`TNN #issue`) and the test that proves it.

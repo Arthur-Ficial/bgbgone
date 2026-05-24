@@ -25,7 +25,7 @@ filter: adjust
 hypothesis: Given the red panda over its own forest background, `bg:adjust=brightness=-0.1:contrast=1.2:saturation=0.5` should darken/desaturate background foliage pixels, while red panda fur pixels stay original.
 
 filter: bloom
-hypothesis: Given the red panda composite with bright highlights, `all:bloom=1.0:18` should expand highlight glow around bright leaves and fur highlights, while dark shadows change less.
+hypothesis: Given the red panda composite with bright highlights, `composite:bloom=1.0:18` should expand highlight glow around bright leaves and fur highlights, while dark shadows change less.
 
 filter: blur
 hypothesis: Given the red panda over its own forest background, `bg:blur=22` should reduce local edge contrast in foliage pixels, while the red panda face remains sharp.
@@ -76,7 +76,7 @@ filter: gamma
 hypothesis: Given the red panda over its own forest background, `bg:gamma=1.8` should darken background midtones, while red panda fur stays original.
 
 filter: gloom
-hypothesis: Given the red panda composite, `all:gloom=1.0:18` should spread darker soft glow through shadowed detail, while geometry and matte alignment stay fixed.
+hypothesis: Given the red panda composite, `composite:gloom=1.0:18` should spread darker soft glow through shadowed detail, while geometry and matte alignment stay fixed.
 
 filter: grayscale
 hypothesis: Given the red panda over its own green forest background, `bg:grayscale` should make background foliage pixels near-equal RGB, while red panda fur remains orange.
@@ -145,10 +145,10 @@ filter: vibrance
 hypothesis: Given the red panda composite, `all:vibrance=0.8` should boost muted colours more than already-saturated fur, while luminance structure stays recognizable.
 
 filter: vignette
-hypothesis: Given the red panda composite, `all:vignette=2:1` should darken corner pixels more than central face pixels, while the subject/background layout stays fixed.
+hypothesis: Given the red panda composite, `composite:vignette=2:1` should darken corner pixels more than central face pixels, while the subject/background layout stays fixed.
 
 filter: vignette-effect
-hypothesis: Given the red panda composite, `all:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5` should darken pixels outside a centred oval falloff, while central face pixels change less.
+hypothesis: Given the red panda composite, `composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5` should darken pixels outside a centred oval falloff, while central face pixels change less.
 
 filter: zoom-blur
 hypothesis: Given the red panda over its own forest background, `bg:zoom-blur=center=0.5,0.5:amount=35` should radially smear background texture away from centre, while the red panda remains sharp.

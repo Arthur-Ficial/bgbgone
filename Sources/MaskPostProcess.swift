@@ -93,7 +93,7 @@ enum MaskPostProcess {
         return try makeGrayImage(width: mask.width, height: mask.height, bytes: bytes)
     }
 
-    static func applyROI(_ roi: ServerRectSpec, to mask: CGImage) throws -> CGImage {
+    static func applyROI(_ roi: RectSpec, to mask: CGImage) throws -> CGImage {
         let w = mask.width
         let h = mask.height
         var bytes = try grayscaleBytes(mask)
@@ -106,10 +106,22 @@ enum MaskPostProcess {
         let bounds = CGRect(x: 0, y: 0, width: w, height: h)
         let safe = rect.intersection(bounds)
         if safe.isNull || safe.isEmpty {
-            throw ServerAPIError.invalid("roi_region_empty", "ROI region is empty", detail: "The given roi parameter defines an empty region")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseRoiInvalid,
+                "ROI region is empty",
+                origin: "--roi",
+                context: ["field_code": "roi_region_empty"],
+                hint: "use an roi rectangle that intersects the image"
+            )
         }
         if !bounds.contains(rect) {
-            throw ServerAPIError.invalid("roi_exceeds_bounds", "ROI exceeds image bounds", detail: "The given roi parameter defines a region that exceeds the image bounds")
+            throw BgBgOneError.parser(
+                ErrorCodes.parseRoiInvalid,
+                "ROI exceeds image bounds",
+                origin: "--roi",
+                context: ["field_code": "roi_exceeds_bounds"],
+                hint: "keep roi coordinates within the input image bounds"
+            )
         }
 
         for y in 0..<h {
@@ -181,20 +193,7 @@ enum MaskPostProcess {
         return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
     }
 
-    static func paddedRect(_ rect: CGRect, in imageSize: CGSize, padding: Double?, isPercent: Bool) -> CGRect {
-        guard let padding else { return rect }
-        let padPixels: CGFloat
-        if isPercent {
-            padPixels = max(rect.width, rect.height) * CGFloat(padding)
-        } else {
-            padPixels = CGFloat(padding)
-        }
-
-        let expanded = rect.insetBy(dx: -padPixels, dy: -padPixels)
-        return expanded.intersection(CGRect(origin: .zero, size: imageSize))
-    }
-
-    static func paddedRect(_ rect: CGRect, in imageSize: CGSize, margins: ServerEdgeInsets?) -> CGRect {
+    static func paddedRect(_ rect: CGRect, in imageSize: CGSize, margins: EdgeInsetsSpec?) -> CGRect {
         guard let margins else { return rect }
         let top = clampedMargin(margins.top, total: Double(rect.height))
         let right = clampedMargin(margins.right, total: Double(rect.width))
@@ -209,7 +208,7 @@ enum MaskPostProcess {
         return expanded.intersection(CGRect(origin: .zero, size: imageSize))
     }
 
-    private static func clampedMargin(_ value: ServerDimension, total: Double) -> CGFloat {
+    private static func clampedMargin(_ value: DimensionSpec, total: Double) -> CGFloat {
         let resolved = value.resolve(total: total)
         return CGFloat(max(0, min(resolved, min(500, total * 0.5))))
     }

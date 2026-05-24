@@ -25,8 +25,8 @@ func runServerParsingTests() {
     }
 
     test("urlencoded parser decodes plus and percent escapes") {
-        let form = ServerFormParser.parseURLEncoded(Data("bg_color=%23ffffff&crop=true&name=hello+world".utf8))
-        try assertEqual(form.fields["bg_color"], "#ffffff")
+        let form = ServerFormParser.parseURLEncoded(Data("bg=color%3A%23ffffff&crop=true&name=hello+world".utf8))
+        try assertEqual(form.fields["bg"], "color:#ffffff")
         try assertEqual(form.fields["crop"], "true")
         try assertEqual(form.fields["name"], "hello world")
     }
@@ -35,15 +35,14 @@ func runServerParsingTests() {
         let form = ServerForm(
             fields: [
                 "format": "jpg",
-                "bg_color": "ffffff",
+                "bg": "color:#ffffff",
                 "channels": "rgba",
                 "crop": "true",
-                "crop_margin": "12",
-                "shadow_type": "drop",
+                "crop-margin": "12",
+                "shadow-type": "drop",
                 "quality": "80",
-                "bg_fit": "contain",
-                "feather": "4",
-                "threshold": "0.55",
+                "bg-fit": "contain",
+                "filter": "mask:feather=4,threshold=0.55",
                 "type": "person",
                 "size": "auto"
             ],
@@ -57,12 +56,11 @@ func runServerParsingTests() {
         try assertEqual(request.config.inputs, ["/tmp/input.jpg"])
         try assertEqual(request.config.outputFormat, .jpeg)
         try assertTrue(request.config.cropToSubject)
-        try assertEqual(request.config.cropMargins, ServerEdgeInsets(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
+        try assertEqual(request.config.cropMargins, EdgeInsetsSpec(top: .pixels(12), right: .pixels(12), bottom: .pixels(12), left: .pixels(12)))
         try assertTrue(request.config.dropShadow)
         try assertEqual(request.config.quality, 80)
         try assertEqual(request.config.bgFit, .contain)
-        try assertEqual(request.config.feather, 4.0)
-        try assertEqual(request.config.threshold, 0.55)
+        try assertEqual(request.config.filters.count, 1)
         try assertEqual(request.config.algo, .person)
         if case .solidColor(let rgba) = request.config.background {
             try assertEqual(rgba.r, 1.0)
@@ -90,20 +88,19 @@ func runServerParsingTests() {
         try assertEqual(request.config.outputFormat, .png)
     }
 
-    test("image_file_b64 is accepted as an input source") {
-        let form = ServerForm(fields: ["image_file_b64": Data([9, 8, 7]).base64EncodedString()], files: [:])
+    test("image_file base64 text is accepted as an input source") {
+        let form = ServerForm(fields: ["image_file": Data([9, 8, 7]).base64EncodedString()], files: [:])
         let request = try ServerRemovalRequest.parse(form: form, inputPath: "/tmp/input.bin", backgroundImagePath: nil)
         try assertEqual(request.input, .uploaded(Data([9, 8, 7]), filename: "image"))
     }
 
-    test("network-backed image fields are rejected to preserve local-only runtime") {
-        for fields in [["image_url": "https://example.com/in.jpg"], ["bg_image_url": "https://example.com/bg.jpg", "image_file_b64": "AQID"]] {
+    test("network-backed request fields are rejected to preserve the one-way local API") {
+        for fields in [["image_url": "https://example.com/in.jpg"], ["bg_url": "https://example.com/bg.jpg", "image_file": "AQID"]] {
             do {
                 _ = try ServerRemovalRequest.parse(form: ServerForm(fields: fields, files: [:]), inputPath: "/tmp/input.jpg", backgroundImagePath: nil)
                 throw TestFailure("expected throw")
-            } catch let e as ServerAPIError {
-                try assertEqual(e.status, 501)
-                try assertEqual(e.code, "not_implementable")
+            } catch let e as ParameterParseError {
+                try assertEqual(e.code, "unknown_field")
             }
         }
     }
@@ -160,7 +157,7 @@ func runServerParsingTests() {
 
     test("JSON request rejects unsupported value types") {
         let json = """
-        {"image_file_b64":"AQID","extra":{"nested":1}}
+        {"image_file":"AQID","extra":{"nested":1}}
         """
         do {
             _ = try ServerFormParser.parseJSON(Data(json.utf8))
@@ -171,34 +168,34 @@ func runServerParsingTests() {
     }
 
     test("URL-encoded body handles plus-encoded spaces and multiple keys") {
-        let form = ServerFormParser.parseURLEncoded(Data("format=jpg&bg_color=rgb%3A0%2C128%2C255&shadow_type=drop".utf8))
+        let form = ServerFormParser.parseURLEncoded(Data("format=jpg&bg=color%3Argb%3A0%2C128%2C255&shadow-type=drop".utf8))
         try assertEqual(form.fields["format"], "jpg")
-        try assertEqual(form.fields["bg_color"], "rgb:0,128,255")
-        try assertEqual(form.fields["shadow_type"], "drop")
+        try assertEqual(form.fields["bg"], "color:rgb:0,128,255")
+        try assertEqual(form.fields["shadow-type"], "drop")
     }
 
-    test("empty image_file_b64 is rejected as an invalid source") {
+    test("empty image_file text is rejected as a missing source") {
         do {
             _ = try ServerRemovalRequest.parse(
-                form: ServerForm(fields: ["image_file_b64": ""], files: [:]),
+                form: ServerForm(fields: ["image_file": ""], files: [:]),
                 inputPath: "/tmp/input.jpg",
                 backgroundImagePath: nil
             )
             throw TestFailure("expected missing_source")
-        } catch let e as ServerAPIError {
+        } catch let e as ParameterParseError {
             try assertEqual(e.code, "missing_source")
         }
     }
 
-    test("image_file_b64 that is not real base64 fails with invalid_file") {
+    test("image_file text that is not real base64 fails with invalid_file") {
         do {
             _ = try ServerRemovalRequest.parse(
-                form: ServerForm(fields: ["image_file_b64": "@@@"], files: [:]),
+                form: ServerForm(fields: ["image_file": "@@@"], files: [:]),
                 inputPath: "/tmp/input.jpg",
                 backgroundImagePath: nil
             )
             throw TestFailure("expected invalid_file")
-        } catch let e as ServerAPIError {
+        } catch let e as ParameterParseError {
             try assertEqual(e.code, "invalid_file")
         }
     }

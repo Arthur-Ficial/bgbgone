@@ -1,14 +1,14 @@
 #!/bin/bash
 # For every filter in the catalogue, render a bg:/fg:/all: 3-panel comparison
-# against the yoga photo (with --algo person) and the Parastoo photo (with
-# --algo person) so the per-filter doc shows a real fg/bg split next to the
+# against the yoga photo (with --type person) and the Parastoo photo (with
+# --type person) so the per-filter doc shows a real fg/bg split next to the
 # baseline.
 #
 # Output: docs/images/filters/panels/{yoga,parastoo}-<filter>.jpg
-# (3-up composite, left=bg:X, middle=fg:X, right=all:X)
+# (4-up strip: original | bg:X | fg:X | all:X)
 #
 # For mask-only filters, the panel just renders mask:X once.
-# For composite-only filters, just all:X once.
+# For composite-only filters, the panel renders composite:X once.
 
 set -uo pipefail
 
@@ -23,7 +23,7 @@ PARASTOO="$FIX/Parastoo_Ahmadi.jpg"
 mkdir -p "$PANEL_OUT"
 
 # Filter table: name | layers | example-args
-# layers: "all" for fg/bg/all triple; "all-only" for composite-only; "fg-only";
+# layers: "all" for fg/bg/all triple; "composite-only" for composite-only; "fg-only";
 #         "mask-only"
 ROWS=$(cat <<'EOF'
 grayscale|all|
@@ -56,10 +56,10 @@ crystallize|all|=30
 pointillize|all|=15
 comic|all|
 noise|all|=0.3
-vignette|all-only|=2:1
-vignette-effect|all-only|=center=0.5,0.5:radius=1.2:intensity=1.5
-bloom|all-only|=1.0:18
-gloom|all-only|=1.0:18
+vignette|composite-only|=2:1
+vignette-effect|composite-only|=center=0.5,0.5:radius=1.2:intensity=1.5
+bloom|composite-only|=1.0:18
+gloom|composite-only|=1.0:18
 outline|fg-only|=color=#ffaa00:width=8
 glow|fg-only|=color=#ffff80:radius=25:intensity=0.8
 shadow|fg-only|=blur=14:offset=6,6:opacity=0.6:color=#000
@@ -96,26 +96,26 @@ panel_for_subject() {
         label_under "$subj" "original" "$tmp/orig-l.jpg"
         case "$layers" in
             all)
-                "$BIN" "$subj" --algo person --filter "bg:${name}${args}" -o "$tmp/bg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                "$BIN" "$subj" --algo person --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --type person --filter "bg:${name}${args}" -o "$tmp/bg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --type person --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --type person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/bg.jpg"  "bg:${name}${args}"  "$tmp/bg-l.jpg"
                 label_under "$tmp/fg.jpg"  "fg:${name}${args}"  "$tmp/fg-l.jpg"
                 label_under "$tmp/all.jpg" "all:${name}${args}" "$tmp/all-l.jpg"
                 magick "$tmp/orig-l.jpg" "$tmp/bg-l.jpg" "$tmp/fg-l.jpg" "$tmp/all-l.jpg" +append "$out"
                 ;;
-            all-only)
-                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
-                label_under "$tmp/all.jpg" "all:${name}${args}" "$tmp/all-l.jpg"
+            composite-only)
+                "$BIN" "$subj" --type person --filter "composite:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                label_under "$tmp/all.jpg" "composite:${name}${args}" "$tmp/all-l.jpg"
                 magick "$tmp/orig-l.jpg" "$tmp/all-l.jpg" +append "$out"
                 ;;
             fg-only)
-                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --type person --bg color:#1a2233 --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/fg.jpg" "fg:${name}${args}" "$tmp/fg-l.jpg"
                 magick "$tmp/orig-l.jpg" "$tmp/fg-l.jpg" +append "$out"
                 ;;
             mask-only)
-                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "mask:${name}${args}" -o "$tmp/mask.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --type person --bg color:#1a2233 --filter "mask:${name}${args}" -o "$tmp/mask.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/mask.jpg" "mask:${name}${args}" "$tmp/mask-l.jpg"
                 magick "$tmp/orig-l.jpg" "$tmp/mask-l.jpg" +append "$out"
                 ;;
@@ -125,9 +125,9 @@ panel_for_subject() {
     done <<< "$ROWS"
 }
 
-echo "panels: yoga subject (--algo person)"
+echo "panels: yoga subject (--type person)"
 panel_for_subject "$YOGA" "yoga"
-echo "panels: Parastoo subject (--algo person)"
+echo "panels: Parastoo subject (--type person)"
 panel_for_subject "$PARASTOO" "parastoo"
 
 echo "done. $PANEL_OUT"

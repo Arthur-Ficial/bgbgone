@@ -392,8 +392,8 @@ algo_row() {
     local base=$(basename "$src" .jpg)
     panel "$src" "src" "$WORK/algo/$base-src.png" 320 320
     for a in vn-mask person saliency; do
-        "$BGBGONE" "$src" --algo "$a" -o "$WORK/algo/$base-$a.png" --quiet
-        panel "$WORK/algo/$base-$a.png" "--algo $a" \
+        "$BGBGONE" "$src" --type "$a" -o "$WORK/algo/$base-$a.png" --quiet
+        panel "$WORK/algo/$base-$a.png" "--type $a" \
               "$WORK/algo/$base-$a-p.png" 320 320
     done
     row "$out" "" \
@@ -410,7 +410,7 @@ algo_row "$FX/10-mona-lisa.jpg"                  "$WORK/algo/row-mona.png"
 W=$(magick identify -format '%w' "$WORK/algo/row-mars.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--algo: rover · two people · painted figure (every supported algorithm side by side)" \
+    -annotate +0+0 "--type: rover · two people · painted figure (every supported algorithm side by side)" \
     PNG24:"$WORK/algo/title.png"
 stack "$OUT/showcase-algos.png" \
     "$WORK/algo/title.png" \
@@ -475,10 +475,10 @@ echo "==> pipeline (real auge classify output)"
 mkdir -p "$WORK/pipe"
 PSRC="$FX/06-nasa-mars-curiosity-selfie.jpg"
 "$BGBGONE" "$PSRC" -o "$WORK/pipe/cut.png" --quiet
-"$BGBGONE" "$PSRC" --bg color:black --to jpg -o "$WORK/pipe/black.jpg" --quiet
+"$BGBGONE" "$PSRC" --bg color:black --format jpg -o "$WORK/pipe/black.jpg" --quiet
 panel "$PSRC" "1. src · curiosity selfie" "$WORK/pipe/p1.png" 360 320
 panel "$WORK/pipe/cut.png" "2. bgbgone (cutout)" "$WORK/pipe/p2.png" 360 320
-panel "$WORK/pipe/black.jpg" "3. bgbgone --bg color:black --to jpg" "$WORK/pipe/p3.png" 360 320
+panel "$WORK/pipe/black.jpg" "3. bgbgone --bg color:black --format jpg" "$WORK/pipe/p3.png" 360 320
 
 # Capture real auge output on the cutout (not fabricated).
 AUGE_OUT=$(auge --classify "$WORK/pipe/black.jpg" --top 5 2>/dev/null || echo "auge not installed")

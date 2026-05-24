@@ -221,12 +221,12 @@ fi
 # pipeline must resample the mask up to the source extent before
 # CIBlendWithMask, otherwise the mask projects to the bottom-left quadrant
 # and every layer split (bg:/fg:/all:) puts the matte in the wrong place.
-# Use --algo person on the multi-person yoga fixture: bg:duotone should land
+# Use --type person on the multi-person yoga fixture: bg:duotone should land
 # the duotone on the FULL scene (so the centre-top crop is duotone-blue,
 # not the orange floor), while the same fixture under fg:duotone should
 # leave the top crop UNTOUCHED (still orange floor).
 YOGA_FIX="$FIX/showcase/franz-yoga.jpg"
-out=$("$BIN" "$YOGA_FIX" --algo person --filter "bg:duotone=dark=#003366:light=#ffcc00" -o "$OUT/t4j-bgduo-aligned.jpg" 2>&1); rc=$?
+out=$("$BIN" "$YOGA_FIX" --type person --filter "bg:duotone=dark=#003366:light=#ffcc00" -o "$OUT/t4j-bgduo-aligned.jpg" 2>&1); rc=$?
 if [ $rc -eq 0 ]; then
     rgb=$(mean_rgb_crop "$OUT/t4j-bgduo-aligned.jpg" "200x200+1200+200") || rgb="255 255 255"
     read -r r g b <<< "$rgb"
@@ -282,10 +282,10 @@ red_filter "T33" "35" "all:comic"                                           "t33
 red_filter "T34" "36" "all:noise=0.1"                                       "t34-noise"
 
 # Composite-only (refuses fg:/bg: at parse time)
-red_filter "T35" "37" "vignette=intensity=0.5:radius=1.5"                   "t35-vignette"
-red_filter "T36" "38" "vignette-effect=center=0.5,0.5:radius=1.5"           "t36-vignette-effect"
-red_filter "T37" "39" "bloom=intensity=0.5:radius=10"                       "t37-bloom"
-red_filter "T38" "40" "gloom=intensity=0.5:radius=10"                       "t38-gloom"
+red_filter "T35" "37" "composite:vignette=intensity=0.5:radius=1.5"         "t35-vignette"
+red_filter "T36" "38" "composite:vignette-effect=center=0.5,0.5:radius=1.5" "t36-vignette-effect"
+red_filter "T37" "39" "composite:bloom=intensity=0.5:radius=10"             "t37-bloom"
+red_filter "T38" "40" "composite:gloom=intensity=0.5:radius=10"             "t38-gloom"
 
 # Also assert parse-time refusal for layer prefix on composite-only filters.
 out=$("$BIN" "$RED_FIX" --filter "fg:vignette=10" -o "$OUT/t35-bad.png" 2>&1); rc=$?
@@ -324,6 +324,13 @@ red_removed "T55" "57" "--feather" "5"
 red_removed "T55" "57" "--threshold" "0.5"
 red_removed "T56" "58" "--mask-only"
 
+# --- Removals T64..T66 (KISS+DRY: collapse duplicates into the canonical surface) ---
+# --algo is a duplicate of --type; --padding is a duplicate of --crop-margin <single>;
+# --shadow is a duplicate of --shadow-type drop. Use --type, --crop-margin, --shadow-type.
+red_removed "T64" "66" "--algo" "vn-mask"
+red_removed "T65" "66" "--padding" "10%"
+red_removed "T66" "66" "--shadow"
+
 # --- Housekeeping T57..T61 ---
 
 # T57 #59: JPEG + alpha-producing filter -> exit 1 with helpful diagnostic.
@@ -349,11 +356,11 @@ PORT=18790
 SERVER_PID=$!
 if wait_for_server "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
     dst="$OUT/t59-server.png"
-    out=$(curl -fsS -X POST "http://127.0.0.1:$PORT/v1.0/bgbgone" \
+    out=$(curl -fsS -X POST "http://127.0.0.1:$PORT/bgbgone" \
         -F "image_file=@$RED_FIX" -F "format=png" -F "filter=bg:grayscale" \
         -o "$dst" 2>&1); rc=$?
     if [ $rc -eq 0 ] && check_png_rgba "$dst"; then
-        pass "T59 #61 HTTP /v1.0/bgbgone accepts filter form field"
+        pass "T59 #61 HTTP /bgbgone accepts filter form field"
     else
         fail "T59 #61 HTTP filter form field" "rc=$rc out=$out"
     fi

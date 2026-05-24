@@ -132,7 +132,12 @@ public enum OpacityFilter: Filter {
     public static let name = "opacity"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        let value = max(0, min(1, try PixelFilterHelper.floatArg(args, default: 1.0)))
+        let value = try PixelFilterHelper.requireRange(
+            PixelFilterHelper.floatArg(args, default: 1.0),
+            0.0...1.0,
+            name: "value",
+            filter: name
+        )
         let aVector = CIVector(x: 0, y: 0, z: 0, w: CGFloat(value))
         return try PixelFilterHelper.applyCI(name: "CIColorMatrix", params: ["inputAVector": aVector], to: image, on: layer, humanName: name)
     }
@@ -195,8 +200,8 @@ public enum LevelsFilter: Filter {
                 }
             }
         }
-        black = normalizedLevelEndpoint(black)
-        white = normalizedLevelEndpoint(white)
+        black = try normalizedLevelEndpoint(black, name: "black")
+        white = try normalizedLevelEndpoint(white, name: "white")
         // Apply a CIColorMatrix that maps [black, white] -> [0, 1], then gamma.
         let scale = white > black ? CGFloat(1.0 / (white - black)) : 1.0
         let offset = CGFloat(-black) * scale
@@ -214,9 +219,17 @@ public enum LevelsFilter: Filter {
         return step
     }
 
-    private static func normalizedLevelEndpoint(_ value: Double) -> Double {
+    private static func normalizedLevelEndpoint(_ value: Double, name argName: String) throws -> Double {
+        guard (0.0...255.0).contains(value) else {
+            throw BgBgOneError.parser(
+                ErrorCodes.parseFlagValueInvalid,
+                "filter levels: \(argName) must be 0..255, got \(value)",
+                origin: "--filter",
+                context: ["filter": name, "arg": argName, "value": String(value)]
+            )
+        }
         let normalized = value > 1.0 ? value / 255.0 : value
-        return max(0.0, min(1.0, normalized))
+        return normalized
     }
 }
 

@@ -17,17 +17,23 @@ do {
         stdoutPath: stdoutFilePath()
     )
 } catch let e as BgBgOneError {
-    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(e).utf8))
+    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(e, quiet: requestedQuiet(args)).utf8))
     exit(e.exitCode)
 } catch {
     let wrapped = BgBgOneError.parser(ErrorCodes.parseFlagUnknown, error.localizedDescription)
-    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(wrapped).utf8))
+    FileHandle.standardError.write(Data(ErrorRenderer.stderrText(wrapped, quiet: requestedQuiet(args)).utf8))
     exit(2)
 }
 
 switch cfg.mode {
 case .helpRequested:
-    CLI.printHelp()
+    if cfg.inputs.first == "filters" {
+        CLI.printFiltersList()
+    } else if let first = cfg.inputs.first, first.hasPrefix("filter=") {
+        CLI.printFilterHelp(name: String(first.dropFirst("filter=".count)))
+    } else {
+        CLI.printHelp()
+    }
     exit(0)
 case .versionRequested:
     CLI.printVersion()
@@ -67,8 +73,8 @@ if cfg.inputs.count == 1 {
         let results = try BgBgOne.runMany(cfg)
         for result in results {
             if cfg.outputMode == .json || cfg.outputMode == .ndjson {
-                print(result.toJSON())
-            } else if !cfg.quiet && result.output != "-" {
+                print(result.toJSON(filters: cfg.filters))
+            } else if cfg.verbose && !cfg.quiet && result.output != "-" {
                 FileHandle.standardError.write(Data("bgbgone: \(result.input) -> \(result.output) [\(result.algo)] \(result.width)x\(result.height)\n".utf8))
             }
         }
@@ -129,8 +135,8 @@ if cfg.inputs.count == 1 {
         case .success(let results):
             for result in results {
                 if cfg.outputMode == .json || cfg.outputMode == .ndjson {
-                    print(result.toJSON())
-                } else if !cfg.quiet && result.output != "-" {
+                    print(result.toJSON(filters: cfg.filters))
+                } else if cfg.verbose && !cfg.quiet && result.output != "-" {
                     FileHandle.standardError.write(Data("bgbgone: \(result.input) -> \(result.output) [\(result.algo)] \(result.width)x\(result.height)\n".utf8))
                 }
             }
@@ -193,4 +199,8 @@ private func stdoutFilePath() -> String? {
         String(cString: buffer.baseAddress!)
     }
     return resolved.isEmpty ? nil : resolved
+}
+
+private func requestedQuiet(_ args: [String]) -> Bool {
+    args.contains("--quiet")
 }

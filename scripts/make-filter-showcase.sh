@@ -73,12 +73,12 @@ trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
 echo "-- showcase 4: vintage backdrop (Parastoo Ahmadi, library bookshelves go sepia; subject keeps colour) --"
 # HYPOTHESIS: library bookshelves with warm wooden light have rich detail.
-# --algo person isolates Parastoo cleanly. bg gets sepia + slight darken +
+# --type person isolates Parastoo cleanly. bg gets sepia + slight darken +
 # desaturate (old-library backdrop); fg keeps original colour (floral dress,
 # red lipstick stay vivid). Vignette darkens corners for classic film look.
 cp "$PARASTOO" "$OUT/04-parastoo-before.jpg"
-"$BIN" "$PARASTOO" --algo person \
-  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; vignette=1.8:1.1" \
+"$BIN" "$PARASTOO" --type person \
+  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; composite:vignette=1.8:1.1" \
   -o "$OUT/04-parastoo-vintage.jpg" >/dev/null
 trash_path "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
@@ -108,14 +108,14 @@ magick "$OUT/feather/corgi-f16.png" -background "#1a2233" -alpha background -fla
 magick "$OUT/feather/zoom-f0.jpg" "$OUT/feather/zoom-f16.jpg" +append "$OUT/feather-zoom.jpg"
 echo "  ok  feather-zoom.jpg"
 
-echo "-- showcase 5b: yoga with --algo person (isolates the main subject from neighbours) --"
+echo "-- showcase 5b: yoga with --type person (isolates the main subject from neighbours) --"
 # HYPOTHESIS: the yoga photo has several people on adjacent mats. Default
-# vn-mask picks up multiple instances. --algo person uses VNGeneratePerson
+# vn-mask picks up multiple instances. --type person uses VNGeneratePerson
 # SegmentationRequest which is tuned for human subjects and prefers the
 # largest / most prominent person.
 cp "$YOGA" "$OUT/05-yoga-before.jpg"
-"$BIN" "$YOGA" --algo person --filter "bg:blur=40" -o "$OUT/05-yoga-person-portrait.jpg" >/dev/null
-"$BIN" "$YOGA" --algo person --filter "bg:grayscale,adjust=brightness=-0.1" -o "$OUT/05-yoga-person-colourpop.jpg" >/dev/null
+"$BIN" "$YOGA" --type person --filter "bg:blur=40" -o "$OUT/05-yoga-person-portrait.jpg" >/dev/null
+"$BIN" "$YOGA" --type person --filter "bg:grayscale,adjust=brightness=-0.1" -o "$OUT/05-yoga-person-colourpop.jpg" >/dev/null
 
 # ============ One example per filter for docs/filters/<name>.md ============
 # Each filter rendered against the same canonical subject (Red Panda over its
@@ -165,10 +165,10 @@ run_filter "crystallize"     "bg:crystallize=30"
 run_filter "pointillize"     "bg:pointillize=15"
 run_filter "comic"           "all:comic"
 run_filter "noise"           "all:noise=0.3"
-run_filter "vignette"        "all:vignette=2:1"
-run_filter "vignette-effect" "all:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5"
-run_filter "bloom"           "all:bloom=1.0:18"
-run_filter "gloom"           "all:gloom=1.0:18"
+run_filter "vignette"        "composite:vignette=2:1"
+run_filter "vignette-effect" "composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5"
+run_filter "bloom"           "composite:bloom=1.0:18"
+run_filter "gloom"           "composite:gloom=1.0:18"
 run_filter "outline"         "fg:outline=color=#ffaa00:width=6"
 run_filter "glow"            "fg:glow=color=#ffff80:radius=25:intensity=0.8"
 run_filter "shadow"          "fg:shadow=blur=14:offset=6,6:opacity=0.6:color=#000"
