@@ -11,24 +11,25 @@ public enum PixelFilterHelper {
         params: [String: Any],
         to layered: LayeredImage,
         on layer: FilterLayer,
-        humanName: String
+        humanName: String,
+        forceOpaque: Bool = false
     ) throws -> LayeredImage {
         var out = layered
         switch layer {
         case .fg:
-            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName)
+            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
         case .bg:
-            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName)
+            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
         case .all:
-            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName)
-            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName)
+            out.foreground = try transform(layered.foreground, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
+            out.background = try transform(layered.background, ciName: ciName, params: params, humanName: humanName, forceOpaque: forceOpaque)
         case .mask:
             throw rejectMask(humanName)
         }
         return out
     }
 
-    private static func transform(_ image: CIImage, ciName: String, params: [String: Any], humanName: String) throws -> CIImage {
+    private static func transform(_ image: CIImage, ciName: String, params: [String: Any], humanName: String, forceOpaque: Bool) throws -> CIImage {
         guard let filter = CIFilter(name: ciName) else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "\(ciName) unavailable (filter \(humanName))")
         }
@@ -36,6 +37,20 @@ public enum PixelFilterHelper {
         for (k, v) in params { filter.setValue(v, forKey: k) }
         guard let out = filter.outputImage else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "\(humanName): no output from \(ciName)")
+        }
+        let cropped = out.cropped(to: image.extent)
+        return forceOpaque ? try opaque(cropped, humanName: humanName) : cropped
+    }
+
+    private static func opaque(_ image: CIImage, humanName: String) throws -> CIImage {
+        guard let filter = CIFilter(name: "CIColorMatrix") else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIColorMatrix unavailable (filter \(humanName))")
+        }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputAVector")
+        filter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputBiasVector")
+        guard let out = filter.outputImage else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "\(humanName): cannot make output opaque")
         }
         return out.cropped(to: image.extent)
     }
@@ -61,6 +76,10 @@ public enum PixelFilterHelper {
                 return d
             default: continue
             }
+        }
+        if key == nil, args.count == 1, case .keyed(let k, let v) = args[0] {
+            guard let d = Double(v) else { throw badArg(value: v, name: k) }
+            return d
         }
         return def
     }

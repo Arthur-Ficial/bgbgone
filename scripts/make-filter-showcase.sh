@@ -14,6 +14,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
 FIX="$ROOT/Tests/fixtures/showcase"
 BG="$FIX/bg"
@@ -68,7 +69,7 @@ cp "$CORGI" "$OUT/03-corgi-before.jpg"
 "$BIN" "$CORGI" --bg "color:#1a2233" \
   --filter "fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=30" \
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
-rm -f "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
+trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
 echo "-- showcase 4: vintage backdrop (Parastoo Ahmadi, library bookshelves go sepia; subject keeps colour) --"
 # HYPOTHESIS: library bookshelves with warm wooden light have rich detail.
@@ -79,7 +80,7 @@ cp "$PARASTOO" "$OUT/04-parastoo-before.jpg"
 "$BIN" "$PARASTOO" --algo person \
   --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; vignette=1.8:1.1" \
   -o "$OUT/04-parastoo-vintage.jpg" >/dev/null
-rm -f "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
+trash_path "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
 # ============ feather progression panel + close-up (restored from removed --feather docs) ============
 echo "-- feather progression: 0 / 8 / 16 / 32 px on the corgi against transparent --"

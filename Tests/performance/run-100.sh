@@ -8,6 +8,7 @@ BIN="${1:-bgbgone}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 TEST_ROOT="$(cd "$DIR/.." && pwd)"
 REPO_ROOT="$(cd "$DIR/../.." && pwd)"
+source "$REPO_ROOT/scripts/trash.sh"
 FIX="$TEST_ROOT/fixtures"
 WORK="$DIR/_tmp_100"
 IN="$WORK/in"
@@ -16,7 +17,7 @@ STATS="$WORK/stats.tsv"
 README="$REPO_ROOT/README.md"
 RUNS=5
 
-rm -rf "$WORK"
+trash_path "$WORK"
 mkdir -p "$IN" "$OUT"
 : > "$STATS"
 
@@ -39,7 +40,7 @@ if [ "${#inputs[@]}" -ne 100 ]; then
 fi
 
 for run in $(seq 1 "$RUNS"); do
-    rm -rf "$OUT"
+    trash_path "$OUT"
     mkdir -p "$OUT"
 
     start=$(python3 - <<'PY'

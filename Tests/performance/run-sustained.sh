@@ -40,6 +40,7 @@ fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
 TEST_ROOT="$(cd "$DIR/.." && pwd)"
 REPO_ROOT="$(cd "$DIR/../.." && pwd)"
+source "$REPO_ROOT/scripts/trash.sh"
 FIX="$TEST_ROOT/fixtures"
 BATCH=100
 TOTAL=$(( BATCH * INVOCATIONS ))
@@ -49,7 +50,7 @@ OUT="$WORK/out"
 STATS="$WORK/stats.tsv"
 README="$REPO_ROOT/README.md"
 
-rm -rf "$WORK"
+trash_path "$WORK"
 mkdir -p "$IN" "$OUT"
 : > "$STATS"
 
@@ -77,7 +78,7 @@ if [ "$width" -lt 2 ]; then width=2; fi
 
 echo "bgbgone $INVOCATIONS x $BATCH = $TOTAL image operations:"
 for run in $(seq 1 "$INVOCATIONS"); do
-    rm -rf "$OUT"
+    trash_path "$OUT"
     mkdir -p "$OUT"
 
     start=$(python3 - <<'PY'

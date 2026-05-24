@@ -14,11 +14,12 @@ fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$DIR/../.." && pwd)"
+source "$PROJECT_ROOT/scripts/trash.sh"
 FIX="$ROOT/fixtures"
 OUT="$DIR/_out"
 TMP="$DIR/_tmp"
 
-rm -rf "$OUT" "$TMP"
+trash_path "$OUT" "$TMP"
 mkdir -p "$OUT" "$TMP"
 
 PASSED=0

@@ -116,9 +116,23 @@ public enum EmbossFilter: Filter {
     public static let name = "emboss"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        // 3x3 emboss kernel: -2 -1 0 / -1 1 1 / 0 1 2 (classic photo emboss).
-        let weights = CIVector(values: [-2, -1, 0, -1, 1, 1, 0, 1, 2], count: 9)
-        return try PixelFilterHelper.applyCI(name: "CIConvolution3X3", params: ["inputWeights": weights, "inputBias": 0.5], to: image, on: layer, humanName: name)
+        // Zero-sum emboss kernel with 0.5 bias keeps relief centered around gray.
+        let weights = CIVector(values: [-2, -1, 0, -1, 0, 1, 0, 1, 2], count: 9)
+        let relief = try PixelFilterHelper.applyCI(
+            name: "CIConvolution3X3",
+            params: ["inputWeights": weights, "inputBias": 0.5],
+            to: image,
+            on: layer,
+            humanName: name,
+            forceOpaque: true
+        )
+        return try PixelFilterHelper.applyCI(
+            name: "CIColorControls",
+            params: ["inputSaturation": 0.0, "inputContrast": 2.0, "inputBrightness": -0.85],
+            to: relief,
+            on: layer,
+            humanName: name
+        )
     }
 }
 

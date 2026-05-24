@@ -41,6 +41,58 @@ red_removed() {
     fi
 }
 
+mean_rgb_crop() {
+    local img="$1" crop="$2"
+    magick "$img" -crop "$crop" +repage \
+        -format '%[fx:int(255*mean.r)] %[fx:int(255*mean.g)] %[fx:int(255*mean.b)]' info:
+}
+
+assert_grayscale_not_white_crop() {
+    local img="$1" crop="$2"
+    local rgb r g b chroma maxc minc brightness
+    rgb=$(mean_rgb_crop "$img" "$crop") || return 1
+    read -r r g b <<< "$rgb"
+    maxc=$r; [ "$g" -gt "$maxc" ] && maxc=$g; [ "$b" -gt "$maxc" ] && maxc=$b
+    minc=$r; [ "$g" -lt "$minc" ] && minc=$g; [ "$b" -lt "$minc" ] && minc=$b
+    chroma=$((maxc - minc))
+    brightness=$(((r + g + b) / 3))
+    [ "$chroma" -le 8 ] && [ "$brightness" -lt 245 ]
+}
+
+changed_pixel_percent() {
+    local a="$1" b="$2" ae total
+    ae=$(magick compare -metric AE "$a" "$b" null: 2>&1 >/dev/null || true)
+    ae=${ae%% *}
+    total=$(magick identify -format '%[fx:w*h]' "$a")
+    awk -v ae="$ae" -v total="$total" 'BEGIN{printf "%.4f", (ae/total)*100}'
+}
+
+assert_nearly_same_image() {
+    local a="$1" b="$2" max_pct="${3:-0.10}" pct
+    pct=$(changed_pixel_percent "$a" "$b")
+    awk -v pct="$pct" -v max="$max_pct" 'BEGIN{exit !(pct <= max)}'
+}
+
+assert_crop_mean_brightness_above() {
+    local img="$1" crop="$2" min_brightness="$3" rgb r g b brightness
+    rgb=$(mean_rgb_crop "$img" "$crop") || return 1
+    read -r r g b <<< "$rgb"
+    brightness=$(((r + g + b) / 3))
+    [ "$brightness" -gt "$min_brightness" ]
+}
+
+assert_image_stddev_above() {
+    local img="$1" min_stddev="$2" stddev
+    stddev=$(magick "$img" -colorspace Gray -format '%[fx:int(255*standard_deviation.r)]' info:) || return 1
+    [ "$stddev" -gt "$min_stddev" ]
+}
+
+assert_image_mean_below() {
+    local img="$1" max_mean="$2" mean
+    mean=$(magick "$img" -colorspace Gray -format '%[fx:int(255*mean.r)]' info:) || return 1
+    [ "$mean" -lt "$max_mean" ]
+}
+
 echo ""
 echo "filter chain RED tests (epic #1)"
 
@@ -79,11 +131,90 @@ else
     fail "T3 #5 empty filter chain invariant" "rc1=$rc1 rc2=$rc2"
 fi
 
+# Regression: bg-layer filters without an explicit --bg use the source image as
+# the background plate, so colour-pop docs and panels are not rendered over
+# blank white/transparent backgrounds.
+PANDA_FIX="$FIX/showcase/Red_Panda__24986761703_.jpg"
+out=$("$BIN" "$PANDA_FIX" --filter "bg:grayscale" -o "$OUT/t3b-bg-autopromote.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ] && check_jpeg "$OUT/t3b-bg-autopromote.jpg" \
+    && assert_grayscale_not_white_crop "$OUT/t3b-bg-autopromote.jpg" "80x80+20+20"; then
+    pass "T3b bg: filter without --bg auto-promotes source background"
+else
+    fail "T3b bg: filter auto-promotes source background" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
 # T4 #6: perf baseline file exists.
 if [ -f "$ROOT/performance/baseline.json" ] || [ -f "$ROOT/../Tests/performance/baseline.json" ]; then
     pass "T4 #6 perf baseline.json checked in"
 else
     fail "T4 #6 perf baseline.json checked in" "Tests/performance/baseline.json not found"
+fi
+
+# Parameter mapping regressions: advertised keyed and positional forms must
+# reach the same Core Image parameters.
+out=$("$BIN" "$PANDA_FIX" --filter "bg:sepia=intensity=0.2" -o "$OUT/t4b-sepia-keyed.jpg" 2>&1); rc1=$?
+out2=$("$BIN" "$PANDA_FIX" --filter "bg:sepia=0.2" -o "$OUT/t4b-sepia-pos.jpg" 2>&1); rc2=$?
+if [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ] && assert_nearly_same_image "$OUT/t4b-sepia-keyed.jpg" "$OUT/t4b-sepia-pos.jpg"; then
+    pass "T4b sepia keyed intensity maps to the same parameter as positional"
+else
+    fail "T4b sepia keyed intensity" "rc1=$rc1 rc2=$rc2 delta=$(changed_pixel_percent "$OUT/t4b-sepia-keyed.jpg" "$OUT/t4b-sepia-pos.jpg" 2>/dev/null || echo n/a)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "all:edges=intensity=2.5" -o "$OUT/t4c-edges-keyed.jpg" 2>&1); rc1=$?
+out2=$("$BIN" "$PANDA_FIX" --filter "all:edges=2.5" -o "$OUT/t4c-edges-pos.jpg" 2>&1); rc2=$?
+if [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ] && assert_nearly_same_image "$OUT/t4c-edges-keyed.jpg" "$OUT/t4c-edges-pos.jpg"; then
+    pass "T4c edges keyed intensity maps to the same parameter as positional"
+else
+    fail "T4c edges keyed intensity" "rc1=$rc1 rc2=$rc2 delta=$(changed_pixel_percent "$OUT/t4c-edges-keyed.jpg" "$OUT/t4c-edges-pos.jpg" 2>/dev/null || echo n/a)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "bg:motion-blur=radius=22:angle=45" -o "$OUT/t4d-motion-keyed.jpg" 2>&1); rc1=$?
+out2=$("$BIN" "$PANDA_FIX" --filter "bg:motion-blur=22:45" -o "$OUT/t4d-motion-pos.jpg" 2>&1); rc2=$?
+if [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ] && assert_nearly_same_image "$OUT/t4d-motion-keyed.jpg" "$OUT/t4d-motion-pos.jpg"; then
+    pass "T4d motion-blur positional radius/angle maps correctly"
+else
+    fail "T4d motion-blur positional radius/angle" "rc1=$rc1 rc2=$rc2 delta=$(changed_pixel_percent "$OUT/t4d-motion-keyed.jpg" "$OUT/t4d-motion-pos.jpg" 2>/dev/null || echo n/a)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "all:unsharp=radius=3:intensity=1.0" -o "$OUT/t4e-unsharp-keyed.jpg" 2>&1); rc1=$?
+out2=$("$BIN" "$PANDA_FIX" --filter "all:unsharp=3:1.0" -o "$OUT/t4e-unsharp-pos.jpg" 2>&1); rc2=$?
+if [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ] && assert_nearly_same_image "$OUT/t4e-unsharp-keyed.jpg" "$OUT/t4e-unsharp-pos.jpg"; then
+    pass "T4e unsharp positional radius/intensity maps correctly"
+else
+    fail "T4e unsharp positional radius/intensity" "rc1=$rc1 rc2=$rc2 delta=$(changed_pixel_percent "$OUT/t4e-unsharp-keyed.jpg" "$OUT/t4e-unsharp-pos.jpg" 2>/dev/null || echo n/a)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "bg:levels=black=20:white=235:gamma=1.0" -o "$OUT/t4f-levels-255.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ] && assert_crop_mean_brightness_above "$OUT/t4f-levels-255.jpg" "80x80+20+20" 20; then
+    pass "T4f levels accepts 0..255 black/white inputs without crushing to black"
+else
+    fail "T4f levels 0..255 black/white" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "all:edge-work=3" -o "$OUT/t4g-edge-work.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ] && assert_image_stddev_above "$OUT/t4g-edge-work.jpg" 10; then
+    pass "T4g edge-work JPEG keeps opaque line-art pixels"
+else
+    fail "T4g edge-work JPEG line art" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+out=$("$BIN" "$PANDA_FIX" --filter "all:emboss" -o "$OUT/t4h-emboss.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ] && assert_image_stddev_above "$OUT/t4h-emboss.jpg" 10 \
+    && assert_image_mean_below "$OUT/t4h-emboss.jpg" 230; then
+    pass "T4h emboss emits visible gray relief instead of a white wash"
+else
+    fail "T4h emboss gray relief" "rc=$rc out=$(echo "$out" | head -1)"
+fi
+
+# fg-only pixel filters without explicit --bg must auto-promote the source
+# image as background, NOT fall back to JPEG white. Render fg:sepia on a
+# scene where the background is far from white and check that the upper-left
+# crop is dark scene pixels, not white bleed-through.
+out=$("$BIN" "$PANDA_FIX" --filter "fg:sepia=0.85" -o "$OUT/t4i-fg-autopromote.jpg" 2>&1); rc=$?
+if [ $rc -eq 0 ] && assert_image_mean_below "$OUT/t4i-fg-autopromote.jpg" 230; then
+    pass "T4i fg-only filter auto-promotes source as bg (no white bleed)"
+else
+    fail "T4i fg-only auto-promote bg" "rc=$rc out=$(echo "$out" | head -1)"
 fi
 
 # --- Filters T5..T53 (one test per filter, all RED) ---

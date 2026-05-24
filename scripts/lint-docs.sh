@@ -10,10 +10,11 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
 FIX="$ROOT/Tests/fixtures/01-nasa-aldrin-moon.jpg"
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'trash_path "$TMP_DIR"' EXIT
 
 if [ ! -x "$BIN" ]; then
     echo "lint-docs: binary not found at $BIN - run 'swift build -c release' first" >&2

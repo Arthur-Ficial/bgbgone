@@ -13,6 +13,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
 FIX="$ROOT/Tests/fixtures/showcase"
 PANEL_OUT="$ROOT/docs/images/filters/panels"
@@ -91,28 +92,28 @@ panel_for_subject() {
         local tmp; tmp=$(mktemp -d)
         case "$layers" in
             all)
-                "$BIN" "$subj" --algo person --filter "bg:${name}${args}" -o "$tmp/bg.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
-                "$BIN" "$subj" --algo person --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
-                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --filter "bg:${name}${args}" -o "$tmp/bg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/bg.jpg"  "bg:${name}${args}"  "$tmp/bg-l.jpg"
                 label_under "$tmp/fg.jpg"  "fg:${name}${args}"  "$tmp/fg-l.jpg"
                 label_under "$tmp/all.jpg" "all:${name}${args}" "$tmp/all-l.jpg"
                 magick "$tmp/bg-l.jpg" "$tmp/fg-l.jpg" "$tmp/all-l.jpg" +append "$out"
                 ;;
             all-only)
-                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --filter "all:${name}${args}" -o "$tmp/all.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/all.jpg" "all:${name}${args}" "$out"
                 ;;
             fg-only)
-                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "fg:${name}${args}" -o "$tmp/fg.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/fg.jpg" "fg:${name}${args}" "$out"
                 ;;
             mask-only)
-                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "mask:${name}${args}" -o "$tmp/mask.jpg" >/dev/null 2>&1 || { rm -rf "$tmp"; continue; }
+                "$BIN" "$subj" --algo person --bg color:#1a2233 --filter "mask:${name}${args}" -o "$tmp/mask.jpg" >/dev/null 2>&1 || { trash_path "$tmp"; continue; }
                 label_under "$tmp/mask.jpg" "mask:${name}${args}" "$out"
                 ;;
         esac
-        rm -rf "$tmp"
+        trash_path "$tmp"
         echo "  ok  ${tag}-${name}"
     done <<< "$ROWS"
 }

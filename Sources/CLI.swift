@@ -41,20 +41,18 @@ enum CLI {
           --bg-fit cover|contain|tile|center    fit mode for image backgrounds
 
         MATTE / EDGE:
-          --mask-only                           output the alpha mask only
           --channels rgba|alpha                 finalized image or alpha mask
-          --feather <px>                        edge softening (default: 1)
-          --threshold <0..1>                    mask binarisation
           --padding <px|N%>                     extra space around subject
           --crop-margin <1|2|4 values>          API-style crop margins (px or %)
           --crop                                tight-crop to subject bbox
           --roi "x1 y1 x2 y2"                   keep detections inside region of interest
-          --scale <10%..100%|original>          scale subject on the canvas
-          --position <center|x% y%|original>    place scaled subject on the canvas
           --semitransparency true|false         keep or harden semi-transparent matte pixels
           --shadow                              drop shadow under cutout
           --shadow-type auto|drop|3D|car|none   shadow compatibility selector
           --shadow-opacity <0..100|auto>        shadow darkness
+          (use --filter "mask:feather=N", "mask:threshold=N", or --channels alpha
+           in place of the removed --feather / --threshold / --mask-only flags;
+           --scale and --position were removed without replacement)
 
         ALGORITHM:
           --algo auto|vn-mask|person|saliency   (default: auto)
@@ -88,7 +86,7 @@ enum CLI {
         ROUTING RULES:
           -o and --out-dir are mutually exclusive
           stdin input requires stdout or -o; --out-dir needs file inputs
-          --multi writes files; it cannot combine with -o or --mask-only
+          --multi writes files; it cannot combine with -o
 
         SERVER:
           --server                             run local HTTP API

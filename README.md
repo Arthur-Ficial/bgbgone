@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.1.5](https://img.shields.io/badge/version-1.1.5-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Website](https://img.shields.io/badge/website-bgbgone.franzai.com-1f6feb)](https://bgbgone.franzai.com/)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
@@ -611,7 +611,7 @@ make test-performance-100
 bash Tests/performance/run-100.sh .build/release/bgbgone
 ```
 
-Average over 5 release-binary runs: **100 images in 1.223 s, 81.74 images/s, 12.2 ms/image** with 95,487,542 output bytes verified per run. On-device, no network, no GPU contention with another process.
+Average over 5 release-binary runs: **100 images in 1.241 s, 80.56 images/s, 12.4 ms/image** with 95,487,542 output bytes verified per run. On-device, no network, no GPU contention with another process.
 
 ### Optional sustained-throughput tests (1k / 10k)
 

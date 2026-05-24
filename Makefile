@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint-readme lint-docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images release
 
 # --- Environment ---
 
@@ -39,6 +39,13 @@ test-unit: check-toolchain generate-build-info
 
 test-integration: build
 	bash Tests/integration/run.sh .build/release/$(BINARY)
+
+lint-readme:
+	bash scripts/lint-readme.sh
+
+lint-docs: check-toolchain generate-build-info
+	swift build -c release
+	bash scripts/lint-docs.sh
 
 performance-100:
 	bash Tests/performance/run-100.sh .build/release/$(BINARY)
@@ -120,14 +127,13 @@ version:
 
 uninstall:
 	@if [ -w "$(PREFIX)/bin" ]; then \
-		rm -f $(PREFIX)/bin/$(BINARY); \
+		bash -c 'source scripts/trash.sh; trash_path "$(PREFIX)/bin/$(BINARY)"'; \
 	else \
-		sudo rm -f $(PREFIX)/bin/$(BINARY); \
+		sudo bash -c 'source "$(PWD)/scripts/trash.sh"; trash_path "$(PREFIX)/bin/$(BINARY)"'; \
 	fi
 
 clean:
-	swift package clean
-	rm -rf Tests/integration/_out Tests/integration/_tmp
+	bash -c 'source scripts/trash.sh; trash_path .build Tests/integration/_out Tests/integration/_tmp'
 
 package-release-asset:
 	@v=$$(cat $(VERSION_FILE)); \

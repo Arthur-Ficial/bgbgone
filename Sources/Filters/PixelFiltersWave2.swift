@@ -22,9 +22,14 @@ public enum MotionBlurFilter: Filter {
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var radius = 20.0, angle = 0.0
+        var positional = 0
         for a in args {
             switch a {
-            case .value(let v): if let d = Double(v) { radius = d }
+            case .value(let v):
+                if let d = Double(v) {
+                    if positional == 0 { radius = d } else if positional == 1 { angle = d * .pi / 180 }
+                    positional += 1
+                }
             case .keyed(let k, let v):
                 if let d = Double(v) {
                     switch k.lowercased() {
@@ -67,6 +72,7 @@ public enum UnsharpFilter: Filter {
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         var radius = 2.5, intensity = 0.5
+        var positional = 0
         for a in args {
             if case .keyed(let k, let v) = a, let d = Double(v) {
                 switch k.lowercased() {
@@ -75,7 +81,8 @@ public enum UnsharpFilter: Filter {
                 default: break
                 }
             } else if case .value(let v) = a, let d = Double(v) {
-                radius = d
+                if positional == 0 { radius = d } else if positional == 1 { intensity = d }
+                positional += 1
             }
         }
         return try PixelFilterHelper.applyCI(name: "CIUnsharpMask", params: ["inputRadius": radius, "inputIntensity": intensity], to: image, on: layer, humanName: name)
@@ -97,7 +104,7 @@ public enum EdgeWorkFilter: Filter {
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         let radius = try PixelFilterHelper.floatArg(args, default: 3.0)
-        return try PixelFilterHelper.applyCI(name: "CIEdgeWork", params: ["inputRadius": radius], to: image, on: layer, humanName: name)
+        return try PixelFilterHelper.applyCI(name: "CIEdgeWork", params: ["inputRadius": radius], to: image, on: layer, humanName: name, forceOpaque: true)
     }
 }
 
@@ -188,6 +195,8 @@ public enum LevelsFilter: Filter {
                 }
             }
         }
+        black = normalizedLevelEndpoint(black)
+        white = normalizedLevelEndpoint(white)
         // Apply a CIColorMatrix that maps [black, white] -> [0, 1], then gamma.
         let scale = white > black ? CGFloat(1.0 / (white - black)) : 1.0
         let offset = CGFloat(-black) * scale
@@ -203,6 +212,11 @@ public enum LevelsFilter: Filter {
             step = try PixelFilterHelper.applyCI(name: "CIGammaAdjust", params: ["inputPower": gamma], to: step, on: layer, humanName: name)
         }
         return step
+    }
+
+    private static func normalizedLevelEndpoint(_ value: Double) -> Double {
+        let normalized = value > 1.0 ? value / 255.0 : value
+        return max(0.0, min(1.0, normalized))
     }
 }
 

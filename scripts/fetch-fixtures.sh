@@ -15,6 +15,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$DIR/scripts/trash.sh"
 OUT="$DIR/Tests/fixtures"
 mkdir -p "$OUT"
 
@@ -62,7 +63,7 @@ for entry in "${FIXTURES[@]}"; do
   echo "  →     $local_name"
   if ! curl -sSfL -A "$UA" -o "$dest" "$url"; then
     echo "        FAILED: $url"
-    rm -f "$dest"
+    trash_path "$dest"
     exit 1
   fi
   ok=$((ok + 1))

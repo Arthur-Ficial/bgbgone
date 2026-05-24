@@ -8,10 +8,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/trash.sh"
 FX="$ROOT/Tests/fixtures"
 OUT="$ROOT/docs/images"
 WORK="$(mktemp -d -t bgbgone-readme.XXXXXX)"
-trap 'rm -rf "$WORK"' EXIT
+trap 'trash_path "$WORK"' EXIT
 
 # Pin to the freshly-built release binary if one exists, otherwise fall back to
 # `bgbgone` on PATH. Required because `bgbgone` on PATH can resolve to an older
@@ -276,9 +277,14 @@ ESUB="$FX/07-einstein-1921.jpg"
 
 # Feather progression on white bg so edges are visible.
 for fpx in 0 1 4 8 16; do
-    "$BGBGONE" "$ESUB" --bg color:white --feather "$fpx" \
-        -o "$WORK/edge/feather-$fpx.png" --quiet
-    panel "$WORK/edge/feather-$fpx.png" "--feather $fpx" \
+    if [ "$fpx" = "0" ]; then
+        "$BGBGONE" "$ESUB" --bg color:white \
+            -o "$WORK/edge/feather-$fpx.png" --quiet
+    else
+        "$BGBGONE" "$ESUB" --bg color:white --filter "mask:feather=$fpx" \
+            -o "$WORK/edge/feather-$fpx.png" --quiet
+    fi
+    panel "$WORK/edge/feather-$fpx.png" "mask:feather=$fpx" \
           "$WORK/edge/feather-$fpx-p.png" 320 320
 done
 
@@ -289,7 +295,7 @@ row "$WORK/edge/row-feather.png" "" \
     "$WORK/edge/feather-8-p.png" \
     "$WORK/edge/feather-16-p.png"
 
-# crop / padding / shadow / mask-only
+# crop / padding / shadow / matte
 panel "$ESUB" "src" "$WORK/edge/src.png" 320 320
 
 "$BGBGONE" "$ESUB" --crop -o "$WORK/edge/crop.png" --quiet
@@ -301,8 +307,8 @@ panel "$WORK/edge/pad.png" "--crop --padding 10%" "$WORK/edge/pad-p.png" 320 320
 "$BGBGONE" "$ESUB" --bg color:white --shadow -o "$WORK/edge/shadow.png" --quiet
 panel "$WORK/edge/shadow.png" "--bg color:white --shadow" "$WORK/edge/shadow-p.png" 320 320
 
-"$BGBGONE" "$ESUB" --mask-only -o "$WORK/edge/mask.png" --quiet
-panel "$WORK/edge/mask.png" "--mask-only (alpha matte)" "$WORK/edge/mask-p.png" 320 320
+"$BGBGONE" "$ESUB" --channels alpha -o "$WORK/edge/mask.png" --quiet
+panel "$WORK/edge/mask.png" "--channels alpha (alpha matte)" "$WORK/edge/mask-p.png" 320 320
 
 row "$WORK/edge/row-misc.png" "" \
     "$WORK/edge/src.png" \
@@ -314,11 +320,11 @@ row "$WORK/edge/row-misc.png" "" \
 W=$(magick identify -format '%w' "$WORK/edge/row-feather.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--feather progression (0 → 16 px)" \
+    -annotate +0+0 "--filter \"mask:feather=N\" progression (0 → 16 px)" \
     "$WORK/edge/t1.png"
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--crop  ·  --padding  ·  --shadow  ·  --mask-only" \
+    -annotate +0+0 "--crop  ·  --padding  ·  --shadow  ·  --channels alpha" \
     "$WORK/edge/t2.png"
 
 stack "$OUT/showcase-edges.png" \
@@ -330,8 +336,8 @@ echo "    -> $OUT/showcase-edges.png"
 
 # Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
 ZOOM_SUB="$FX/02-nasa-mccandless-eva.jpg"
-"$BGBGONE" "$ZOOM_SUB" --feather 0 -o "$WORK/edge/zoom-f0.png" --quiet
-"$BGBGONE" "$ZOOM_SUB" --feather 8 -o "$WORK/edge/zoom-f8.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" -o "$WORK/edge/zoom-f0.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=8" -o "$WORK/edge/zoom-f8.png" --quiet
 
 zoom_panel() {
     local src="$1" label="$2" dst="$3"
@@ -350,9 +356,9 @@ zoom_panel() {
         -append PNG24:"$dst"
 }
 
-zoom_panel "$WORK/edge/zoom-f0.png" "--feather 0 (hard edge)" "$WORK/edge/zoom-f0-p.png"
-zoom_panel "$WORK/edge/zoom-f8.png" "--feather 8 (soft matte)" "$WORK/edge/zoom-f8-p.png"
-row "$WORK/edge/feather-zoom-row.png" "Edge refinement — --feather close-up around the subject outline" \
+zoom_panel "$WORK/edge/zoom-f0.png" "default (hard edge)" "$WORK/edge/zoom-f0-p.png"
+zoom_panel "$WORK/edge/zoom-f8.png" "mask:feather=8 (soft matte)" "$WORK/edge/zoom-f8-p.png"
+row "$WORK/edge/feather-zoom-row.png" "Edge refinement — mask:feather close-up around the subject outline" \
     "$WORK/edge/zoom-f0-p.png" \
     "$WORK/edge/zoom-f8-p.png"
 cp "$WORK/edge/feather-zoom-row.png" "$OUT/feather-zoom.png"
@@ -360,10 +366,10 @@ echo "    -> $OUT/feather-zoom.png"
 
 # Mask breakdown: source → alpha matte → final transparent cutout.
 MB_SUB="$FX/02-nasa-mccandless-eva.jpg"
-"$BGBGONE" "$MB_SUB" --mask-only -o "$WORK/edge/mb-mask.png" --quiet
+"$BGBGONE" "$MB_SUB" --channels alpha -o "$WORK/edge/mb-mask.png" --quiet
 "$BGBGONE" "$MB_SUB" -o "$WORK/edge/mb-cutout.png" --quiet
 panel "$MB_SUB" "src" "$WORK/edge/mb-src-p.png" 360 320
-panel "$WORK/edge/mb-mask.png" "--mask-only" "$WORK/edge/mb-mask-p.png" 360 320
+panel "$WORK/edge/mb-mask.png" "--channels alpha" "$WORK/edge/mb-mask-p.png" 360 320
 panel "$WORK/edge/mb-cutout.png" "cutout" "$WORK/edge/mb-cutout-p.png" 360 320
 row "$WORK/edge/mask-breakdown-row.png" "input → grayscale matte → transparent cutout" \
     "$WORK/edge/mb-src-p.png" \
@@ -501,10 +507,10 @@ stack "$OUT/showcase-pipeline.png" "$WORK/pipe/title.png" "$WORK/pipe/row.png"
 echo "    -> $OUT/showcase-pipeline.png"
 
 # ---- 9) Products: vintage PD ads → cutout → composited context -------------
-# For each product fixture: src → --mask-only (alpha matte) → cutout → recomposed
+# For each product fixture: src -> --channels alpha matte -> cutout -> recomposed
 # onto a PD background. All steps are real bgbgone calls.
 
-echo "==> products (with --mask-only and composited contexts)"
+echo "==> products (with --channels alpha and composited contexts)"
 mkdir -p "$WORK/prod"
 
 # product_row <fixture> <new-context-fixture> <caption-for-new-context> <out-row>
@@ -514,8 +520,8 @@ product_row() {
 
     panel "$src" "src · $base" "$WORK/prod/$base-src.png" 320 360
 
-    "$BGBGONE" "$src" --mask-only -o "$WORK/prod/$base-mask.png" --quiet
-    panel "$WORK/prod/$base-mask.png" "--mask-only (alpha matte)" "$WORK/prod/$base-mask-p.png" 320 360
+    "$BGBGONE" "$src" --channels alpha -o "$WORK/prod/$base-mask.png" --quiet
+    panel "$WORK/prod/$base-mask.png" "--channels alpha (matte)" "$WORK/prod/$base-mask-p.png" 320 360
 
     "$BGBGONE" "$src" -o "$WORK/prod/$base-cut.png" --quiet
     panel "$WORK/prod/$base-cut.png" "cutout (transparent)" "$WORK/prod/$base-cut-p.png" 320 360
@@ -553,7 +559,7 @@ product_row "$FX/13-singer-1892.jpg" \
 W=$(magick identify -format '%w' "$WORK/prod/row-typewriter.png")
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "Products — src · --mask-only · cutout · composed onto a new background" \
+    -annotate +0+0 "Products - src . --channels alpha . cutout . composed onto a new background" \
     PNG24:"$WORK/prod/title.png"
 stack "$OUT/showcase-products.png" \
     "$WORK/prod/title.png" \

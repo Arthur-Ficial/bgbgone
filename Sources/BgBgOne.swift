@@ -37,7 +37,7 @@ enum BgBgOne {
             processedMask = try ImageTransforms.position(processedMask, scalePercent: cfg.scalePercent, position: cfg.position)
             var final = try Compositor.compose(
                 masked: positionedMasked,
-                background: effectiveBackground(cfg),
+                background: effectiveBackground(cfg, input: input),
                 bgFit: cfg.bgFit,
                 dropShadow: cfg.dropShadow,
                 shadowOpacity: cfg.shadowOpacity
@@ -130,7 +130,7 @@ enum BgBgOne {
         var final: CGImage
         if !cfg.filters.isEmpty {
             let canvas = CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
-            let bgRendered = try BackgroundRenderer.render(effectiveBackground(cfg), bgFit: cfg.bgFit, canvas: canvas)
+            let bgRendered = try BackgroundRenderer.render(effectiveBackground(cfg, input: input), bgFit: cfg.bgFit, canvas: canvas)
             final = try FilterPipeline.executeAndFlatten(
                 foreground: cgImage,
                 mask: processedMask,
@@ -145,7 +145,7 @@ enum BgBgOne {
             // 2. compose with background (transparent = just emit the masked image)
             final = try Compositor.compose(
                 masked: positionedMasked,
-                background: effectiveBackground(cfg),
+                background: effectiveBackground(cfg, input: input),
                 bgFit: cfg.bgFit,
                 dropShadow: cfg.dropShadow,
                 shadowOpacity: cfg.shadowOpacity
@@ -173,11 +173,25 @@ enum BgBgOne {
         )
     }
 
-    private static func effectiveBackground(_ cfg: Config) -> Background {
+    private static func effectiveBackground(_ cfg: Config, input: String? = nil) -> Background {
+        if case .transparent = cfg.background,
+           filtersTouchSourceBackground(cfg.filters),
+           let input,
+           input != "-" {
+            return .image(input)
+        }
         if case .transparent = cfg.background, !cfg.outputFormat.supportsTransparency {
             return .solidColor(RGBA(r: 1, g: 1, b: 1, a: 1))
         }
         return cfg.background
+    }
+
+    private static func filtersTouchSourceBackground(_ chains: [FilterChain]) -> Bool {
+        chains.contains { chain in
+            chain.stages.contains { stage in
+                stage.layer == .bg || stage.layer == .all || stage.layer == .fg
+            }
+        }
     }
 
     private static func preparedMask(_ mask: CGImage, cfg: Config) throws -> CGImage {
