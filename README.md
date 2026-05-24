@@ -425,31 +425,33 @@ bgbgone red-panda.jpg --filter "bg:blur=60" -o portrait.jpg
 
 `CIGaussianBlur` at radius 60 runs on the background plate only; the foreground stays pin-sharp. Note: no `--bg` flag needed — when a chain uses the `bg` layer, bgbgone auto-promotes the source image as the background plate. Phone-camera portrait mode in one shell command.
 
-### 3. Sticker style — thick white halo + big drop shadow on white background
+### 3. Sticker style — die-cut white border with rounded corners + drop shadow
 
 ```bash
-bgbgone corgi.jpg --bg color:white \
-  --filter "fg:shadow=blur=30:offset=20,20:opacity=0.7:color=#000,outline=color=#fff:width=24" \
+bgbgone corgi.jpg --bg color:#1a2233 \
+  --filter "mask:expand=24,feather=12; fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=28" \
   -o corgi-sticker.jpg
 ```
 
-| Before (on white) | After (sticker) |
+| Before (original photo) | After (sticker) |
 |---|---|
-| ![corgi on white](docs/images/showcase/03-corgi-before.jpg) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.jpg) |
+| ![corgi original](docs/images/showcase/03-corgi-before.jpg) | ![corgi sticker](docs/images/showcase/03-corgi-sticker.jpg) |
 
-`CIMorphologyMaximum` dilates the matte by 24 px for a thick white halo; `CIGaussianBlur` + `CIAffineTransform` produce a big offset drop shadow (30 px blur, 20 px down-right, 70% opacity). Chain order matters: shadow rendered first so the outline overpaints the inner edge cleanly.
+Two-stage chain. **Stage 1 — mask shape:** `mask:expand=24` dilates the matte 24 px outward (so the sticker paper extends beyond the subject), then `mask:feather=12` Gaussian-blurs the expanded matte so the contour is rounded — no jagged shape-following. **Stage 2 — fg styling:** `shadow=blur=40:offset=22,22:opacity=0.7` lays a soft drop shadow under the rounded silhouette; `outline=color=#fff:width=28` paints the thick white "paper" border. The dark navy plate (`--bg color:#1a2233`) makes both the white border and the shadow clearly visible.
 
-### 4. Vintage backdrop, modern subject — fg/bg colour split
+### 4. Vintage backdrop, modern subject — fg/bg colour split (Parastoo in a library)
 
 ```bash
-bgbgone kingfisher.jpg --filter "bg:sepia=1.0,adjust=brightness=-0.3:saturation=0.3; vignette=2:1" -o vintage.jpg
+bgbgone parastoo.jpg --algo person \
+  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; vignette=1.8:1.1" \
+  -o vintage.jpg
 ```
 
 | Before (original photo) | After (vintage backdrop) |
 |---|---|
-| ![kingfisher original](docs/images/showcase/04-kingfisher-before.jpg) | ![kingfisher vintage](docs/images/showcase/04-kingfisher-vintage.jpg) |
+| ![Parastoo original](docs/images/showcase/04-parastoo-before.jpg) | ![Parastoo vintage](docs/images/showcase/04-parastoo-vintage.jpg) |
 
-Two-stage chain. **Stage 1 (bg only):** `CISepiaTone` at 100% + `CIColorControls` brightness=-0.3, saturation=0.3 — the background turns into a darkened, desaturated old-photo backdrop. **Stage 2 (composite):** `CIVignette` intensity 2 darkens the corners. Foreground stays untouched: the kingfisher keeps its electric blue head and vivid orange chest — modern subject in front of vintage backdrop.
+`--algo person` uses Apple Vision's person-segmentation model to isolate Parastoo cleanly from the warm wooden library bookshelves behind her. **Stage 1 (bg only):** `CISepiaTone` at 100% + `CIColorControls` brightness=-0.15, saturation=0.45 — the bookshelves become a darkened, desaturated old-library backdrop. **Stage 2 (composite):** `CIVignette` intensity 1.8 darkens the corners for film-style depth. Foreground stays untouched: floral dress, red lipstick, and skin tones keep their modern colour against the vintage backdrop.
 
 ### 5. Dramatic composite — corgi in deep space, three-stage chain
 
@@ -474,7 +476,7 @@ All showcase fixtures are CC0 or Franz Enzenhofer's own CC BY 4.0 work. Sidecar 
 |---|---|---|---|
 | `Red_Panda__24986761703_.jpg` | Mathias Appel | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Red_Panda_(24986761703).jpg) |
 | `Fawn_and_white_Welsh_Corgi_puppy_...jpg` | Huoadg5888 (Pixabay) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg) |
-| `Eisvogel_kingfisher.jpg` | Joefrei | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Eisvogel_kingfisher.jpg) |
+| `Parastoo_Ahmadi.jpg` | Wikimedia uploader | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Parastoo_Ahmadi.jpg) |
 | `bg/Flying-Dragon-Nebula_Sh_2-113.png` | NASA / ESA Hubble (PD-USGov) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Flying-Dragon-Nebula_Sh_2-113.png) |
 
 Full per-filter docs in [`docs/filters/`](docs/filters/). The 49-filter catalogue index: [`docs/filters/README.md`](docs/filters/README.md).

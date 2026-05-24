@@ -31,6 +31,7 @@ YOGA="$FIX/franz-yoga.jpg"
 PIPEMAN="$FIX/Bearded_man_smoking_pipe-3013924.jpg"
 CAT="$FIX/Tabby_cat_with_blue_eyes-3336579.jpg"
 KINGFISHER="$FIX/Eisvogel_kingfisher.jpg"
+PARASTOO="$FIX/Parastoo_Ahmadi.jpg"
 MATTERHORN="$BG/Matterhorn_sunset_2016__Unsplash_.jpg"
 NEBULA="$BG/Flaming_Star_Nebula__IC_405.png"
 
@@ -47,26 +48,33 @@ cp "$PANDA" "$OUT/01-panda-before.jpg"
 echo "-- showcase 2: portrait mode (red panda, original bg gets silky blur=60) --"
 "$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:blur=60" -o "$OUT/02-panda-portraitmode.jpg" >/dev/null
 
-echo "-- showcase 3: sticker (DARK bg so white halo+shadow are clearly visible) --"
-# HYPOTHESIS: dark navy bg (#1a2233) - thick white halo (width=30) glows
-# clearly around the subject; large drop shadow (blur=40, offset=24,24,
-# opacity=0.85) is visible against the dark plate. fg/bg split is obvious:
-# bg = uniform dark navy; fg = corgi with halo & shadow.
-"$BIN" "$CORGI" --bg "color:#1a2233" -o "$OUT/03-corgi-before.jpg" >/dev/null
+echo "-- showcase 3: real die-cut sticker (mask:expand+feather rounds corners; outline + drop shadow) --"
+# HYPOTHESIS: "good sticker border" = (1) expanded mask so the white border
+# extends beyond the subject silhouette, (2) Gaussian-feathered mask so
+# the contour is rounded (no jagged shape-following), (3) thick white
+# outline = the visible sticker paper, (4) soft drop shadow underneath
+# = the sticker lifting off the page. Chain order:
+#   mask:expand=24,feather=12 → dilate + round the matte
+#   fg:shadow=…             → big offset shadow under the rounded shape
+#   fg:outline=…            → thick white border around the rounded shape
+# Before = the ORIGINAL photo (cp, no processing) so the user sees what
+# the source actually looks like.
+cp "$CORGI" "$OUT/03-corgi-before.jpg"
 "$BIN" "$CORGI" --bg "color:#1a2233" \
-  --filter "fg:shadow=blur=40:offset=24,24:opacity=0.85:color=#000,outline=color=#fff:width=30" \
+  --filter "mask:expand=24,feather=12; fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=28" \
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 rm -f "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
-echo "-- showcase 4: vintage backdrop, modern subject (kingfisher, bg sepia+darken; fg keeps vivid blue/orange) --"
-# HYPOTHESIS: kingfisher has clean matte (hard-edged bird vs creamy bokeh bg).
-# bg gets full sepia + brightness=-0.3 + saturation=0.3 (old-photo backdrop);
-# fg keeps original colour - blue head + orange chest pop against vintage bg.
-# Clear fg/bg split with no matte artifacts (unlike fluffy cat fur).
-cp "$KINGFISHER" "$OUT/04-kingfisher-before.jpg"
-"$BIN" "$KINGFISHER" --filter "bg:sepia=1.0,adjust=brightness=-0.3:saturation=0.3; vignette=2:1" \
-  -o "$OUT/04-kingfisher-vintage.jpg" >/dev/null
-rm -f "$OUT/04-cat-before.jpg" "$OUT/04-cat-vintage.jpg"
+echo "-- showcase 4: vintage backdrop (Parastoo Ahmadi, library bookshelves go sepia; subject keeps colour) --"
+# HYPOTHESIS: library bookshelves with warm wooden light have rich detail.
+# --algo person isolates Parastoo cleanly. bg gets sepia + slight darken +
+# desaturate (old-library backdrop); fg keeps original colour (floral dress,
+# red lipstick stay vivid). Vignette darkens corners for classic film look.
+cp "$PARASTOO" "$OUT/04-parastoo-before.jpg"
+"$BIN" "$PARASTOO" --algo person \
+  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; vignette=1.8:1.1" \
+  -o "$OUT/04-parastoo-vintage.jpg" >/dev/null
+rm -f "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
 # ============ feather progression panel + close-up (restored from removed --feather docs) ============
 echo "-- feather progression: 0 / 8 / 16 / 32 px on the corgi against transparent --"
