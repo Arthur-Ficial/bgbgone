@@ -30,6 +30,7 @@ PANDA="$FIX/Red_Panda__24986761703_.jpg"
 YOGA="$FIX/franz-yoga.jpg"
 PIPEMAN="$FIX/Bearded_man_smoking_pipe-3013924.jpg"
 CAT="$FIX/Tabby_cat_with_blue_eyes-3336579.jpg"
+KINGFISHER="$FIX/Eisvogel_kingfisher.jpg"
 MATTERHORN="$BG/Matterhorn_sunset_2016__Unsplash_.jpg"
 NEBULA="$BG/Flaming_Star_Nebula__IC_405.png"
 
@@ -57,13 +58,38 @@ echo "-- showcase 3: sticker (DARK bg so white halo+shadow are clearly visible) 
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 rm -f "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
-echo "-- showcase 4: vintage backdrop, modern subject (bg sepia+darken; fg keeps colour) --"
-# HYPOTHESIS: bg gets full sepia + brightness=-0.25 + saturation=0.4 (old-
-# photo backdrop). fg keeps original colour - blue eyes stay vibrant. Clear
-# fg/bg split: modern colour subject in front of vintage backdrop.
-cp "$CAT" "$OUT/04-cat-before.jpg"
-"$BIN" "$CAT" --filter "bg:sepia=1.0,adjust=brightness=-0.25:saturation=0.4; vignette=2:1" \
-  -o "$OUT/04-cat-vintage.jpg" >/dev/null
+echo "-- showcase 4: vintage backdrop, modern subject (kingfisher, bg sepia+darken; fg keeps vivid blue/orange) --"
+# HYPOTHESIS: kingfisher has clean matte (hard-edged bird vs creamy bokeh bg).
+# bg gets full sepia + brightness=-0.3 + saturation=0.3 (old-photo backdrop);
+# fg keeps original colour - blue head + orange chest pop against vintage bg.
+# Clear fg/bg split with no matte artifacts (unlike fluffy cat fur).
+cp "$KINGFISHER" "$OUT/04-kingfisher-before.jpg"
+"$BIN" "$KINGFISHER" --filter "bg:sepia=1.0,adjust=brightness=-0.3:saturation=0.3; vignette=2:1" \
+  -o "$OUT/04-kingfisher-vintage.jpg" >/dev/null
+rm -f "$OUT/04-cat-before.jpg" "$OUT/04-cat-vintage.jpg"
+
+# ============ feather progression panel + close-up (restored from removed --feather docs) ============
+echo "-- feather progression: 0 / 8 / 16 / 32 px on the corgi against transparent --"
+# HYPOTHESIS: feather=0 -> hard razor edge; 8 -> soft halo; 16 -> noticeably
+# fuzzy; 32 -> obvious vignette glow at boundary. Composite 4-up for the
+# README Edge refinement section.
+mkdir -p "$OUT/feather"
+for r in 0 8 16 32; do
+    if [ "$r" = "0" ]; then
+        "$BIN" "$CORGI" -o "$OUT/feather/corgi-f$r.png" >/dev/null
+    else
+        "$BIN" "$CORGI" --filter "mask:feather=$r" -o "$OUT/feather/corgi-f$r.png" >/dev/null
+    fi
+    magick "$OUT/feather/corgi-f$r.png" -resize 400x600 -background "#1a2233" -alpha background -flatten -gravity south -splice 0x40 -gravity south -fill white -pointsize 24 -annotate +0+8 "mask:feather=$r" "$OUT/feather/panel-f$r.jpg"
+done
+magick "$OUT/feather/panel-f0.jpg" "$OUT/feather/panel-f8.jpg" "$OUT/feather/panel-f16.jpg" "$OUT/feather/panel-f32.jpg" +append "$OUT/feather-progression.jpg"
+echo "  ok  feather-progression.jpg"
+
+echo "-- feather close-up: hard edge vs soft matte, 400x300 crop around the ear --"
+magick "$OUT/feather/corgi-f0.png" -background "#1a2233" -alpha background -flatten -crop 400x300+700+400 +repage "$OUT/feather/zoom-f0.jpg"
+magick "$OUT/feather/corgi-f16.png" -background "#1a2233" -alpha background -flatten -crop 400x300+700+400 +repage "$OUT/feather/zoom-f16.jpg"
+magick "$OUT/feather/zoom-f0.jpg" "$OUT/feather/zoom-f16.jpg" +append "$OUT/feather-zoom.jpg"
+echo "  ok  feather-zoom.jpg"
 
 echo "-- showcase 5: dramatic composite (yoga on Matterhorn, fg+bg colour-graded) --"
 "$BIN" "$YOGA" --bg "image:$MATTERHORN" -o "$OUT/05-yoga-matterhorn-before.jpg" >/dev/null

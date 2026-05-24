@@ -147,6 +147,14 @@ bgbgone in.jpg --filter "mask:contract=6"                      -o thinner-mask.p
 
 See [`docs/filters/`](docs/filters/) for the full per-filter deep-dives, and the [Filter showcase](#filter-showcase----filter-chain-in-action) section below for five end-to-end before/after examples.
 
+Feather progression (matte edge softness, `--filter "mask:feather=N"`) from hard razor edge to obvious halo:
+
+![mask:feather=0 / 8 / 16 / 32 on the corgi against a dark plate](docs/images/showcase/feather-progression.jpg)
+
+Pixel-level close-up of the corgi's ear at `mask:feather=0` (hard edge) vs `mask:feather=16` (soft matte) — same crop, side-by-side:
+
+![feather close-up: hard edge vs soft matte](docs/images/showcase/feather-zoom.jpg)
+
 ### Algorithm selection
 
 ```bash
@@ -431,17 +439,17 @@ bgbgone corgi.jpg --bg color:white \
 
 `CIMorphologyMaximum` dilates the matte by 24 px for a thick white halo; `CIGaussianBlur` + `CIAffineTransform` produce a big offset drop shadow (30 px blur, 20 px down-right, 70% opacity). Chain order matters: shadow rendered first so the outline overpaints the inner edge cleanly.
 
-### 4. Vintage finish — sepia + vignette on the original photo
+### 4. Vintage backdrop, modern subject — fg/bg colour split
 
 ```bash
-bgbgone tabby-cat.jpg --filter "sepia=0.95,vignette=2:1" -o vintage.jpg
+bgbgone kingfisher.jpg --filter "bg:sepia=1.0,adjust=brightness=-0.3:saturation=0.3; vignette=2:1" -o vintage.jpg
 ```
 
-| Before (original photo) | After (vintage) |
+| Before (original photo) | After (vintage backdrop) |
 |---|---|
-| ![cat original](docs/images/showcase/04-cat-before.jpg) | ![cat vintage](docs/images/showcase/04-cat-vintage.jpg) |
+| ![kingfisher original](docs/images/showcase/04-kingfisher-before.jpg) | ![kingfisher vintage](docs/images/showcase/04-kingfisher-vintage.jpg) |
 
-`CISepiaTone` at 95% + `CIVignette` intensity 2. Composite-only chain (no `fg:`/`bg:` prefix needed) — operates on the final flattened frame. The warm golden out-of-focus background of the source amplifies the sepia tone; the vignette darkens the corners to a classic film look.
+Two-stage chain. **Stage 1 (bg only):** `CISepiaTone` at 100% + `CIColorControls` brightness=-0.3, saturation=0.3 — the background turns into a darkened, desaturated old-photo backdrop. **Stage 2 (composite):** `CIVignette` intensity 2 darkens the corners. Foreground stays untouched: the kingfisher keeps its electric blue head and vivid orange chest — modern subject in front of vintage backdrop.
 
 ### 5. Dramatic composite — corgi in deep space, three-stage chain
 
@@ -466,7 +474,7 @@ All showcase fixtures are CC0 or Franz Enzenhofer's own CC BY 4.0 work. Sidecar 
 |---|---|---|---|
 | `Red_Panda__24986761703_.jpg` | Mathias Appel | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Red_Panda_(24986761703).jpg) |
 | `Fawn_and_white_Welsh_Corgi_puppy_...jpg` | Huoadg5888 (Pixabay) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg) |
-| `Tabby_cat_with_blue_eyes-3336579.jpg` | Pexels contributor | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tabby_cat_with_blue_eyes-3336579.jpg) |
+| `Eisvogel_kingfisher.jpg` | Joefrei | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Eisvogel_kingfisher.jpg) |
 | `bg/Flying-Dragon-Nebula_Sh_2-113.png` | NASA / ESA Hubble (PD-USGov) | **CC0 / Public Domain** | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Flying-Dragon-Nebula_Sh_2-113.png) |
 
 Full per-filter docs in [`docs/filters/`](docs/filters/). The 49-filter catalogue index: [`docs/filters/README.md`](docs/filters/README.md).
