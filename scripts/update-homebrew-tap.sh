@@ -19,7 +19,8 @@ echo "homebrew-tap: bumping bgbgone -> v${version} (sha256 ${sha})"
 
 current_sha=$(gh api "/repos/${tap_repo}/contents/${formula_path}" -q .sha)
 
-new_content=$(cat <<EOF
+tmpformula=$(mktemp)
+cat > "$tmpformula" <<EOF
 class Bgbgone < Formula
   desc "On-device Apple Vision background remover for macOS"
   homepage "https://github.com/Arthur-Ficial/bgbgone"
@@ -35,7 +36,7 @@ class Bgbgone < Formula
 
   def caveats
     <<~EOS
-      bgbgone runs entirely on-device using Apple's Vision framework.
+      bgbgone runs entirely on-device using Apples Vision framework.
       No API keys, no network, no accounts. No GUI side-effects - every
       invocation is silent and scriptable.
 
@@ -56,7 +57,8 @@ class Bgbgone < Formula
   end
 end
 EOF
-)
+new_content=$(cat "$tmpformula")
+rm -f "$tmpformula"
 
 b64=$(printf '%s' "$new_content" | base64)
 
