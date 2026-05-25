@@ -301,11 +301,11 @@ panel "$ESUB" "src" "$WORK/edge/src.png" 320 320
 "$BGBGONE" "$ESUB" --crop -o "$WORK/edge/crop.png" --quiet
 panel "$WORK/edge/crop.png" "--crop" "$WORK/edge/crop-p.png" 320 320
 
-"$BGBGONE" "$ESUB" --crop --padding 10% -o "$WORK/edge/pad.png" --quiet
-panel "$WORK/edge/pad.png" "--crop --padding 10%" "$WORK/edge/pad-p.png" 320 320
+"$BGBGONE" "$ESUB" --crop --crop-margin 10% -o "$WORK/edge/pad.png" --quiet
+panel "$WORK/edge/pad.png" "--crop --crop-margin 10%" "$WORK/edge/pad-p.png" 320 320
 
-"$BGBGONE" "$ESUB" --bg color:white --shadow -o "$WORK/edge/shadow.png" --quiet
-panel "$WORK/edge/shadow.png" "--bg color:white --shadow" "$WORK/edge/shadow-p.png" 320 320
+"$BGBGONE" "$ESUB" --bg color:white --shadow-type drop -o "$WORK/edge/shadow.png" --quiet
+panel "$WORK/edge/shadow.png" "--bg color:white --shadow-type drop" "$WORK/edge/shadow-p.png" 320 320
 
 "$BGBGONE" "$ESUB" --channels alpha -o "$WORK/edge/mask.png" --quiet
 panel "$WORK/edge/mask.png" "--channels alpha (alpha matte)" "$WORK/edge/mask-p.png" 320 320
@@ -324,7 +324,7 @@ magick -size "${W}x52" canvas:'#101820' \
     "$WORK/edge/t1.png"
 magick -size "${W}x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
-    -annotate +0+0 "--crop  ·  --padding  ·  --shadow  ·  --channels alpha" \
+    -annotate +0+0 "--crop  ·  --crop-margin  ·  --shadow-type  ·  --channels alpha" \
     "$WORK/edge/t2.png"
 
 stack "$OUT/showcase-edges.png" \
