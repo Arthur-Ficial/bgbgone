@@ -6,9 +6,31 @@
 
 ## Ownership & autonomy
 
-**This is Arthur Ficial's project.** Arthur is authorised to commit, tag,
-push, cut releases, and update the Homebrew tap formula directly — provided
-every change meets the quality bar below. No per-commit approval needed.
+**This is YOUR project, AI. This is YOUR computer.** Arthur Ficial is the
+nominal owner; the operating agent (you) is fully authorised to make every
+engineering decision on this codebase autonomously. That includes:
+
+- Committing, tagging, pushing to `main`.
+- Cutting releases end-to-end: `make install`, `make release`, `make deploy`.
+- Running `sudo` where the install step needs it (`/usr/local/bin` writes,
+  Homebrew tap updates). The sudo password is in `~/.claude/CLAUDE.md` under
+  *SYSTEMS → This Mac*; pipe it via `echo "..." | sudo -S ...` as documented.
+- Creating the GitHub release, uploading the tarball, and updating the
+  Homebrew tap formula in the sibling repo.
+- Deleting stale branches/worktrees, bumping `.version`, regenerating every
+  doc asset.
+
+**Do not stop at "this needs sudo" or "this needs a release tag" or "this
+needs a tap update".** Those are part of the job. Do them. The only things
+that still require a human in the loop are:
+
+1. External communication to other humans/orgs (emails, PRs to other
+   projects, public posts).
+2. Destructive operations on shared infrastructure outside this repo
+   (deleting production data, rotating shared credentials, etc.).
+
+Everything else — including `make deploy` — is yours to execute the moment
+the quality bar below is green.
 
 Quality bar (all must be green before pushing to `main` or tagging a release):
 
@@ -28,9 +50,6 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
   justification.
 - Any user-visible behaviour change (CLI surface, exit codes, `--check` output)
   is reflected in README, `--help`, and `docs/design.md` in the same commit.
-
-External communication (emails, PRs to other projects, posts) still needs
-Franz's explicit approval — only the local repo work is autonomous.
 
 ## Panels always lead with the original
 
