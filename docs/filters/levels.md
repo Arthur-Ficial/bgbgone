@@ -23,11 +23,8 @@ After `all:levels=black=20:white=235:gamma=1.0`:
 ![red-panda after all:levels=black=20:white=235:gamma=1.0](../images/filters/levels.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:levels"
@@ -38,11 +35,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:levels"
 Panels (`original | bg | fg | all`):
 
 ![`levels` panels on yoga](../images/filters/panels/yoga-levels.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:levels"

@@ -23,11 +23,8 @@ After `composite:bloom=intensity=0.5:radius=10`:
 ![red-panda after composite:bloom=intensity=0.5:radius=10](../images/filters/bloom.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "composite:bloom"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "composite:bloom"
 Panels (`original | bg | fg | all`):
 
 ![`bloom` panels on yoga](../images/filters/panels/yoga-bloom.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "composite:bloom"

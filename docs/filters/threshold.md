@@ -23,11 +23,8 @@ After `mask:threshold=0.5`:
 ![red-panda after mask:threshold=0.5](../images/filters/threshold.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:threshold"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:threshold"
 Panels (`original | bg | fg | all`):
 
 ![`threshold` panels on yoga](../images/filters/panels/yoga-threshold.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "mask:threshold"

@@ -23,11 +23,8 @@ After `mask:feather=8`:
 ![red-panda after mask:feather=8](../images/filters/feather.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:feather"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:feather"
 Panels (`original | bg | fg | all`):
 
 ![`feather` panels on yoga](../images/filters/panels/yoga-feather.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "mask:feather"

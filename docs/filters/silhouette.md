@@ -23,11 +23,8 @@ After `fg:silhouette=color=#ff0000`:
 ![red-panda after fg:silhouette=color=#ff0000](../images/filters/silhouette.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:silhouette"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:silhouette"
 Panels (`original | bg | fg | all`):
 
 ![`silhouette` panels on yoga](../images/filters/panels/yoga-silhouette.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:silhouette"

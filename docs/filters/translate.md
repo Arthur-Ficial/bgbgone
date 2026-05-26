@@ -23,11 +23,8 @@ After `fg:translate=-200,200`:
 ![red-panda after fg:translate=-200,200](../images/filters/translate.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:translate"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:translate"
 Panels (`original | bg | fg | all`):
 
 ![`translate` panels on yoga](../images/filters/panels/yoga-translate.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:translate"

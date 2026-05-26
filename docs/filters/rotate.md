@@ -23,11 +23,8 @@ After `fg:rotate=15`:
 ![red-panda after fg:rotate=15](../images/filters/rotate.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:rotate"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:rotate"
 Panels (`original | bg | fg | all`):
 
 ![`rotate` panels on yoga](../images/filters/panels/yoga-rotate.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:rotate"

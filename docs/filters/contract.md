@@ -23,11 +23,8 @@ After `mask:contract=3`:
 ![red-panda after mask:contract=3](../images/filters/contract.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:contract"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:contract"
 Panels (`original | bg | fg | all`):
 
 ![`contract` panels on yoga](../images/filters/panels/yoga-contract.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "mask:contract"

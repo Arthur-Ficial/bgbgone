@@ -23,11 +23,8 @@ After `all:noise=0.1`:
 ![red-panda after all:noise=0.1](../images/filters/noise.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:noise"
@@ -38,11 +35,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:noise"
 Panels (`original | bg | fg | all`):
 
 ![`noise` panels on yoga](../images/filters/panels/yoga-noise.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:noise"

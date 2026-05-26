@@ -62,8 +62,8 @@ subject_section() {
     esac
   done < <(jq -r '.layers[]' <<<"$entry")
 
-  printf '\n## Per-layer panels — %s (`--type person`)\n\nOriginal input:\n\n![%s input](../../Tests/fixtures/%s.jpg)\n\n```bash\n%s```\n\nPanels (`original | bg | fg | all`):\n\n![`%s` panels on %s](../images/filters/panels/%s-%s.jpg)\n' \
-    "$subject" "$subject" "$subject" "$lines" "$name" "$subject" "$subject" "$name"
+  printf '\n\n## Per-layer panels — %s (`--type person`)\n\n```bash\n%s```\n\nPanels (`original | bg | fg | all`):\n\n![`%s` panels on %s](../images/filters/panels/%s-%s.jpg)' \
+    "$subject" "$lines" "$name" "$subject" "$subject" "$name"
 }
 
 # ---- per-filter pages ----

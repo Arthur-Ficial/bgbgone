@@ -23,11 +23,8 @@ After `fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000`:
 ![red-panda after fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000](../images/filters/shadow.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:shadow"
@@ -36,11 +33,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:shadow"
 Panels (`original | bg | fg | all`):
 
 ![`shadow` panels on yoga](../images/filters/panels/yoga-shadow.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:shadow"

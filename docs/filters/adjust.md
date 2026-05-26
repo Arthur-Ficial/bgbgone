@@ -23,11 +23,8 @@ After `all:adjust=brightness=0.1:contrast=1.1:saturation=0.9`:
 ![red-panda after all:adjust=brightness=0.1:contrast=1.1:saturation=0.9](../images/filters/adjust.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:adjust"
@@ -38,11 +35,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:adjust"
 Panels (`original | bg | fg | all`):
 
 ![`adjust` panels on yoga](../images/filters/panels/yoga-adjust.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:adjust"

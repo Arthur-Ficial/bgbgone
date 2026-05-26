@@ -23,11 +23,8 @@ After `all:colorize=color=#0066ff:amount=0.5`:
 ![red-panda after all:colorize=color=#0066ff:amount=0.5](../images/filters/colorize.jpg)
 
 
+
 ## Per-layer panels — yoga (`--type person`)
-
-Original input:
-
-![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
 bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:colorize"
@@ -38,11 +35,8 @@ bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:colorize"
 Panels (`original | bg | fg | all`):
 
 ![`colorize` panels on yoga](../images/filters/panels/yoga-colorize.jpg)
+
 ## Per-layer panels — woman-singer (`--type person`)
-
-Original input:
-
-![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:colorize"
