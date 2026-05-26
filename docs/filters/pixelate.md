@@ -10,8 +10,23 @@
 
 ## Example — red-panda, `fg:pixelate=20` (subject filter, background preserved)
 
+### Via CLI
+
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:pixelate=20" -o red-panda-pixelate.jpg
+```
+
+### Via HTTP server (`bgbgone --server`)
+
+Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
+
+```bash
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  -F "image_file=@red-panda.jpg" \
+  -F "bg=@red-panda.jpg" \
+  -F "filter=fg:pixelate=20" \
+  -F "format=jpg" \
+  -o red-panda-pixelate.jpg
 ```
 
 ![red-panda after `fg:pixelate=20`](../images/filters/pixelate.jpg)
@@ -42,4 +57,4 @@ Panels (`original | bg | fg | all`):
 
 ![`pixelate` panels on woman-singer](../images/filters/panels/woman-singer-pixelate.jpg)
 
-See the [filter index](README.md) for the full catalogue.
+See the [filter index](README.md) for the full catalogue. Server-mode README: [`../../SERVER-README.md`](../../SERVER-README.md).

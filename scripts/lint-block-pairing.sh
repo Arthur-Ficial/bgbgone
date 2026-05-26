@@ -61,8 +61,11 @@ for md in $FILES; do
     esac
 
     checked=$((checked + 1))
-    lo=$((s - 5)); [ "$lo" -lt 1 ] && lo=1
-    hi=$((e + 5))
+    # Lookahead window: 12 lines either side. Wider than 4 because a
+    # section often documents the same example through two transports
+    # (CLI + curl) before the shared output image.
+    lo=$((s - 20)); [ "$lo" -lt 1 ] && lo=1
+    hi=$((e + 20))
     if awk -v lo="$lo" -v hi="$hi" 'NR>=lo && NR<=hi' "$md" \
          | grep -qE '!\[[^]]*\]\([^)]+\)'; then
       :

@@ -10,8 +10,23 @@
 
 ## Example — red-panda, `fg:levels=black=20:white=235:gamma=1.0` (subject filter, background preserved)
 
+### Via CLI
+
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:levels=black=20:white=235:gamma=1.0" -o red-panda-levels.jpg
+```
+
+### Via HTTP server (`bgbgone --server`)
+
+Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
+
+```bash
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  -F "image_file=@red-panda.jpg" \
+  -F "bg=@red-panda.jpg" \
+  -F "filter=fg:levels=black=20:white=235:gamma=1.0" \
+  -F "format=jpg" \
+  -o red-panda-levels.jpg
 ```
 
 ![red-panda after `fg:levels=black=20:white=235:gamma=1.0`](../images/filters/levels.jpg)
@@ -42,4 +57,4 @@ Panels (`original | bg | fg | all`):
 
 ![`levels` panels on woman-singer](../images/filters/panels/woman-singer-levels.jpg)
 
-See the [filter index](README.md) for the full catalogue.
+See the [filter index](README.md) for the full catalogue. Server-mode README: [`../../SERVER-README.md`](../../SERVER-README.md).

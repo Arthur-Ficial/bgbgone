@@ -53,6 +53,16 @@ invocation_for() {
     "$layer" "$example" "$name"
 }
 
+# Curl equivalent of `invocation_for` for the local HTTP server. The
+# server accepts the same options as the CLI (parity contract). Same
+# output - we reuse the CLI-rendered asset; the server suite asserts
+# byte-equivalence in run-server-parity.sh.
+server_invocation_for() {
+  local layer="$1" name="$2" example="$3"
+  printf 'curl -X POST http://127.0.0.1:8787/bgbgone \\\n  -F "image_file=@red-panda.jpg" \\\n  -F "bg=@red-panda.jpg" \\\n  -F "filter=%s:%s" \\\n  -F "format=jpg" \\\n  -o red-panda-%s.jpg' \
+    "$layer" "$example" "$name"
+}
+
 # Run the invocation against the live binary; output lands at the
 # absolute path under IMG_DIR. The displayed command uses relative
 # names so the user can copy-paste; the renderer rewrites them to the
@@ -119,6 +129,7 @@ while IFS= read -r entry; do
 
   LAYER=$(preferred_layer "$layers_csv")
   export EXAMPLE_INVOCATION=$(invocation_for "$LAYER" "$NAME" "$example")
+  export EXAMPLE_SERVER=$(server_invocation_for "$LAYER" "$NAME" "$example")
   export EXAMPLE_CHAIN="${LAYER}:${example}"
 
   # Render the asset using the same chain. Any failure here is a bug
@@ -139,7 +150,7 @@ while IFS= read -r entry; do
   export YOGA_SECTION=$(subject_section "yoga" "$NAME" "$entry")
   export WOMAN_SINGER_SECTION=$(subject_section "woman-singer" "$NAME" "$entry")
 
-  render "$TMPL_FILTER" NAME DOC SIGNATURE LAYERS EXAMPLE_INVOCATION EXAMPLE_CHAIN ALPHA_NOTE YOGA_SECTION WOMAN_SINGER_SECTION > "$OUT_DIR/${NAME}.md"
+  render "$TMPL_FILTER" NAME DOC SIGNATURE LAYERS EXAMPLE_INVOCATION EXAMPLE_SERVER EXAMPLE_CHAIN ALPHA_NOTE YOGA_SECTION WOMAN_SINGER_SECTION > "$OUT_DIR/${NAME}.md"
   i=$((i + 1))
 done < <(printf '%s' "$JSON" | jq -c '.[]')
 

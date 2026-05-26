@@ -29,7 +29,7 @@
 - **Filter catalogue**
   - [Filter overview + index (49 filters)](docs/filters/README.md)
   - [Filter chain grammar](#filter-chain-grammar)
-- [Server mode](#server-mode)
+- [Server mode](#server-mode) — full walkthrough: [`SERVER-README.md`](SERVER-README.md)
 - [Exit codes](#exit-codes)
 - [Architecture](#architecture)
 - [Development](#development)
@@ -156,7 +156,23 @@ bgbgone red-panda.jpg -o red-panda-cutout.png && auge --classify red-panda-cutou
 
 ## Server mode
 
-Run `bgbgone --server --host 127.0.0.1 --port 8088` to expose the same Config + pipeline over local HTTP. POSTs to `/bgbgone` accept the same options as the CLI (`bg`, `filter`, `format`, `type`, …) via multipart, JSON, or form. Full wire contract: [docs/server/README.md](docs/server/README.md). Security matrix: [docs/server/security.md](docs/server/security.md).
+`bgbgone --server` exposes the same Config + pipeline over local HTTP. Every flag has an HTTP twin with byte-identical output, verified in [`Tests/integration/run-server-parity.sh`](Tests/integration/run-server-parity.sh) (19 cases, all green).
+
+One example, same colour-pop as the section above:
+
+```bash
+bgbgone --server --host 127.0.0.1 --port 8787 &
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  -F "image_file=@red-panda.jpg" \
+  -F "format=jpg" \
+  -F "bg=@red-panda.jpg" \
+  -F "filter=bg:grayscale" \
+  -o red-panda-colourpop.jpg
+```
+
+![red-panda colour-pop via HTTP — byte-identical to the CLI version above](docs/images/showcase/01-panda-colourpop.jpg)
+
+**Full server walkthrough — every example in this README mirrored as curl:** [`SERVER-README.md`](SERVER-README.md). Wire contract: [`docs/server/README.md`](docs/server/README.md). Security matrix: [`docs/server/security.md`](docs/server/security.md).
 
 ## Exit codes
 
