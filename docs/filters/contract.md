@@ -8,19 +8,13 @@
 | **Signature** | `contract=pixels` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `mask:contract=3` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:contract=3" -o red-panda-contract.jpg
 ```
 
-After `mask:contract=3`:
-
-![red-panda after mask:contract=3](../images/filters/contract.jpg)
+![red-panda after `mask:contract=3`](../images/filters/contract.jpg)
 
 
 

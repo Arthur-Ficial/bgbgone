@@ -8,19 +8,13 @@
 | **Signature** | `sharpen=amount` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:sharpen=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:sharpen=0.5" -o red-panda-sharpen.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:sharpen=0.5" -o red-panda-sharpen.jpg
 ```
 
-After `all:sharpen=0.5`:
-
-![red-panda after all:sharpen=0.5](../images/filters/sharpen.jpg)
+![red-panda after `fg:sharpen=0.5`](../images/filters/sharpen.jpg)
 
 
 

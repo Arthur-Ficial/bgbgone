@@ -8,19 +8,13 @@
 | **Signature** | `translate=dx,dy` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:translate=-200,200` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:translate=-200,200" -o red-panda-translate.jpg
 ```
 
-After `fg:translate=-200,200`:
-
-![red-panda after fg:translate=-200,200](../images/filters/translate.jpg)
+![red-panda after `fg:translate=-200,200`](../images/filters/translate.jpg)
 
 
 

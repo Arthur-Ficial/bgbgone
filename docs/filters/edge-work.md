@@ -8,19 +8,13 @@
 | **Signature** | `edge-work=radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:edge-work=3` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:edge-work=3" -o red-panda-edge-work.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:edge-work=3" -o red-panda-edge-work.jpg
 ```
 
-After `all:edge-work=3`:
-
-![red-panda after all:edge-work=3](../images/filters/edge-work.jpg)
+![red-panda after `fg:edge-work=3`](../images/filters/edge-work.jpg)
 
 
 

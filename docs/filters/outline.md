@@ -6,21 +6,15 @@
 |---|---|
 | **Layers** | fg |
 | **Signature** | `outline=color=#hex:width=N` |
-| **Note** | introduces alpha — use PNG output or pass `--bg` |
+| **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:outline=color=#ffffff:width=3` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:outline=color=#ffffff:width=3" -o red-panda-outline.jpg
 ```
 
-After `fg:outline=color=#ffffff:width=3`:
-
-![red-panda after fg:outline=color=#ffffff:width=3](../images/filters/outline.jpg)
+![red-panda after `fg:outline=color=#ffffff:width=3`](../images/filters/outline.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `levels=black=B:white=W:gamma=G` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:levels=black=20:white=235:gamma=1.0` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:levels=black=20:white=235:gamma=1.0" -o red-panda-levels.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:levels=black=20:white=235:gamma=1.0" -o red-panda-levels.jpg
 ```
 
-After `all:levels=black=20:white=235:gamma=1.0`:
-
-![red-panda after all:levels=black=20:white=235:gamma=1.0](../images/filters/levels.jpg)
+![red-panda after `fg:levels=black=20:white=235:gamma=1.0`](../images/filters/levels.jpg)
 
 
 

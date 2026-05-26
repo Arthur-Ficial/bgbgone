@@ -8,19 +8,13 @@
 | **Signature** | `vignette=intensity:radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `composite:vignette=intensity=0.5:radius=10` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "composite:vignette=intensity=0.5:radius=10" -o red-panda-vignette.jpg
 ```
 
-After `composite:vignette=intensity=0.5:radius=10`:
-
-![red-panda after composite:vignette=intensity=0.5:radius=10](../images/filters/vignette.jpg)
+![red-panda after `composite:vignette=intensity=0.5:radius=10`](../images/filters/vignette.jpg)
 
 
 

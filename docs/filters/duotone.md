@@ -8,19 +8,13 @@
 | **Signature** | `duotone=dark=#hex:light=#hex` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:duotone=dark=#003366:light=#ffcc00` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:duotone=dark=#003366:light=#ffcc00" -o red-panda-duotone.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:duotone=dark=#003366:light=#ffcc00" -o red-panda-duotone.jpg
 ```
 
-After `all:duotone=dark=#003366:light=#ffcc00`:
-
-![red-panda after all:duotone=dark=#003366:light=#ffcc00](../images/filters/duotone.jpg)
+![red-panda after `fg:duotone=dark=#003366:light=#ffcc00`](../images/filters/duotone.jpg)
 
 
 

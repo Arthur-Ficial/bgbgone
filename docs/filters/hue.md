@@ -8,19 +8,13 @@
 | **Signature** | `hue=degrees` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:hue=120` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:hue=120" -o red-panda-hue.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:hue=120" -o red-panda-hue.jpg
 ```
 
-After `all:hue=120`:
-
-![red-panda after all:hue=120](../images/filters/hue.jpg)
+![red-panda after `fg:hue=120`](../images/filters/hue.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `gloom=intensity:radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `composite:gloom=intensity=0.5:radius=10` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "composite:gloom=intensity=0.5:radius=10" -o red-panda-gloom.jpg
 ```
 
-After `composite:gloom=intensity=0.5:radius=10`:
-
-![red-panda after composite:gloom=intensity=0.5:radius=10](../images/filters/gloom.jpg)
+![red-panda after `composite:gloom=intensity=0.5:radius=10`](../images/filters/gloom.jpg)
 
 
 

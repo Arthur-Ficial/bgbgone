@@ -8,19 +8,13 @@
 | **Signature** | `crystallize=radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:crystallize=20` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:crystallize=20" -o red-panda-crystallize.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:crystallize=20" -o red-panda-crystallize.jpg
 ```
 
-After `all:crystallize=20`:
-
-![red-panda after all:crystallize=20](../images/filters/crystallize.jpg)
+![red-panda after `fg:crystallize=20`](../images/filters/crystallize.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `pixelate=size` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:pixelate=20` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:pixelate=20" -o red-panda-pixelate.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:pixelate=20" -o red-panda-pixelate.jpg
 ```
 
-After `all:pixelate=20`:
-
-![red-panda after all:pixelate=20](../images/filters/pixelate.jpg)
+![red-panda after `fg:pixelate=20`](../images/filters/pixelate.jpg)
 
 
 

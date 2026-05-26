@@ -8,19 +8,13 @@
 | **Signature** | `gamma=value` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:gamma=1.2` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:gamma=1.2" -o red-panda-gamma.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:gamma=1.2" -o red-panda-gamma.jpg
 ```
 
-After `all:gamma=1.2`:
-
-![red-panda after all:gamma=1.2](../images/filters/gamma.jpg)
+![red-panda after `fg:gamma=1.2`](../images/filters/gamma.jpg)
 
 
 

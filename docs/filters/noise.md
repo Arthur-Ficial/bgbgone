@@ -8,19 +8,13 @@
 | **Signature** | `noise=amount` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:noise=0.1` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:noise=0.1" -o red-panda-noise.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:noise=0.1" -o red-panda-noise.jpg
 ```
 
-After `all:noise=0.1`:
-
-![red-panda after all:noise=0.1](../images/filters/noise.jpg)
+![red-panda after `fg:noise=0.1`](../images/filters/noise.jpg)
 
 
 

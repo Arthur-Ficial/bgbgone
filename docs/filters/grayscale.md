@@ -8,19 +8,13 @@
 | **Signature** | `grayscale` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:grayscale` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:grayscale" -o red-panda-grayscale.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:grayscale" -o red-panda-grayscale.jpg
 ```
 
-After `all:grayscale`:
-
-![red-panda after all:grayscale](../images/filters/grayscale.jpg)
+![red-panda after `fg:grayscale`](../images/filters/grayscale.jpg)
 
 
 

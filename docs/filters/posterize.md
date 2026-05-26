@@ -8,19 +8,13 @@
 | **Signature** | `posterize=levels` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:posterize=4` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:posterize=4" -o red-panda-posterize.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:posterize=4" -o red-panda-posterize.jpg
 ```
 
-After `all:posterize=4`:
-
-![red-panda after all:posterize=4](../images/filters/posterize.jpg)
+![red-panda after `fg:posterize=4`](../images/filters/posterize.jpg)
 
 
 

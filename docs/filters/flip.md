@@ -8,19 +8,13 @@
 | **Signature** | `flip=horizontal|vertical` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:flip=horizontal` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:flip=horizontal" -o red-panda-flip.jpg
 ```
 
-After `fg:flip=horizontal`:
-
-![red-panda after fg:flip=horizontal](../images/filters/flip.jpg)
+![red-panda after `fg:flip=horizontal`](../images/filters/flip.jpg)
 
 
 

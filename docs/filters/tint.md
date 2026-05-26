@@ -8,19 +8,13 @@
 | **Signature** | `tint=color=#hex:amount=A` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:tint=color=#0066ff:amount=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:tint=color=#0066ff:amount=0.5" -o red-panda-tint.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:tint=color=#0066ff:amount=0.5" -o red-panda-tint.jpg
 ```
 
-After `all:tint=color=#0066ff:amount=0.5`:
-
-![red-panda after all:tint=color=#0066ff:amount=0.5](../images/filters/tint.jpg)
+![red-panda after `fg:tint=color=#0066ff:amount=0.5`](../images/filters/tint.jpg)
 
 
 

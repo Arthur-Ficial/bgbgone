@@ -8,19 +8,13 @@
 | **Signature** | `sepia=intensity` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:sepia=0.8` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:sepia=0.8" -o red-panda-sepia.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:sepia=0.8" -o red-panda-sepia.jpg
 ```
 
-After `all:sepia=0.8`:
-
-![red-panda after all:sepia=0.8](../images/filters/sepia.jpg)
+![red-panda after `fg:sepia=0.8`](../images/filters/sepia.jpg)
 
 
 

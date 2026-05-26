@@ -8,19 +8,13 @@
 | **Signature** | `exposure=stops` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:exposure=1.0` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:exposure=1.0" -o red-panda-exposure.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:exposure=1.0" -o red-panda-exposure.jpg
 ```
 
-After `all:exposure=1.0`:
-
-![red-panda after all:exposure=1.0](../images/filters/exposure.jpg)
+![red-panda after `fg:exposure=1.0`](../images/filters/exposure.jpg)
 
 
 

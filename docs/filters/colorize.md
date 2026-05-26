@@ -8,19 +8,13 @@
 | **Signature** | `colorize=color=#hex:amount=A` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:colorize=color=#0066ff:amount=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:colorize=color=#0066ff:amount=0.5" -o red-panda-colorize.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:colorize=color=#0066ff:amount=0.5" -o red-panda-colorize.jpg
 ```
 
-After `all:colorize=color=#0066ff:amount=0.5`:
-
-![red-panda after all:colorize=color=#0066ff:amount=0.5](../images/filters/colorize.jpg)
+![red-panda after `fg:colorize=color=#0066ff:amount=0.5`](../images/filters/colorize.jpg)
 
 
 

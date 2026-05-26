@@ -8,19 +8,13 @@
 | **Signature** | `motion-blur=radius:angle` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:motion-blur=radius=10:angle=45` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:motion-blur=radius=10:angle=45" -o red-panda-motion-blur.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:motion-blur=radius=10:angle=45" -o red-panda-motion-blur.jpg
 ```
 
-After `all:motion-blur=radius=10:angle=45`:
-
-![red-panda after all:motion-blur=radius=10:angle=45](../images/filters/motion-blur.jpg)
+![red-panda after `fg:motion-blur=radius=10:angle=45`](../images/filters/motion-blur.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `threshold=value` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `mask:threshold=0.5` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:threshold=0.5" -o red-panda-threshold.jpg
 ```
 
-After `mask:threshold=0.5`:
-
-![red-panda after mask:threshold=0.5](../images/filters/threshold.jpg)
+![red-panda after `mask:threshold=0.5`](../images/filters/threshold.jpg)
 
 
 

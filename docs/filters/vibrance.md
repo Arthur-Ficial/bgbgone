@@ -8,19 +8,13 @@
 | **Signature** | `vibrance=amount` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:vibrance=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:vibrance=0.5" -o red-panda-vibrance.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:vibrance=0.5" -o red-panda-vibrance.jpg
 ```
 
-After `all:vibrance=0.5`:
-
-![red-panda after all:vibrance=0.5](../images/filters/vibrance.jpg)
+![red-panda after `fg:vibrance=0.5`](../images/filters/vibrance.jpg)
 
 
 

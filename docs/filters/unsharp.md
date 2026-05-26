@@ -8,19 +8,13 @@
 | **Signature** | `unsharp=radius:intensity` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:unsharp=radius=2.5:intensity=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:unsharp=radius=2.5:intensity=0.5" -o red-panda-unsharp.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:unsharp=radius=2.5:intensity=0.5" -o red-panda-unsharp.jpg
 ```
 
-After `all:unsharp=radius=2.5:intensity=0.5`:
-
-![red-panda after all:unsharp=radius=2.5:intensity=0.5](../images/filters/unsharp.jpg)
+![red-panda after `fg:unsharp=radius=2.5:intensity=0.5`](../images/filters/unsharp.jpg)
 
 
 

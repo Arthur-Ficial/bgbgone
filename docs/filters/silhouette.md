@@ -8,19 +8,13 @@
 | **Signature** | `silhouette=color=#hex` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:silhouette=color=#ff0000` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:silhouette=color=#ff0000" -o red-panda-silhouette.jpg
 ```
 
-After `fg:silhouette=color=#ff0000`:
-
-![red-panda after fg:silhouette=color=#ff0000](../images/filters/silhouette.jpg)
+![red-panda after `fg:silhouette=color=#ff0000`](../images/filters/silhouette.jpg)
 
 
 

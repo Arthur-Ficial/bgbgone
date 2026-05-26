@@ -6,21 +6,15 @@
 |---|---|
 | **Layers** | all, bg, fg |
 | **Signature** | `opacity=value` |
-| **Note** | introduces alpha — use PNG output or pass `--bg` |
+| **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:opacity=0.7` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:opacity=0.7" -o red-panda-opacity.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:opacity=0.7" -o red-panda-opacity.jpg
 ```
 
-After `all:opacity=0.7`:
-
-![red-panda after all:opacity=0.7](../images/filters/opacity.jpg)
+![red-panda after `fg:opacity=0.7`](../images/filters/opacity.jpg)
 
 
 

@@ -6,21 +6,15 @@
 |---|---|
 | **Layers** | fg |
 | **Signature** | `shadow=blur=B:offset=X,Y:opacity=O:color=#hex` |
-| **Note** | introduces alpha — use PNG output or pass `--bg` |
+| **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000" -o red-panda-shadow.jpg
 ```
 
-After `fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000`:
-
-![red-panda after fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000](../images/filters/shadow.jpg)
+![red-panda after `fg:shadow=blur=12:offset=4,4:opacity=0.5:color=#000`](../images/filters/shadow.jpg)
 
 
 

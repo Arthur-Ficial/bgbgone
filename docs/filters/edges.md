@@ -8,19 +8,13 @@
 | **Signature** | `edges=intensity` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:edges=2.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:edges=2.5" -o red-panda-edges.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:edges=2.5" -o red-panda-edges.jpg
 ```
 
-After `all:edges=2.5`:
-
-![red-panda after all:edges=2.5](../images/filters/edges.jpg)
+![red-panda after `fg:edges=2.5`](../images/filters/edges.jpg)
 
 
 

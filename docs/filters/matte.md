@@ -6,21 +6,15 @@
 |---|---|
 | **Layers** | fg |
 | **Signature** | `matte` |
-| **Note** | introduces alpha — use PNG output or pass `--bg` |
+| **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:matte` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:matte" -o red-panda-matte.jpg
 ```
 
-After `fg:matte`:
-
-![red-panda after fg:matte](../images/filters/matte.jpg)
+![red-panda after `fg:matte`](../images/filters/matte.jpg)
 
 
 

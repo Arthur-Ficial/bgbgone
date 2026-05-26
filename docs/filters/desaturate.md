@@ -8,19 +8,13 @@
 | **Signature** | `desaturate=amount` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:desaturate=0.5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:desaturate=0.5" -o red-panda-desaturate.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:desaturate=0.5" -o red-panda-desaturate.jpg
 ```
 
-After `all:desaturate=0.5`:
-
-![red-panda after all:desaturate=0.5](../images/filters/desaturate.jpg)
+![red-panda after `fg:desaturate=0.5`](../images/filters/desaturate.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `adjust=brightness=B:contrast=C:saturation=S` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:adjust=brightness=0.1:contrast=1.1:saturation=0.9` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:adjust=brightness=0.1:contrast=1.1:saturation=0.9" -o red-panda-adjust.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:adjust=brightness=0.1:contrast=1.1:saturation=0.9" -o red-panda-adjust.jpg
 ```
 
-After `all:adjust=brightness=0.1:contrast=1.1:saturation=0.9`:
-
-![red-panda after all:adjust=brightness=0.1:contrast=1.1:saturation=0.9](../images/filters/adjust.jpg)
+![red-panda after `fg:adjust=brightness=0.1:contrast=1.1:saturation=0.9`](../images/filters/adjust.jpg)
 
 
 

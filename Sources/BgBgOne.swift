@@ -169,8 +169,16 @@ enum BgBgOne {
     }
 
     private static func effectiveBackground(_ cfg: Config, input: String? = nil) -> Background {
+        // Auto-promote source-as-bg ONLY when the output format cannot hold
+        // alpha. For transparent-capable formats (PNG, etc.) leave the
+        // background transparent so that filters like fg:outline / fg:shadow
+        // / fg:glow produce a true cut-out sticker against an alpha channel,
+        // not against the original photo. This is the one-pass invariant:
+        //   bgbgone in.jpg --filter "fg:outline=..." -o out.png  → transparent
+        //   bgbgone in.jpg --filter "fg:sepia=..."    -o out.jpg → source as bg
         if case .transparent = cfg.background,
            filtersTouchSourceBackground(cfg.filters),
+           !cfg.outputFormat.supportsTransparency,
            let input,
            input != "-" {
             return .image(input)

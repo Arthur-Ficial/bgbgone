@@ -8,19 +8,13 @@
 | **Signature** | `inner-shadow=blur=B:offset=X,Y:opacity=O:color=#hex` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000" -o red-panda-inner-shadow.jpg
 ```
 
-After `fg:inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000`:
-
-![red-panda after fg:inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000](../images/filters/inner-shadow.jpg)
+![red-panda after `fg:inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000`](../images/filters/inner-shadow.jpg)
 
 
 

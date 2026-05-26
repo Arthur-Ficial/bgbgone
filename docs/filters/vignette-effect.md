@@ -8,19 +8,13 @@
 | **Signature** | `vignette-effect=center=X,Y:radius=R:intensity=I` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1" -o red-panda-vignette-effect.jpg
 ```
 
-After `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1`:
-
-![red-panda after composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1](../images/filters/vignette-effect.jpg)
+![red-panda after `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1`](../images/filters/vignette-effect.jpg)
 
 
 

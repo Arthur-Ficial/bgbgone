@@ -8,19 +8,13 @@
 | **Signature** | `temperature=K` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:temperature=6500` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:temperature=6500" -o red-panda-temperature.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:temperature=6500" -o red-panda-temperature.jpg
 ```
 
-After `all:temperature=6500`:
-
-![red-panda after all:temperature=6500](../images/filters/temperature.jpg)
+![red-panda after `fg:temperature=6500`](../images/filters/temperature.jpg)
 
 
 

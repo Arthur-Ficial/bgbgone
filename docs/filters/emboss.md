@@ -8,19 +8,13 @@
 | **Signature** | `emboss` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:emboss` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:emboss" -o red-panda-emboss.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:emboss" -o red-panda-emboss.jpg
 ```
 
-After `all:emboss`:
-
-![red-panda after all:emboss](../images/filters/emboss.jpg)
+![red-panda after `fg:emboss`](../images/filters/emboss.jpg)
 
 
 

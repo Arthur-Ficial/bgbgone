@@ -135,74 +135,19 @@ cp "$YOGA" "$OUT/05-yoga-before.jpg"
 
 # ============ One example per filter for docs/filters/<name>.md ============
 # Each filter rendered against the same canonical subject (Red Panda over its
-# own original background) so per-filter docs all share a baseline. Original
-# colourful background ensures bg:/all: filter effects show through clearly.
+# own original background) so per-filter docs all share a baseline.
+# Original colourful background ensures fg: filter effects show through
+# clearly with the bg preserved as a visual anchor.
 echo ""
-echo "-- per-filter doc assets (Red Panda on original natural background) --"
+echo "-- per-filter doc baseline (Red Panda on original natural background) --"
 
-CANON_BG_ARGS=(--bg "image:$PANDA")
 cp "$PANDA" "$FILT_OUT/_baseline.jpg"
 echo "  ok  _baseline (cp of source)"
 
-run_filter() {
-    local name="$1" chain="$2"
-    "$BIN" "$PANDA" "${CANON_BG_ARGS[@]}" --filter "$chain" -o "$FILT_OUT/${name}.jpg" >/dev/null 2>&1 \
-        && echo "  ok  $name" \
-        || echo "  SKIP $name"
-}
-
-run_filter "grayscale"       "bg:grayscale"
-run_filter "desaturate"      "bg:desaturate=0.8"
-run_filter "negate"          "bg:negate"
-run_filter "sepia"           "all:sepia=0.85"
-run_filter "adjust"          "bg:adjust=brightness=-0.1:contrast=1.2:saturation=0.5"
-run_filter "gamma"           "bg:gamma=1.8"
-run_filter "exposure"        "bg:exposure=0.8"
-run_filter "hue"             "bg:hue=90"
-run_filter "tint"            "bg:tint=color=#ff00ff:amount=0.5"
-run_filter "colorize"        "bg:colorize=color=#00bfff:amount=0.9"
-run_filter "temperature"     "bg:temperature=3500"
-run_filter "levels"          "bg:levels=black=0.1:white=0.9:gamma=1.2"
-run_filter "vibrance"        "all:vibrance=0.8"
-run_filter "opacity"         "bg:opacity=0.5"
-run_filter "duotone"         "bg:duotone=dark=#003366:light=#ffcc00"
-run_filter "blur"            "bg:blur=22"
-run_filter "box-blur"        "bg:box-blur=14"
-run_filter "motion-blur"     "bg:motion-blur=radius=22:angle=45"
-run_filter "zoom-blur"       "bg:zoom-blur=center=0.5,0.5:amount=35"
-run_filter "sharpen"         "all:sharpen=0.8"
-run_filter "unsharp"         "all:unsharp=radius=3:intensity=1.0"
-run_filter "posterize"       "all:posterize=4"
-run_filter "pixelate"        "bg:pixelate=25"
-run_filter "edges"           "all:edges=2.5"
-run_filter "edge-work"       "all:edge-work=3"
-run_filter "emboss"          "all:emboss"
-run_filter "crystallize"     "bg:crystallize=30"
-run_filter "pointillize"     "bg:pointillize=15"
-run_filter "comic"           "all:comic"
-run_filter "noise"           "all:noise=0.3"
-run_filter "vignette"        "composite:vignette=2:1"
-run_filter "vignette-effect" "composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5"
-run_filter "bloom"           "composite:bloom=1.0:18"
-run_filter "gloom"           "composite:gloom=1.0:18"
-run_filter "outline"         "fg:outline=color=#ffaa00:width=6"
-run_filter "glow"            "fg:glow=color=#ffff80:radius=25:intensity=0.8"
-run_filter "shadow"          "fg:shadow=blur=14:offset=6,6:opacity=0.6:color=#000"
-run_filter "inner-shadow"    "fg:inner-shadow=blur=10:offset=2,2:opacity=0.7:color=#000"
-run_filter "silhouette"      "fg:silhouette=color=#005577"
-# cutout/mask-shape filters demoed on a contrast bg (otherwise source==bg
-# makes the mask boundary invisible — fg pixel == bg pixel).
-"$BIN" "$PANDA" --bg color:#1a2233 --filter "fg:cutout" -o "$FILT_OUT/cutout.jpg" >/dev/null 2>&1 && echo "  ok  cutout (contrast bg)" || echo "  SKIP cutout"
-run_filter "matte"           "fg:matte"
-run_filter "scale"           "fg:scale=0.7"
-run_filter "translate"       "fg:translate=120,-60"
-run_filter "rotate"          "fg:rotate=15"
-run_filter "flip"            "fg:flip=horizontal"
-# mask-shape filters need a contrast bg to show the mask boundary change.
-"$BIN" "$PANDA" --bg color:#1a2233 --filter "mask:feather=24" -o "$FILT_OUT/feather.jpg" >/dev/null 2>&1 && echo "  ok  feather (contrast bg)" || echo "  SKIP feather"
-"$BIN" "$PANDA" --bg color:#1a2233 --filter "mask:threshold=0.5" -o "$FILT_OUT/threshold.jpg" >/dev/null 2>&1 && echo "  ok  threshold (contrast bg)" || echo "  SKIP threshold"
-"$BIN" "$PANDA" --bg color:#1a2233 --filter "mask:expand=14" -o "$FILT_OUT/expand.jpg" >/dev/null 2>&1 && echo "  ok  expand (contrast bg)" || echo "  SKIP expand"
-"$BIN" "$PANDA" --bg color:#1a2233 --filter "mask:contract=14" -o "$FILT_OUT/contract.jpg" >/dev/null 2>&1 && echo "  ok  contract (contrast bg)" || echo "  SKIP contract"
+# Per-filter showcase images (docs/images/filters/<name>.jpg) are
+# rendered by scripts/gen-docs.sh in the same pass as the markdown that
+# documents them. Single source of truth: gen-docs.sh prints the
+# bgbgone invocation AND executes it. Do not duplicate that here.
 
 echo ""
 echo "done."

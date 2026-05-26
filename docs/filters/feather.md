@@ -8,19 +8,13 @@
 | **Signature** | `feather=radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `mask:feather=8` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:feather=8" -o red-panda-feather.jpg
 ```
 
-After `mask:feather=8`:
-
-![red-panda after mask:feather=8](../images/filters/feather.jpg)
+![red-panda after `mask:feather=8`](../images/filters/feather.jpg)
 
 
 

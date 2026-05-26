@@ -8,19 +8,13 @@
 | **Signature** | `scale=factor` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:scale=0.75` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:scale=0.75" -o red-panda-scale.jpg
 ```
 
-After `fg:scale=0.75`:
-
-![red-panda after fg:scale=0.75](../images/filters/scale.jpg)
+![red-panda after `fg:scale=0.75`](../images/filters/scale.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `expand=pixels` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `mask:expand=3` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:expand=3" -o red-panda-expand.jpg
 ```
 
-After `mask:expand=3`:
-
-![red-panda after mask:expand=3](../images/filters/expand.jpg)
+![red-panda after `mask:expand=3`](../images/filters/expand.jpg)
 
 
 

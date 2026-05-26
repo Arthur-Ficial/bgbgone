@@ -8,19 +8,13 @@
 | **Signature** | `comic` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:comic` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:comic" -o red-panda-comic.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:comic" -o red-panda-comic.jpg
 ```
 
-After `all:comic`:
-
-![red-panda after all:comic](../images/filters/comic.jpg)
+![red-panda after `fg:comic`](../images/filters/comic.jpg)
 
 
 

@@ -8,19 +8,13 @@
 | **Signature** | `pointillize=radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:pointillize=5` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:pointillize=5" -o red-panda-pointillize.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:pointillize=5" -o red-panda-pointillize.jpg
 ```
 
-After `all:pointillize=5`:
-
-![red-panda after all:pointillize=5](../images/filters/pointillize.jpg)
+![red-panda after `fg:pointillize=5`](../images/filters/pointillize.jpg)
 
 
 

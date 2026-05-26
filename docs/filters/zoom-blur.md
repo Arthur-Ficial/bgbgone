@@ -8,19 +8,13 @@
 | **Signature** | `zoom-blur=center=X,Y:amount=A` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:zoom-blur=center=0.5,0.5:amount=20` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:zoom-blur=center=0.5,0.5:amount=20" -o red-panda-zoom-blur.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:zoom-blur=center=0.5,0.5:amount=20" -o red-panda-zoom-blur.jpg
 ```
 
-After `all:zoom-blur=center=0.5,0.5:amount=20`:
-
-![red-panda after all:zoom-blur=center=0.5,0.5:amount=20](../images/filters/zoom-blur.jpg)
+![red-panda after `fg:zoom-blur=center=0.5,0.5:amount=20`](../images/filters/zoom-blur.jpg)
 
 
 

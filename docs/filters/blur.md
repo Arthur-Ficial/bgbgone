@@ -8,19 +8,13 @@
 | **Signature** | `blur=radius` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:blur=15` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:blur=15" -o red-panda-blur.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:blur=15" -o red-panda-blur.jpg
 ```
 
-After `all:blur=15`:
-
-![red-panda after all:blur=15](../images/filters/blur.jpg)
+![red-panda after `fg:blur=15`](../images/filters/blur.jpg)
 
 
 

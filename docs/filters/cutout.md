@@ -6,21 +6,15 @@
 |---|---|
 | **Layers** | fg |
 | **Signature** | `cutout` |
-| **Note** | introduces alpha — use PNG output or pass `--bg` |
+| **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:cutout` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:cutout" -o red-panda-cutout.jpg
 ```
 
-After `fg:cutout`:
-
-![red-panda after fg:cutout](../images/filters/cutout.jpg)
+![red-panda after `fg:cutout`](../images/filters/cutout.jpg)
 
 
 

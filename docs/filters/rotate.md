@@ -8,19 +8,13 @@
 | **Signature** | `rotate=degrees` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:rotate=15` (subject filter, background preserved)
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:rotate=15" -o red-panda-rotate.jpg
 ```
 
-After `fg:rotate=15`:
-
-![red-panda after fg:rotate=15](../images/filters/rotate.jpg)
+![red-panda after `fg:rotate=15`](../images/filters/rotate.jpg)
 
 
 

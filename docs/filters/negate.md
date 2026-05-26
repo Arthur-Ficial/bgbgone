@@ -8,19 +8,13 @@
 | **Signature** | `negate` |
 
 
-## Example — red-panda
-
-Original input:
-
-![red-panda input](../../Tests/fixtures/red-panda.jpg)
+## Example — red-panda, `fg:negate` (subject filter, background preserved)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:negate" -o red-panda-negate.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:negate" -o red-panda-negate.jpg
 ```
 
-After `all:negate`:
-
-![red-panda after all:negate](../images/filters/negate.jpg)
+![red-panda after `fg:negate`](../images/filters/negate.jpg)
 
 
 
