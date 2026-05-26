@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.2.13](https://img.shields.io/badge/version-1.2.13-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.2.14](https://img.shields.io/badge/version-1.2.14-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![100% on-device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
@@ -22,6 +22,20 @@ Three originals drive every example below. Each is shown once here; later sectio
 |---|---|---|
 | ![red-panda original](docs/images/showcase/01-panda-before.jpg) | ![corgi-puppy original](docs/images/showcase/03-corgi-before.jpg) | ![woman-singer original](docs/images/showcase/04-woman-singer-before.jpg) |
 
+## Red-panda in every output mode
+
+Same fixture, six side-by-side modes: source → transparent cutout → alpha matte → on solid colour → on a universe photo (nebula) → die-cut sticker.
+
+```bash
+bgbgone red-panda.jpg -o red-panda-cutout.png                                                                # 2. transparent cutout
+bgbgone red-panda.jpg --channels alpha -o red-panda-matte.png                                                # 3. alpha matte
+bgbgone red-panda.jpg --bg color:#1a2233 -o red-panda-on-navy.jpg                                            # 4. on solid colour
+bgbgone red-panda.jpg --bg "image:nebula-flaming-star.png" -o red-panda-in-space.jpg                         # 5. on universe photo
+bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:outline=color=#fff:width=24" -o red-panda-sticker.jpg  # 6. hard-edge sticker
+```
+
+![red-panda across every output mode](docs/images/red-panda-all-modes.png)
+
 ## Colour-pop on red-panda — bg goes B&W, subject keeps its colour
 
 ```bash
@@ -38,15 +52,15 @@ bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o red-pa
 
 ![red-panda portrait-mode blur](docs/images/showcase/02-panda-portraitmode.jpg)
 
-## Die-cut sticker on corgi-puppy — drop shadow + thick white outline
+## Die-cut sticker on corgi-puppy — thick hard white outline (no blur)
 
 ```bash
 bgbgone corgi-puppy.jpg --bg color:#1a2233 \
-  --filter "fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=30" \
+  --filter "fg:outline=color=#fff:width=30" \
   -o corgi-sticker.jpg
 ```
 
-![corgi-puppy die-cut sticker](docs/images/showcase/03-corgi-sticker.jpg)
+![corgi-puppy die-cut sticker — hard solid white border, no halo](docs/images/showcase/03-corgi-sticker.jpg)
 
 ## Motion-radial backdrop on woman-singer — `bg:zoom-blur`, `--type person`
 

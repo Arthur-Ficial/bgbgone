@@ -49,25 +49,16 @@ cp "$PANDA" "$OUT/01-panda-before.jpg"
 echo "-- showcase 2: portrait mode (red panda, original bg gets silky blur=60) --"
 "$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:blur=60" -o "$OUT/02-panda-portraitmode.jpg" >/dev/null
 
-echo "-- showcase 3: real die-cut sticker (mask:expand+feather rounds corners; outline + drop shadow) --"
-# HYPOTHESIS: "good sticker border" = (1) expanded mask so the white border
-# extends beyond the subject silhouette, (2) Gaussian-feathered mask so
-# the contour is rounded (no jagged shape-following), (3) thick white
-# outline = the visible sticker paper, (4) soft drop shadow underneath
-# = the sticker lifting off the page. Chain order:
-#   mask:expand=24,feather=12 → dilate + round the matte
-#   fg:shadow=…             → big offset shadow under the rounded shape
-#   fg:outline=…            → thick white border around the rounded shape
-# Before = the ORIGINAL photo (cp, no processing) so the user sees what
-# the source actually looks like.
+echo "-- showcase 3: die-cut sticker (hard solid white border, no shadow, no blur) --"
+# Real die-cut stickers have a thick SOLID white border outside the subject
+# silhouette. No drop shadow (those produce a soft halo that defeats the
+# die-cut look). No blur (same reason). One filter, one effect:
+#   fg:outline=color=#fff:width=30  → thick hard white border
+# `outline` uses CIMorphologyMaximum + subtract + tint, so the border is
+# pixel-sharp at the dilated matte boundary. No transparency, no fade.
 cp "$CORGI" "$OUT/03-corgi-before.jpg"
-# Sticker = subject + SOLID white border + drop shadow. NO mask:expand
-# upstream - that would dilate the matte so the photo's natural background
-# bleeds into the ring area (visible as a green/coloured halo between
-# subject and outline). The outline filter dilates internally and fills
-# the ring with the chosen colour, so subject stays clean.
 "$BIN" "$CORGI" --bg "color:#1a2233" \
-  --filter "fg:shadow=blur=40:offset=22,22:opacity=0.7:color=#000,outline=color=#fff:width=30" \
+  --filter "fg:outline=color=#fff:width=30" \
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 

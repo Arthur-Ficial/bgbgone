@@ -117,6 +117,40 @@ bg() {
     echo "$dst"
 }
 
+# ---- 0) Red-panda in every output mode (single-fixture filmstrip) ----------
+# Same fixture, six modes side-by-side:
+#   src · cutout (transparent) · matte (alpha as grey) · on solid colour ·
+#   on universe (nebula) · sticker (hard white border)
+# Pairs with the README's "Red-panda in every output mode" section.
+
+echo "==> red-panda-all-modes (single-fixture filmstrip)"
+mkdir -p "$WORK/all-modes"
+PANDA_SRC="$FX/red-panda.jpg"
+NEBULA="$FX/nebula-flaming-star.png"
+
+"$BGBGONE" "$PANDA_SRC" -o "$WORK/all-modes/cut.png" --quiet
+"$BGBGONE" "$PANDA_SRC" --channels alpha -o "$WORK/all-modes/matte.png" --quiet
+"$BGBGONE" "$PANDA_SRC" --bg color:#1a2233 --format jpg -o "$WORK/all-modes/on-navy.jpg" --quiet
+"$BGBGONE" "$PANDA_SRC" --bg "image:$NEBULA" --format jpg -o "$WORK/all-modes/in-space.jpg" --quiet
+"$BGBGONE" "$PANDA_SRC" --bg color:#1a2233 --filter "fg:outline=color=#fff:width=24" --format jpg -o "$WORK/all-modes/sticker.jpg" --quiet
+
+panel "$PANDA_SRC"                  "1. src · red-panda.jpg"            "$WORK/all-modes/p1.png" 340 380
+panel "$WORK/all-modes/cut.png"     "2. bgbgone (cutout, transparent)"  "$WORK/all-modes/p2.png" 340 380
+panel "$WORK/all-modes/matte.png"   "3. --channels alpha (matte)"       "$WORK/all-modes/p3.png" 340 380
+panel "$WORK/all-modes/on-navy.jpg" "4. --bg color:#1a2233"             "$WORK/all-modes/p4.png" 340 380
+panel "$WORK/all-modes/in-space.jpg" "5. --bg image:nebula-flaming-star.png" "$WORK/all-modes/p5.png" 340 380
+panel "$WORK/all-modes/sticker.jpg" "6. --filter fg:outline (sticker)"  "$WORK/all-modes/p6.png" 340 380
+
+row "$WORK/all-modes/row.png" "Same red-panda.jpg, six output modes" \
+    "$WORK/all-modes/p1.png" \
+    "$WORK/all-modes/p2.png" \
+    "$WORK/all-modes/p3.png" \
+    "$WORK/all-modes/p4.png" \
+    "$WORK/all-modes/p5.png" \
+    "$WORK/all-modes/p6.png"
+cp "$WORK/all-modes/row.png" "$OUT/red-panda-all-modes.png"
+echo "    -> $OUT/red-panda-all-modes.png"
+
 # ---- 1) Cutout grid: all 12 PD fixtures, source → transparent ---------------
 
 echo "==> cutout-grid (12 source → cutout pairs)"
@@ -348,7 +382,7 @@ stack "$OUT/showcase-edges.png" \
 echo "    -> $OUT/showcase-edges.png"
 
 # Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
-ZOOM_SUB="$FX/astronaut-eva.jpg"
+ZOOM_SUB="$FX/corgi-puppy.jpg"
 "$BGBGONE" "$ZOOM_SUB" -o "$WORK/edge/zoom-f0.png" --quiet
 "$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=8" -o "$WORK/edge/zoom-f8.png" --quiet
 
@@ -369,8 +403,12 @@ zoom_panel() {
         -append PNG24:"$dst"
 }
 
-zoom_panel "$WORK/edge/zoom-f0.png" "default (hard edge)" "$WORK/edge/zoom-f0-p.png"
-zoom_panel "$WORK/edge/zoom-f8.png" "mask:feather=8 (soft matte)" "$WORK/edge/zoom-f8-p.png"
+# Corgi-puppy is 3126x4682. The right ear / head boundary sits around
+# x=1500..2100, y=800..1400 - prime edge-detail territory between fur
+# and the blurred green background.
+CORGI_CROP="600x600+1450+800"
+zoom_panel "$WORK/edge/zoom-f0.png" "default (hard edge)" "$WORK/edge/zoom-f0-p.png" "$CORGI_CROP"
+zoom_panel "$WORK/edge/zoom-f8.png" "mask:feather=8 (soft matte)" "$WORK/edge/zoom-f8-p.png" "$CORGI_CROP"
 row "$WORK/edge/feather-zoom-row.png" "Edge refinement — mask:feather close-up around the subject outline" \
     "$WORK/edge/zoom-f0-p.png" \
     "$WORK/edge/zoom-f8-p.png"
@@ -486,10 +524,10 @@ echo "    -> $OUT/mona-lisa-tour.png"
 
 echo "==> pipeline (real auge classify output)"
 mkdir -p "$WORK/pipe"
-PSRC="$FX/mars-rover.jpg"
+PSRC="$FX/red-panda.jpg"
 "$BGBGONE" "$PSRC" -o "$WORK/pipe/cut.png" --quiet
 "$BGBGONE" "$PSRC" --bg color:black --format jpg -o "$WORK/pipe/black.jpg" --quiet
-panel "$PSRC" "1. src · curiosity selfie" "$WORK/pipe/p1.png" 360 320
+panel "$PSRC" "1. src · red-panda.jpg" "$WORK/pipe/p1.png" 360 320
 panel "$WORK/pipe/cut.png" "2. bgbgone (cutout)" "$WORK/pipe/p2.png" 360 320
 panel "$WORK/pipe/black.jpg" "3. bgbgone --bg color:black --format jpg" "$WORK/pipe/p3.png" 360 320
 
