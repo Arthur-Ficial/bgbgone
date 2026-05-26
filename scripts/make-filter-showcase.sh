@@ -80,7 +80,7 @@ cp "$WOMAN_SINGER" "$OUT/04-woman-singer-before.jpg"
   --bg "image:$WOMAN_SINGER" \
   --filter "bg:zoom-blur=center=0.5,0.45:amount=60" \
   -o "$OUT/04-woman-singer-zoom-blur.jpg" >/dev/null
-trash_path "$OUT/04-woman-singer-vintage.jpg" "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
+trash_path "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
 # ============ feather progression panel + close-up (restored from removed --feather docs) ============
 echo "-- feather progression: 0 / 8 / 16 / 32 px on the corgi against transparent --"

@@ -53,7 +53,7 @@ Quality bar (all must be green before pushing to `main` or tagging a release):
 
 ## Panels always lead with the original
 
-Every panel strip (per-filter yoga + parastoo comparisons, README
+Every panel strip (per-filter yoga + woman-singer comparisons, README
 showcase strips, recipe walkthroughs) MUST start with the unmodified
 source on the left, then the filter variants to the right. The reader
 needs the input as the visual anchor to read every downstream effect.

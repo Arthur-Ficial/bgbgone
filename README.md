@@ -14,21 +14,63 @@
 
 Run `brew install Arthur-Ficial/tap/bgbgone` (macOS 26+, ~3 MB binary, no Xcode needed). From source: `make install` writes to `/usr/local/bin`.
 
+## Inputs used in this README
+
+Three originals drive every example below. Each is shown once here; later sections reference the same fixtures without repeating the big preview.
+
+| `red-panda.jpg` | `corgi-puppy.jpg` | `woman-singer.jpg` |
+|---|---|---|
+| ![red-panda original](docs/images/showcase/01-panda-before.jpg) | ![corgi-puppy original](docs/images/showcase/03-corgi-before.jpg) | ![woman-singer original](docs/images/showcase/04-woman-singer-before.jpg) |
+
 ## Quickstart — transparent cutout
 
-Original `red-panda.jpg`:
+The simplest case: drop the background entirely. Default output is a 32-bit PNG with alpha.
 
-![red-panda input](docs/images/showcase/01-panda-before.jpg)
+```bash
+bgbgone red-panda.jpg -o red-panda-cutout.png
+```
+
+![transparent cutouts across subject types — red-panda, corgi, woman-singer](docs/images/showcase-cutouts.png)
+
+## Solid colour background — `--bg color:#...`
+
+Swap the cutout onto a flat colour. JPEG output works because alpha is composited away.
+
+```bash
+bgbgone red-panda.jpg --bg color:#1a2233 -o red-panda-navy.jpg
+```
+
+![cutouts composited onto solid colours](docs/images/showcase-colors.png)
+
+## Image background — `--bg "image:other.jpg"`
+
+Reuse the same fixture as backdrop (so the foreground stays geometrically aligned) or drop in any image.
+
+```bash
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" -o red-panda-self.jpg
+```
+
+![cutouts composited onto image backgrounds](docs/images/showcase-image-bg.png)
+
+## Mask refinement — `mask:feather`
+
+`feather=N` softens the cutout edge by N pixels. Razor edge vs softened, same input.
+
+```bash
+bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
+```
+
+![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
+
+## Colour-pop on red-panda — bg goes B&W, subject keeps its colour
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale" -o red-panda-colourpop.jpg
 ```
 
-After — background goes B&W, subject keeps its colour:
-
 ![red-panda colour-pop](docs/images/showcase/01-panda-colourpop.jpg)
 
-## Portrait mode — silky bg blur on the same red-panda
+## Portrait mode on red-panda — silky bg blur
 
 ```bash
 bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o red-panda-portrait.jpg
@@ -36,11 +78,7 @@ bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o red-pa
 
 ![red-panda portrait-mode blur](docs/images/showcase/02-panda-portraitmode.jpg)
 
-## Die-cut sticker — drop shadow + thick white outline
-
-Original `corgi-puppy.jpg`:
-
-![corgi-puppy input](docs/images/showcase/03-corgi-before.jpg)
+## Die-cut sticker on corgi-puppy — drop shadow + thick white outline
 
 ```bash
 bgbgone corgi-puppy.jpg --bg color:#1a2233 \
@@ -48,15 +86,9 @@ bgbgone corgi-puppy.jpg --bg color:#1a2233 \
   -o corgi-sticker.jpg
 ```
 
-After — clean sticker with hard die-cut edge:
-
 ![corgi-puppy die-cut sticker](docs/images/showcase/03-corgi-sticker.jpg)
 
-## Motion-radial backdrop — `bg:zoom-blur`, `--type person`
-
-Original `woman-singer.jpg`:
-
-![woman-singer input](docs/images/showcase/04-woman-singer-before.jpg)
+## Motion-radial backdrop on woman-singer — `bg:zoom-blur`, `--type person`
 
 ```bash
 bgbgone woman-singer.jpg --type person \
@@ -65,35 +97,21 @@ bgbgone woman-singer.jpg --type person \
   -o woman-singer-zoom-blur.jpg
 ```
 
-After — bg radiates outward from the subject centre, subject stays razor-sharp:
+![woman-singer zoom-blur backdrop — bg radiates outward, subject razor-sharp](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
 
-![woman-singer zoom-blur backdrop](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
-
-## Edge refinement — `mask:feather`
-
-Original `corgi-puppy.jpg` (same fixture):
-
-![corgi-puppy input](docs/images/showcase/03-corgi-before.jpg)
+## Edge refinement on corgi-puppy — `mask:feather`
 
 ```bash
 bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
 ```
 
-After — left panel `feather=0` (razor edge) vs right panel `feather=16` (softened):
+![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
 
-![corgi-puppy feather 0 vs 16 close-up](docs/images/feather-zoom.png)
-
-## Pipelines — compose with sibling Apple-framework CLIs
-
-Original `red-panda.jpg` (same fixture as Quickstart):
-
-![red-panda input](docs/images/showcase/01-panda-before.jpg)
+## Pipelines on red-panda — compose with sibling Apple-framework CLIs
 
 ```bash
 bgbgone red-panda.jpg -o red-panda-cutout.png && auge --classify red-panda-cutout.png
 ```
-
-After — cutout fed to [auge](https://github.com/Arthur-Ficial/auge) for classification:
 
 ![bgbgone piped into auge --classify](docs/images/showcase-pipeline.png)
 
@@ -122,12 +140,12 @@ Run `bgbgone --server --host 127.0.0.1 --port 8088` to expose the same Config + 
 
 Working agreement: [DEVELOPMENT.md](DEVELOPMENT.md). Per-AI-session rules: [CLAUDE.md](CLAUDE.md).
 
-- `make test` — every lint (`lint-fixtures`, `lint-readme`, `lint-contract`, `lint-docs`, `lint-doc-images`) + unit + integration + doc-block harness
+- `make test` — every lint (`lint-fixtures`, `lint-readme`, `lint-contract`, `lint-docs`, `lint-doc-images`, `lint-block-pairing`) + unit + integration + doc-block harness
 - `make install` — bump patch + build release + install to `/usr/local/bin`
 - `make release` — full release gate; regenerates every shipped image asset
 - `make deploy` — release + tag + push + GitHub release + Homebrew tap bump
 
-Every fenced bash block in this README and in every doc under `docs/` is executed against the installed binary by `scripts/test-doc-blocks.sh` on every `make test`. Every `![](path)` image link is checked by `scripts/lint-doc-images.sh` — no broken images can be committed.
+Every fenced bash block in this README and in every doc under `docs/` is executed against the installed binary by `scripts/test-doc-blocks.sh` on every `make test`. Every image link is checked by `scripts/lint-doc-images.sh`. Every bgbgone visual-demo block must be paired with an image (enforced by `scripts/lint-block-pairing.sh`).
 
 ## Images + attribution
 
