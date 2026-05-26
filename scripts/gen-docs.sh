@@ -5,9 +5,9 @@
 #   - docs/filters/<name>.md         (49 pages, one template)
 #   - docs/filters/README.md         (filter index)
 #
-# Templates live in scripts/templates/. Substitution is {{TOKEN}} -> value
-# via perl; values are passed via env vars so newlines / shell metachars
-# in filter docs cannot inject markdown.
+# Per-subject sections (yoga, woman-singer) are emitted ONLY if the
+# matching panel image exists on disk. No section -> no broken link.
+# This invariant is enforced by scripts/lint-doc-images.sh.
 
 set -euo pipefail
 
@@ -15,6 +15,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
 TMPL_DIR="$ROOT/scripts/templates"
 OUT_DIR="$ROOT/docs/filters"
+PANELS_DIR="$ROOT/docs/images/filters/panels"
 
 [ -x "$BIN" ] || { echo "gen-docs: missing binary $BIN; run 'make build' first"; exit 1; }
 command -v jq   >/dev/null || { echo "gen-docs: requires jq"; exit 1; }
@@ -25,8 +26,6 @@ mkdir -p "$OUT_DIR"
 JSON=$("$BIN" --filters-list --json)
 COUNT=$(printf '%s' "$JSON" | jq 'length')
 
-# perl renderer: read template from arg, write substituted output to stdout,
-# values come from named env vars listed by --tokens.
 render() {
   local tmpl="$1"; shift
   TPL_PATH="$tmpl" perl -e '
@@ -40,6 +39,31 @@ render() {
     }
     print $text;
   ' -- "$@"
+}
+
+# Build a per-subject section: a heading + code block whose invocations
+# target the subject fixture + the panel image. Emits "" if the panel
+# image isn't present on disk (no broken link).
+subject_section() {
+  local subject="$1" name="$2" entry="$3"
+  local panel="$PANELS_DIR/${subject}-${name}.jpg"
+  [ -f "$panel" ] || { printf ''; return; }
+
+  local lines=""
+  while IFS= read -r layer; do
+    [ -z "$layer" ] && continue
+    case "$layer" in
+      composite|fg|mask)
+        lines+="bgbgone ${subject}.jpg --type person --bg color:#1a2233 --filter \"${layer}:${name}\""$'\n'
+        ;;
+      bg|all)
+        lines+="bgbgone ${subject}.jpg --type person --bg \"image:${subject}.jpg\" --filter \"${layer}:${name}\""$'\n'
+        ;;
+    esac
+  done < <(jq -r '.layers[]' <<<"$entry")
+
+  printf '\n## Per-layer panels — %s (`--type person`)\n\nOriginal input:\n\n![%s input](../../Tests/fixtures/%s.jpg)\n\n```bash\n%s```\n\nPanels (`original | bg | fg | all`):\n\n![`%s` panels on %s](../images/filters/panels/%s-%s.jpg)\n' \
+    "$subject" "$subject" "$subject" "$lines" "$name" "$subject" "$subject" "$name"
 }
 
 # ---- per-filter pages ----
@@ -62,23 +86,10 @@ while IFS= read -r entry; do
     export ALPHA_NOTE=""
   fi
 
-  # Build layer-invocation block: one bash fence with one bgbgone call per
-  # valid layer. composite/fg/mask need a solid bg; bg/all use a self-bg.
-  lines=""
-  while IFS= read -r layer; do
-    [ -z "$layer" ] && continue
-    case "$layer" in
-      composite|fg|mask)
-        lines+="bgbgone red-panda.jpg --bg color:#1a2233 --filter \"${layer}:${example}\""$'\n'
-        ;;
-      bg|all)
-        lines+="bgbgone red-panda.jpg --bg \"image:red-panda.jpg\" --filter \"${layer}:${example}\""$'\n'
-        ;;
-    esac
-  done < <(jq -r '.layers[]' <<<"$entry")
-  export LAYER_INVOCATIONS=$'```bash\n'"${lines}"$'```'
+  export YOGA_SECTION=$(subject_section "yoga" "$NAME" "$entry")
+  export WOMAN_SINGER_SECTION=$(subject_section "woman-singer" "$NAME" "$entry")
 
-  render "$TMPL_FILTER" NAME DOC SIGNATURE LAYERS EXAMPLE_CHAIN ALPHA_NOTE LAYER_INVOCATIONS > "$OUT_DIR/${NAME}.md"
+  render "$TMPL_FILTER" NAME DOC SIGNATURE LAYERS EXAMPLE_CHAIN ALPHA_NOTE YOGA_SECTION WOMAN_SINGER_SECTION > "$OUT_DIR/${NAME}.md"
   i=$((i + 1))
 done < <(printf '%s' "$JSON" | jq -c '.[]')
 
@@ -96,4 +107,4 @@ export MASK_ROWS=$(jq -r ".[] | select(.layers == [\"mask\"]) | $row_jq" <<<"$JS
 
 render "$TMPL_INDEX" COUNT ALL_LAYER_ROWS COMPOSITE_ROWS FG_ROWS MASK_ROWS > "$OUT_DIR/README.md"
 
-echo "gen-docs: wrote $i per-filter pages + index from $(basename "$TMPL_FILTER") + $(basename "$TMPL_INDEX")"
+echo "gen-docs: wrote $i per-filter pages + index"

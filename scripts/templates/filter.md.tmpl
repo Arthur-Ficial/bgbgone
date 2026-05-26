@@ -8,19 +8,20 @@
 | **Signature** | `{{SIGNATURE}}` |
 {{ALPHA_NOTE}}
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "{{EXAMPLE_CHAIN}}"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "{{EXAMPLE_CHAIN}}" -o red-panda-{{NAME}}.jpg
 ```
 
-![`{{EXAMPLE_CHAIN}}` on red-panda](../images/filters/{{NAME}}.jpg)
+After `{{EXAMPLE_CHAIN}}`:
 
-## Per-layer panels
+![red-panda after {{EXAMPLE_CHAIN}}](../images/filters/{{NAME}}.jpg)
 
-{{LAYER_INVOCATIONS}}
-
-![`{{NAME}}` panels on yoga](../images/filters/panels/yoga-{{NAME}}.jpg)
-![`{{NAME}}` panels on woman-singer](../images/filters/panels/woman-singer-{{NAME}}.jpg)
+{{YOGA_SECTION}}{{WOMAN_SINGER_SECTION}}
 
 See the [filter index](README.md) for the full catalogue.

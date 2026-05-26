@@ -8,23 +8,50 @@
 | **Signature** | `edges=intensity` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:edges=2.5"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:edges=2.5" -o red-panda-edges.jpg
 ```
 
-![`all:edges=2.5` on red-panda](../images/filters/edges.jpg)
+After `all:edges=2.5`:
 
-## Per-layer panels
+![red-panda after all:edges=2.5](../images/filters/edges.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:edges=2.5"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:edges=2.5"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:edges=2.5"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:edges"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:edges"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:edges"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`edges` panels on yoga](../images/filters/panels/yoga-edges.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:edges"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:edges"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:edges"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`edges` panels on woman-singer](../images/filters/panels/woman-singer-edges.jpg)
 
 See the [filter index](README.md) for the full catalogue.

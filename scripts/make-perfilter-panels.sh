@@ -15,7 +15,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
-FIX="$ROOT/Tests/fixtures/showcase"
+FIX="$ROOT/Tests/fixtures"
 PANEL_OUT="$ROOT/docs/images/filters/panels"
 YOGA="$FIX/yoga.jpg"
 WOMAN_SINGER="$FIX/woman-singer.jpg"

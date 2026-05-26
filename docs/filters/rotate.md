@@ -8,21 +8,46 @@
 | **Signature** | `rotate=degrees` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:rotate=15"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:rotate=15" -o red-panda-rotate.jpg
 ```
 
-![`fg:rotate=15` on red-panda](../images/filters/rotate.jpg)
+After `fg:rotate=15`:
 
-## Per-layer panels
+![red-panda after fg:rotate=15](../images/filters/rotate.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:rotate=15"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:rotate"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`rotate` panels on yoga](../images/filters/panels/yoga-rotate.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:rotate"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`rotate` panels on woman-singer](../images/filters/panels/woman-singer-rotate.jpg)
 
 See the [filter index](README.md) for the full catalogue.

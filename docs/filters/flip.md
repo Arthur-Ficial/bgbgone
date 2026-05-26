@@ -8,21 +8,46 @@
 | **Signature** | `flip=horizontal|vertical` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:flip=horizontal"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:flip=horizontal" -o red-panda-flip.jpg
 ```
 
-![`fg:flip=horizontal` on red-panda](../images/filters/flip.jpg)
+After `fg:flip=horizontal`:
 
-## Per-layer panels
+![red-panda after fg:flip=horizontal](../images/filters/flip.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:flip=horizontal"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:flip"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`flip` panels on yoga](../images/filters/panels/yoga-flip.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:flip"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`flip` panels on woman-singer](../images/filters/panels/woman-singer-flip.jpg)
 
 See the [filter index](README.md) for the full catalogue.

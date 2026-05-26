@@ -8,23 +8,50 @@
 | **Signature** | `exposure=stops` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:exposure=1.0"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:exposure=1.0" -o red-panda-exposure.jpg
 ```
 
-![`all:exposure=1.0` on red-panda](../images/filters/exposure.jpg)
+After `all:exposure=1.0`:
 
-## Per-layer panels
+![red-panda after all:exposure=1.0](../images/filters/exposure.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:exposure=1.0"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:exposure=1.0"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:exposure=1.0"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:exposure"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:exposure"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:exposure"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`exposure` panels on yoga](../images/filters/panels/yoga-exposure.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:exposure"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:exposure"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:exposure"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`exposure` panels on woman-singer](../images/filters/panels/woman-singer-exposure.jpg)
 
 See the [filter index](README.md) for the full catalogue.

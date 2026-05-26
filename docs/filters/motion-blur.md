@@ -8,23 +8,50 @@
 | **Signature** | `motion-blur=radius:angle` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:motion-blur=radius=10:angle=45"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:motion-blur=radius=10:angle=45" -o red-panda-motion-blur.jpg
 ```
 
-![`all:motion-blur=radius=10:angle=45` on red-panda](../images/filters/motion-blur.jpg)
+After `all:motion-blur=radius=10:angle=45`:
 
-## Per-layer panels
+![red-panda after all:motion-blur=radius=10:angle=45](../images/filters/motion-blur.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:motion-blur=radius=10:angle=45"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:motion-blur=radius=10:angle=45"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:motion-blur=radius=10:angle=45"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:motion-blur"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:motion-blur"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:motion-blur"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`motion-blur` panels on yoga](../images/filters/panels/yoga-motion-blur.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:motion-blur"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:motion-blur"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:motion-blur"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`motion-blur` panels on woman-singer](../images/filters/panels/woman-singer-motion-blur.jpg)
 
 See the [filter index](README.md) for the full catalogue.

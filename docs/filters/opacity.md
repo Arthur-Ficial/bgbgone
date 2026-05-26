@@ -8,23 +8,20 @@
 | **Signature** | `opacity=value` |
 | **Note** | introduces alpha — use PNG output or pass `--bg` |
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:opacity=0.7"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:opacity=0.7" -o red-panda-opacity.jpg
 ```
 
-![`all:opacity=0.7` on red-panda](../images/filters/opacity.jpg)
+After `all:opacity=0.7`:
 
-## Per-layer panels
+![red-panda after all:opacity=0.7](../images/filters/opacity.jpg)
 
-```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:opacity=0.7"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:opacity=0.7"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:opacity=0.7"
-```
 
-![`opacity` panels on yoga](../images/filters/panels/yoga-opacity.jpg)
-![`opacity` panels on woman-singer](../images/filters/panels/woman-singer-opacity.jpg)
 
 See the [filter index](README.md) for the full catalogue.

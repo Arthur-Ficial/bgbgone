@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.2.5](https://img.shields.io/badge/version-1.2.5-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.2.6](https://img.shields.io/badge/version-1.2.6-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![100% on-device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
@@ -12,60 +12,35 @@
 
 ## Install
 
-```bash
-brew install Arthur-Ficial/tap/bgbgone
-```
+Run `brew install Arthur-Ficial/tap/bgbgone` (macOS 26+, ~3 MB binary, no Xcode needed). From source: `make install` writes to `/usr/local/bin`.
 
-Or from source: `make install` (writes to `/usr/local/bin`). macOS 26+, no Xcode needed, ~3 MB binary, zero deps.
+## Quickstart — transparent cutout
 
-## Quickstart
+Original `red-panda.jpg`:
 
-Transparent cutout — refuses a TTY, so pipe or `-o`.
+![red-panda input](docs/images/showcase/01-panda-before.jpg)
 
 ```bash
-bgbgone red-panda.jpg -o red-panda-cutout.png
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale" -o red-panda-colourpop.jpg
 ```
 
-![transparent cutout grid](docs/images/showcase-cutouts.png)
+After — background goes B&W, subject keeps its colour:
 
-Solid colour background.
+![red-panda colour-pop](docs/images/showcase/01-panda-colourpop.jpg)
+
+## Portrait mode — silky bg blur on the same red-panda
 
 ```bash
-bgbgone red-panda.jpg --bg color:white -o red-panda-on-white.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o red-panda-portrait.jpg
 ```
 
-![colour backgrounds](docs/images/showcase-colors.png)
+![red-panda portrait-mode blur](docs/images/showcase/02-panda-portraitmode.jpg)
 
-Image background with fit modes (`cover` / `contain` / `center` / `tile`).
+## Die-cut sticker — drop shadow + thick white outline
 
-```bash
-bgbgone yoga.jpg --bg image:matterhorn-sunset.jpg --bg-fit cover -o yoga-on-matterhorn.jpg
-```
+Original `corgi-puppy.jpg`:
 
-![image backgrounds (fit modes)](docs/images/showcase-image-bg.png)
-
-## Filter chain — 49 filters, one grammar
-
-`--filter "<layer>:<name>[=args][,<name>...]; <layer>:..."`
-Layers are `bg` / `fg` / `all` / `mask` / `composite`. See [docs/filters/](docs/filters/README.md) for the full catalogue with paired image per filter.
-
-### Colour-pop — background goes B&W, subject keeps its colour
-
-```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale" -o panda-colourpop.jpg
-```
-
-![colour-pop on red panda](docs/images/showcase/01-panda-colourpop.jpg)
-
-### Portrait mode — background gets a silky Gaussian blur
-
-```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o panda-portrait.jpg
-```
-
-![portrait-mode blur on red panda](docs/images/showcase/02-panda-portraitmode.jpg)
-
-### Die-cut sticker — drop shadow + thick white outline
+![corgi-puppy input](docs/images/showcase/03-corgi-before.jpg)
 
 ```bash
 bgbgone corgi-puppy.jpg --bg color:#1a2233 \
@@ -73,78 +48,62 @@ bgbgone corgi-puppy.jpg --bg color:#1a2233 \
   -o corgi-sticker.jpg
 ```
 
-![die-cut sticker on corgi](docs/images/showcase/03-corgi-sticker.jpg)
+After — clean sticker with hard die-cut edge:
 
-### Vintage backdrop — `--type person` isolates the subject, bg goes sepia
+![corgi-puppy die-cut sticker](docs/images/showcase/03-corgi-sticker.jpg)
+
+## Motion-radial backdrop — `bg:zoom-blur`, `--type person`
+
+Original `woman-singer.jpg`:
+
+![woman-singer input](docs/images/showcase/04-woman-singer-before.jpg)
 
 ```bash
 bgbgone woman-singer.jpg --type person \
-  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; composite:vignette=1.8:1.1" \
-  -o woman-singer-vintage.jpg
+  --bg "image:woman-singer.jpg" \
+  --filter "bg:zoom-blur=center=0.5,0.45:amount=60" \
+  -o woman-singer-zoom-blur.jpg
 ```
 
-![vintage backdrop on woman-singer](docs/images/showcase/04-woman-singer-vintage.jpg)
+After — bg radiates outward from the subject centre, subject stays razor-sharp:
+
+![woman-singer zoom-blur backdrop](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
 
 ## Edge refinement — `mask:feather`
 
-Soften the matte edge by N pixels. 0 = razor edge; 32 = obvious halo.
+Original `corgi-puppy.jpg` (same fixture):
+
+![corgi-puppy input](docs/images/showcase/03-corgi-before.jpg)
 
 ```bash
 bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
 ```
 
-![feather 0 vs 16 zoom](docs/images/feather-zoom.png)
+After — left panel `feather=0` (razor edge) vs right panel `feather=16` (softened):
 
-## Server mode — same surface over HTTP
+![corgi-puppy feather 0 vs 16 close-up](docs/images/feather-zoom.png)
 
-```bash
-bgbgone --server --host 127.0.0.1 --port 8088
-```
+## Pipelines — compose with sibling Apple-framework CLIs
 
-POSTs to `/bgbgone` accept the same options as the CLI (`bg`, `filter`, `format`, `type`, …) via multipart, JSON, or form. See [docs/server/README.md](docs/server/README.md).
+Original `red-panda.jpg` (same fixture as Quickstart):
 
-## Pipelines
-
-stdin → stdout: pipe-friendly, refuses a TTY for safety.
+![red-panda input](docs/images/showcase/01-panda-before.jpg)
 
 ```bash
-cat red-panda.jpg | bgbgone > red-panda-cutout.png
+bgbgone red-panda.jpg -o red-panda-cutout.png && auge --classify red-panda-cutout.png
 ```
 
-![stdin-to-stdout cutout](docs/images/before-after.png)
+After — cutout fed to [auge](https://github.com/Arthur-Ficial/auge) for classification:
 
-Batch directory with parallel Vision: every input gets its own output.
+![bgbgone piped into auge --classify](docs/images/showcase-pipeline.png)
 
-```bash
-mkdir -p ./out/
-bgbgone red-panda.jpg corgi-puppy.jpg yoga.jpg --out-dir ./out/
-```
+## Filter chain grammar
 
-![algorithm comparison across fixtures](docs/images/showcase-algos.png)
+`--filter "<layer>:<name>[=args][,<name>...]; <layer>:..."`. Layers are `bg` / `fg` / `all` / `mask` / `composite`. Full catalogue with paired image per filter: [docs/filters/](docs/filters/README.md). Machine-readable surface: `bgbgone --filters-list --json`.
 
-## Output formats + algorithms
+## Server mode
 
-`--format png|jpg|heic|avif|tiff|zip` and `--type auto|person|product|car|animal|graphic|transportation|saliency`. See [`bgbgone --help`](docs/design.md) and [`bgbgone --check`](docs/design.md).
-
-```bash
-bgbgone red-panda.jpg --type animal --format heic -o red-panda.heic
-```
-
-![pipeline showcase across types](docs/images/showcase-pipeline.png)
-
-## Architecture
-
-```
-CLI args  →  ConfigParser (pure)  →  BgBgOne pipeline
-                                       ├─ Algorithms/  (Vision mask: vn-mask, person, saliency)
-                                       ├─ FilterPipeline (49 Core Image filters)
-                                       ├─ Compositor   (mask + bg)
-                                       └─ Output       (PNG / JPG / WebP / HEIC / AVIF / TIFF / ZIP)
-                                              ↑
-                                          NetworkGuard hard-blocks all sockets at runtime
-```
-
-CLI and `--server` resolve to the same `Config` and run the same pipeline — see [docs/design.md](docs/design.md).
+Run `bgbgone --server --host 127.0.0.1 --port 8088` to expose the same Config + pipeline over local HTTP. POSTs to `/bgbgone` accept the same options as the CLI (`bg`, `filter`, `format`, `type`, …) via multipart, JSON, or form. Full wire contract: [docs/server/README.md](docs/server/README.md). Security matrix: [docs/server/security.md](docs/server/security.md).
 
 ## Exit codes
 
@@ -155,18 +114,20 @@ CLI and `--server` resolve to the same `Config` and run the same pipeline — se
 | `2` | parser error / no foreground subject found |
 | `3` | framework error (Vision unavailable) |
 
+## Architecture
+
+`CLI args` → `ConfigParser` (pure Swift) → `BgBgOne` pipeline → `Algorithms/` (Vision: vn-mask / person / saliency) + `FilterPipeline` (49 Core Image filters) + `Compositor` (mask + bg) → `Output` (PNG / JPG / HEIC / AVIF / TIFF / ZIP). `NetworkGuard` hard-blocks all sockets at runtime. CLI and `--server` resolve to the same `Config` and run the same pipeline. Details: [docs/design.md](docs/design.md).
+
 ## Development
 
-Working agreement: [DEVELOPMENT.md](DEVELOPMENT.md). Per-AI-session rules: [CLAUDE.md](CLAUDE.md). Build + test + release loop:
+Working agreement: [DEVELOPMENT.md](DEVELOPMENT.md). Per-AI-session rules: [CLAUDE.md](CLAUDE.md).
 
-```bash
-make test       # lint-fixtures + lint-readme + lint-contract + unit + integration + doc-block harness
-make install    # bump patch + build release + install to /usr/local/bin
-make release    # full release gate; regenerates every shipped image
-make deploy     # release + tag + push + GitHub release + Homebrew tap bump
-```
+- `make test` — every lint (`lint-fixtures`, `lint-readme`, `lint-contract`, `lint-docs`, `lint-doc-images`) + unit + integration + doc-block harness
+- `make install` — bump patch + build release + install to `/usr/local/bin`
+- `make release` — full release gate; regenerates every shipped image asset
+- `make deploy` — release + tag + push + GitHub release + Homebrew tap bump
 
-Every fenced ```bash block in this README and in every doc under [`docs/`](docs/) is executed by `scripts/test-doc-blocks.sh` against the installed binary on every `make test`. A block that fails the test is a build break.
+Every fenced bash block in this README and in every doc under `docs/` is executed against the installed binary by `scripts/test-doc-blocks.sh` on every `make test`. Every `![](path)` image link is checked by `scripts/lint-doc-images.sh` — no broken images can be committed.
 
 ## Images + attribution
 

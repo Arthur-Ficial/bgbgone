@@ -8,23 +8,50 @@
 | **Signature** | `noise=amount` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:noise=0.1"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:noise=0.1" -o red-panda-noise.jpg
 ```
 
-![`all:noise=0.1` on red-panda](../images/filters/noise.jpg)
+After `all:noise=0.1`:
 
-## Per-layer panels
+![red-panda after all:noise=0.1](../images/filters/noise.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:noise=0.1"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:noise=0.1"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:noise=0.1"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:noise"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:noise"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:noise"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`noise` panels on yoga](../images/filters/panels/yoga-noise.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:noise"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:noise"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:noise"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`noise` panels on woman-singer](../images/filters/panels/woman-singer-noise.jpg)
 
 See the [filter index](README.md) for the full catalogue.

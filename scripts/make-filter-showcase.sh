@@ -71,16 +71,16 @@ cp "$CORGI" "$OUT/03-corgi-before.jpg"
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
-echo "-- showcase 4: vintage backdrop (woman-singer, library bookshelves go sepia; subject keeps colour) --"
-# HYPOTHESIS: library bookshelves with warm wooden light have rich detail.
-# --type person isolates the subject cleanly. bg gets sepia + slight darken +
-# desaturate (old-library backdrop); fg keeps original colour (floral dress,
-# red lipstick stay vivid). Vignette darkens corners for classic film look.
+echo "-- showcase 4: motion-radial backdrop (woman-singer, bg gets zoom-blur from subject centre; subject stays sharp) --"
+# HYPOTHESIS: bg:zoom-blur radiates streaks outward from the chosen
+# centre while --type person keeps the subject in razor focus. Reads as
+# motion / drama / cover-art lighting without losing the subject.
 cp "$WOMAN_SINGER" "$OUT/04-woman-singer-before.jpg"
 "$BIN" "$WOMAN_SINGER" --type person \
-  --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; composite:vignette=1.8:1.1" \
-  -o "$OUT/04-woman-singer-vintage.jpg" >/dev/null
-trash_path "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
+  --bg "image:$WOMAN_SINGER" \
+  --filter "bg:zoom-blur=center=0.5,0.45:amount=60" \
+  -o "$OUT/04-woman-singer-zoom-blur.jpg" >/dev/null
+trash_path "$OUT/04-woman-singer-vintage.jpg" "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
 # ============ feather progression panel + close-up (restored from removed --feather docs) ============
 echo "-- feather progression: 0 / 8 / 16 / 32 px on the corgi against transparent --"

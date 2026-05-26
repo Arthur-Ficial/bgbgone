@@ -8,23 +8,50 @@
 | **Signature** | `grayscale` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:grayscale"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:grayscale" -o red-panda-grayscale.jpg
 ```
 
-![`all:grayscale` on red-panda](../images/filters/grayscale.jpg)
+After `all:grayscale`:
 
-## Per-layer panels
+![red-panda after all:grayscale](../images/filters/grayscale.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "all:grayscale"
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:grayscale"
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:grayscale"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:grayscale"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:grayscale"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:grayscale"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`grayscale` panels on yoga](../images/filters/panels/yoga-grayscale.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:grayscale"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:grayscale"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:grayscale"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`grayscale` panels on woman-singer](../images/filters/panels/woman-singer-grayscale.jpg)
 
 See the [filter index](README.md) for the full catalogue.

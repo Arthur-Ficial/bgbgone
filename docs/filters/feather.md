@@ -8,21 +8,46 @@
 | **Signature** | `feather=radius` |
 
 
-## Example
+## Example — red-panda
+
+Original input:
+
+![red-panda input](../../Tests/fixtures/red-panda.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:feather=8"
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:feather=8" -o red-panda-feather.jpg
 ```
 
-![`mask:feather=8` on red-panda](../images/filters/feather.jpg)
+After `mask:feather=8`:
 
-## Per-layer panels
+![red-panda after mask:feather=8](../images/filters/feather.jpg)
+
+
+## Per-layer panels — yoga (`--type person`)
+
+Original input:
+
+![yoga input](../../Tests/fixtures/yoga.jpg)
 
 ```bash
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "mask:feather=8"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "mask:feather"
 ```
+
+Panels (`original | bg | fg | all`):
 
 ![`feather` panels on yoga](../images/filters/panels/yoga-feather.jpg)
+## Per-layer panels — woman-singer (`--type person`)
+
+Original input:
+
+![woman-singer input](../../Tests/fixtures/woman-singer.jpg)
+
+```bash
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "mask:feather"
+```
+
+Panels (`original | bg | fg | all`):
+
 ![`feather` panels on woman-singer](../images/filters/panels/woman-singer-feather.jpg)
 
 See the [filter index](README.md) for the full catalogue.
