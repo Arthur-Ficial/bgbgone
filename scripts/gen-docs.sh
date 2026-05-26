@@ -150,9 +150,16 @@ subject_section() {
   local panel="$PANELS_DIR/${subject}-${name}.jpg"
   [ -f "$panel" ] || { printf ''; return; }
 
+  # Emit invocations in the EXACT order the panel image displays them:
+  # original | bg | fg | all  (and composite / mask for those filters).
+  # Without this, the code block reads "all, bg, fg" while the image
+  # reads "bg, fg, all" — same triple, different visual order, very
+  # confusing. See make-perfilter-panels.sh for the panel layout.
+  local layers_csv
+  layers_csv=$(jq -r '.layers | join(",")' <<<"$entry")
   local lines=""
-  while IFS= read -r layer; do
-    [ -z "$layer" ] && continue
+  for layer in bg fg all composite mask; do
+    case ",${layers_csv}," in *,${layer},*) ;; *) continue ;; esac
     case "$layer" in
       composite|fg|mask)
         lines+="bgbgone ${subject}.jpg --type person --bg color:#1a2233 --filter \"${layer}:${name}\""$'\n'
@@ -161,7 +168,7 @@ subject_section() {
         lines+="bgbgone ${subject}.jpg --type person --bg \"image:${subject}.jpg\" --filter \"${layer}:${name}\""$'\n'
         ;;
     esac
-  done < <(jq -r '.layers[]' <<<"$entry")
+  done
 
   printf '\n\n## Per-layer panels — %s (`--type person`)\n\n```bash\n%s```\n\nPanels (`original | bg | fg | all`):\n\n![`%s` panels on %s](../images/filters/panels/%s-%s.jpg)' \
     "$subject" "$lines" "$name" "$subject" "$subject" "$name"
