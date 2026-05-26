@@ -183,8 +183,9 @@ panel-images: install
 	BIN=$(PREFIX)/bin/$(BINARY) bash scripts/make-perfilter-panels.sh
 
 # Regenerate the 49 per-filter markdown pages (docs/filters/*.md).
-filter-docs:
-	bash scripts/gen-filter-docs.sh
+filter-docs: build
+	BIN=$(PREFIX)/bin/$(BINARY) bash scripts/gen-docs.sh || \
+	  BIN=.build/release/$(BINARY) bash scripts/gen-docs.sh
 
 # Regenerate EVERY shipped image: filter showcase, per-filter panels,
 # per-filter docs, README examples. Required after every change per

@@ -1,0 +1,46 @@
+# Filter catalogue ({{COUNT}} filters)
+
+Every shipped filter, auto-generated from `bgbgone --filters-list --json`.
+Tables grouped by valid-layer set; each row links to the per-filter doc
+with paired before/after image.
+
+## Tone + colour, spatial, stylise (`fg | bg | all`)
+
+| Filter | Signature | One-liner |
+|---|---|---|
+{{ALL_LAYER_ROWS}}
+
+## Composite (`composite:`)
+
+| Filter | Signature | One-liner |
+|---|---|---|
+{{COMPOSITE_ROWS}}
+
+## Foreground-only (`fg:`)
+
+| Filter | Signature | One-liner |
+|---|---|---|
+{{FG_ROWS}}
+
+## Mask-shape (`mask:`)
+
+| Filter | Signature | One-liner |
+|---|---|---|
+{{MASK_ROWS}}
+
+## Grammar
+
+```
+--filter "<layer>:<filter>[=args][,<filter>[=args]]...[;<layer>:...]"
+```
+
+- `<layer>` is one of `bg` `fg` `all` `composite` `mask` depending on the
+  filter (see tables above).
+- Filters in the same stage run left-to-right.
+- A `;` introduces a new stage.
+- A trailing `composite:` stage runs after the foreground/background split is
+  flattened — only `vignette`, `vignette-effect`, `bloom`, `gloom` accept it.
+
+Run `bgbgone --filters-list` (text) or `bgbgone --filters-list --json`
+(machine-readable) for the live catalogue, or `bgbgone --help filter=<name>`
+for one filter's full schema.
