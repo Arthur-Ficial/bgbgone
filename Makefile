@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing lint-version-policy docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -35,12 +35,12 @@ install: build
 # Docs-only / scripts-only / fixture-only changes: lint + test the docs
 # harness without bumping the version or cutting a release. Use this
 # instead of `make deploy` for README updates, doc fixes, asset regens.
-docs: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing test-doc-blocks
+docs: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing lint-version-policy test-doc-blocks
 	@echo "docs: OK - no version bump, no release. Commit + push when ready."
 
 # --- Tests ---
 
-test: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing test-unit test-integration test-doc-blocks
+test: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing lint-version-policy test-unit test-integration test-doc-blocks
 
 test-unit: check-toolchain generate-build-info
 	swift run bgbgone-tests
@@ -57,6 +57,9 @@ lint-doc-images:
 lint-block-pairing:
 	bash scripts/lint-block-pairing.sh
 
+lint-version-policy:
+	bash scripts/lint-version-policy.sh
+
 test-doc-blocks: build
 	BIN=.build/release/$(BINARY) bash scripts/test-doc-blocks.sh
 
@@ -70,7 +73,7 @@ lint-docs: check-toolchain generate-build-info
 	swift build -c release
 	bash scripts/lint-docs.sh
 
-lint: lint-fixtures lint-readme lint-contract lint-docs lint-doc-images lint-block-pairing
+lint: lint-fixtures lint-readme lint-contract lint-docs lint-doc-images lint-block-pairing lint-version-policy
 
 performance-100:
 	bash Tests/performance/run-100.sh .build/release/$(BINARY)

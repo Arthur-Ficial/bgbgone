@@ -34,18 +34,28 @@ the quality bar below is green.
 
 ## When to release vs. when to just commit
 
-**Match the workflow to the change. A doc fix is not a release.**
+**HARD RULE: auto-bump only on a real new release.** This is rule #14 in
+[`DEVELOPMENT.md`](DEVELOPMENT.md). Match the workflow to the change. A
+doc fix is not a release.
 
 | Change | Workflow |
 |---|---|
 | README / docs / script / fixture / asset regen / lint config | `make docs` (verifies, no version bump) → `git commit` → `git push`. **No tag, no GitHub release, no Homebrew tap bump.** |
 | Swift source / CLI surface / binary behaviour / new feature | `make deploy` (bump-patch → full release gate → tag → GitHub release → tap bump) |
-| Breaking change / new public surface (`--filters-list --json`, new flag) | Bump minor manually via `make bump-minor`, then `make deploy`. |
+| Breaking change / new public surface (e.g. `--filters-list --json`, new flag) | `make bump-minor` first (deliberate), then `make deploy`. |
 
-The Makefile enforces this: `make build` / `make install` / `make test` /
-`make docs` do **not** bump `.version`. Only `make release` (called by
-`make deploy`) bumps. Each release on GitHub must reflect a real binary
-change — never burn a version number on a typo fix.
+The Makefile enforces this: `make build` / `make install` / `make test`
+/ `make docs` / `make readme-images` / `make all-images` / every lint
+target are all **idempotent** against `.version`. Only `make release`
+(called by `make deploy`) bumps. Each tag and each GitHub release must
+reflect a real binary change — never burn a version number on a typo
+fix or an asset re-render.
+
+**Source-of-truth check:** `grep -n bump-patch Makefile` must show
+`bump-patch` as a target definition AND as a prerequisite of
+`release:`, and **nowhere else**. If you spot it on `build:` /
+`install:` / a recipe line again, that's a regression of rule #14 —
+fix it in the same commit.
 
 Quality bar (all must be green before pushing to `main` or tagging a release):
 

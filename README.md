@@ -10,6 +10,32 @@
 
 ![bgbgone hero](docs/images/hero.png)
 
+## Contents
+
+- [Install](#install)
+- [Inputs used in this README](#inputs-used-in-this-readme)
+- **Output modes — red-panda**
+  - [Transparent cutout](#transparent-cutout-on-red-panda)
+  - [Alpha matte (`--channels alpha`)](#alpha-matte-on-red-panda----channels-alpha)
+  - [Solid-colour background](#solid-colour-background-on-red-panda)
+  - [Universe-photo background](#universe-photo-background-on-red-panda--red-panda-in-space)
+- **Filter chain — single-fixture demos**
+  - [Colour-pop on red-panda](#colour-pop-on-red-panda--bg-goes-bw-subject-keeps-its-colour)
+  - [Portrait mode on red-panda](#portrait-mode-on-red-panda--silky-bg-blur)
+  - [Die-cut sticker on corgi-puppy](#die-cut-sticker-on-corgi-puppy--cropped-to-subject-transparent-hard-white-border)
+  - [Motion-radial backdrop on woman-singer](#motion-radial-backdrop-on-woman-singer--bgzoom-blur---type-person)
+  - [Edge refinement on corgi-puppy](#edge-refinement-on-corgi-puppy--maskfeather-3-values-last-extreme)
+- [Pipelines on red-panda](#pipelines-on-red-panda--compose-with-sibling-apple-framework-clis)
+- **Filter catalogue**
+  - [Filter overview + index (49 filters)](docs/filters/README.md)
+  - [Filter chain grammar](#filter-chain-grammar)
+- [Server mode](#server-mode)
+- [Exit codes](#exit-codes)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Images + attribution](#images--attribution)
+- [License](#license)
+
 ## Install
 
 Run `brew install Arthur-Ficial/tap/bgbgone` (macOS 26+, ~3 MB binary, no Xcode needed). From source: `make install` writes to `/usr/local/bin`.
@@ -122,7 +148,11 @@ bgbgone red-panda.jpg -o red-panda-cutout.png && auge --classify red-panda-cutou
 
 ## Filter chain grammar
 
-`--filter "<layer>:<name>[=args][,<name>...]; <layer>:..."`. Layers are `bg` / `fg` / `all` / `mask` / `composite`. Full catalogue with paired image per filter: [docs/filters/](docs/filters/README.md). Machine-readable surface: `bgbgone --filters-list --json`.
+`--filter "<layer>:<name>[=args][,<name>...]; <layer>:..."`. Layers are `bg` / `fg` / `all` / `mask` / `composite`.
+
+- **Filter overview + index (49 filters):** [`docs/filters/README.md`](docs/filters/README.md) — grouped by layer set, every row links to its per-filter doc with paired before/after image.
+- **Machine-readable catalogue:** `bgbgone --filters-list --json` emits a stable JSON array with `name`, `layers`, `signature`, `doc`, `producesAlpha`, `positional`, `keyed`, `examples`.
+- **Per-filter human help:** `bgbgone --help filter=<name>`.
 
 ## Server mode
 

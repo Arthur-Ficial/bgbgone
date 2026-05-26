@@ -31,6 +31,7 @@ Every commit, every ticket, every contributor. No exceptions.
 11. **Docs in the same commit as code.** `README.md`, `--help`, `docs/design.md`, `docs/server/`, `bgbgone --filters-list`, `Tests/fixtures/LICENSES.md` (if new fixtures) all updated in the same commit that introduces or changes behaviour. `make lint` must pass; `scripts/lint-contract.sh` guards the single CLI/server surface, SSOT defaults, and removed-alias drift.
 12. **Clean code.** Files <=150 lines, functions <=30 lines, no magic values, named exports, single responsibility, no boolean params, no >4 params, no commented-out code, no TODO comments, no clever code.
 13. **Industry-standard deps OK; do not reinvent.** Battle-tested system frameworks (Core Image, Vision, Accelerate, ImageIO) and Swift packages (`swift-argument-parser`, `CIFilterFactory`). No GPUImage. No ImageMagick. See section 6.
+14. **Version bumps are deliberate. Auto-bump only on a real release.** `.version` may be touched only by `make bump-patch` / `make bump-minor` / `make bump-major`, and those targets are invoked **only** from `make release` (and therefore `make deploy`). `make build`, `make install`, `make test`, `make docs`, every lint target, every doc-block / image regeneration script: all idempotent against `.version`. A README typo or asset re-render must never burn a tag or cut a GitHub release. New tag <=> new shipped binary, every time. Source-of-truth check: `grep -n bump-patch Makefile` — `bump-patch` may appear as a target definition and as a prerequisite of `release:` only.
 
 ---
 
