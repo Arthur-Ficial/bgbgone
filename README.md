@@ -22,19 +22,45 @@ Three originals drive every example below. Each is shown once here; later sectio
 |---|---|---|
 | ![red-panda original](docs/images/showcase/01-panda-before.jpg) | ![corgi-puppy original](docs/images/showcase/03-corgi-before.jpg) | ![woman-singer original](docs/images/showcase/04-woman-singer-before.jpg) |
 
-## Red-panda in every output mode
+## Transparent cutout on red-panda
 
-Same fixture, six side-by-side modes: source → transparent cutout → alpha matte → on solid colour → on a universe photo (nebula) → die-cut sticker.
+The default: bgbgone removes the background and emits a PNG with alpha. Transparent areas render as the GitHub theme background (or — here — as a checkerboard so you can see the alpha).
 
 ```bash
-bgbgone red-panda.jpg -o red-panda-cutout.png                                                                # 2. transparent cutout
-bgbgone red-panda.jpg --channels alpha -o red-panda-matte.png                                                # 3. alpha matte
-bgbgone red-panda.jpg --bg color:#1a2233 -o red-panda-on-navy.jpg                                            # 4. on solid colour
-bgbgone red-panda.jpg --bg "image:nebula-flaming-star.png" -o red-panda-in-space.jpg                         # 5. on universe photo
-bgbgone red-panda.jpg --bg color:#1a2233 --filter "fg:outline=color=#fff:width=24" -o red-panda-sticker.jpg  # 6. hard-edge sticker
+bgbgone red-panda.jpg -o red-panda-cutout.png
 ```
 
-![red-panda across every output mode](docs/images/red-panda-all-modes.png)
+![red-panda transparent cutout (checkerboard shows alpha)](docs/images/red-panda/cutout.png)
+
+## Alpha matte on red-panda — `--channels alpha`
+
+Emit the alpha mask itself as a grayscale silhouette. Useful for downstream compositing pipelines that want the matte instead of the colour cutout.
+
+```bash
+bgbgone red-panda.jpg --channels alpha -o red-panda-matte.png
+```
+
+![red-panda alpha matte — silhouette as grayscale](docs/images/red-panda/matte.png)
+
+## Solid-colour background on red-panda
+
+Drop the cutout onto a flat colour. JPEG output works because alpha is composited away.
+
+```bash
+bgbgone red-panda.jpg --bg color:#1a2233 -o red-panda-on-navy.jpg
+```
+
+![red-panda on a solid navy background](docs/images/red-panda/on-navy.jpg)
+
+## Universe-photo background on red-panda — red panda in space
+
+Use any image as the background. Here the [Flaming Star Nebula (Chuck Ayoub, CC0)](Tests/fixtures/nebula-flaming-star.png) — same fixture used in `Tests/fixtures/`.
+
+```bash
+bgbgone red-panda.jpg --bg "image:nebula-flaming-star.png" -o red-panda-in-space.jpg
+```
+
+![red-panda composited onto the Flaming Star Nebula](docs/images/red-panda/in-space.jpg)
 
 ## Colour-pop on red-panda — bg goes B&W, subject keeps its colour
 
@@ -52,15 +78,16 @@ bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "bg:blur=60" -o red-pa
 
 ![red-panda portrait-mode blur](docs/images/showcase/02-panda-portraitmode.jpg)
 
-## Die-cut sticker on corgi-puppy — thick hard white outline (no blur)
+## Die-cut sticker on corgi-puppy — cropped to subject, transparent, hard white border
+
+A real die-cut sticker is the subject itself with a thick hard white border, sitting on a transparent surface. Two steps: cutout-and-crop first, then add the outline on the transparent cutout. (Adding the outline directly on the raw photo keeps the original background visible outside the outline.)
 
 ```bash
-bgbgone corgi-puppy.jpg --bg color:#1a2233 \
-  --filter "fg:outline=color=#fff:width=30" \
-  -o corgi-sticker.jpg
+bgbgone corgi-puppy.jpg --crop --crop-margin "8%" -o corgi-cutout.png
+bgbgone corgi-cutout.png --filter "fg:outline=color=#fff:width=30" -o corgi-sticker.png
 ```
 
-![corgi-puppy die-cut sticker — hard solid white border, no halo](docs/images/showcase/03-corgi-sticker.jpg)
+![corgi-puppy die-cut sticker — hard solid white border, transparent background (checkerboard shows alpha)](docs/images/showcase/03-corgi-sticker.png)
 
 ## Motion-radial backdrop on woman-singer — `bg:zoom-blur`, `--type person`
 
@@ -73,13 +100,17 @@ bgbgone woman-singer.jpg --type person \
 
 ![woman-singer zoom-blur backdrop — bg radiates outward, subject razor-sharp](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
 
-## Edge refinement on corgi-puppy — `mask:feather`
+## Edge refinement on corgi-puppy — `mask:feather` (3 values, last extreme)
+
+`feather=N` softens the matte edge by N pixels. The close-up below shows three values on the same fixture, centred on the chest where fur meets the blurred background: default hard edge, `mask:feather=24` (soft glow), and `mask:feather=80` (extreme diffuse halo).
 
 ```bash
-bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
+bgbgone corgi-puppy.jpg                                -o corgi-f0.png   # razor edge
+bgbgone corgi-puppy.jpg --filter "mask:feather=24"     -o corgi-f24.png  # soft glow
+bgbgone corgi-puppy.jpg --filter "mask:feather=80"     -o corgi-f80.png  # extreme
 ```
 
-![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
+![corgi-puppy mask:feather at 0, 24, and 80 — hard edge → soft glow → extreme diffuse halo](docs/images/feather-zoom.png)
 
 ## Pipelines on red-panda — compose with sibling Apple-framework CLIs
 

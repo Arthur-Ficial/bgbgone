@@ -49,18 +49,43 @@ cp "$PANDA" "$OUT/01-panda-before.jpg"
 echo "-- showcase 2: portrait mode (red panda, original bg gets silky blur=60) --"
 "$BIN" "$PANDA" --bg "image:$PANDA" --filter "bg:blur=60" -o "$OUT/02-panda-portraitmode.jpg" >/dev/null
 
-echo "-- showcase 3: die-cut sticker (hard solid white border, no shadow, no blur) --"
-# Real die-cut stickers have a thick SOLID white border outside the subject
-# silhouette. No drop shadow (those produce a soft halo that defeats the
-# die-cut look). No blur (same reason). One filter, one effect:
-#   fg:outline=color=#fff:width=30  → thick hard white border
-# `outline` uses CIMorphologyMaximum + subtract + tint, so the border is
-# pixel-sharp at the dilated matte boundary. No transparency, no fade.
+echo "-- showcase 3: die-cut sticker (cropped to cutout, transparent bg, hard white border on checkerboard) --"
+# Real die-cut sticker recipe:
+#   1. fg:outline=color=#fff:width=30  → hard solid white border, no blur, no halo
+#   2. --crop --crop-margin 8%         → tight-crop to subject bbox + 8% breathing room
+#   3. NO --bg                          → output is PNG with alpha transparency
+# The README then composites the transparent PNG onto a fine checkerboard
+# so users see the actual transparency (the sticker sits on a "blank"
+# surface, exactly as a printed sticker would on a desk).
 cp "$CORGI" "$OUT/03-corgi-before.jpg"
-"$BIN" "$CORGI" --bg "color:#1a2233" \
+
+WORK_STICKER=$(mktemp -d -t corgi-sticker.XXXXXX)
+# Two-step: (1) cutout + crop produces a transparent PNG of just the subject;
+# (2) running outline ON that transparent PNG adds the white border while
+# preserving transparency outside the outline. (One-step with `fg:outline`
+# alone keeps the original photo background visible outside the outline,
+# which is wrong for a die-cut sticker.)
+"$BIN" "$CORGI" \
+  --crop --crop-margin "8%" \
+  -o "$WORK_STICKER/cutout.png" >/dev/null
+"$BIN" "$WORK_STICKER/cutout.png" \
   --filter "fg:outline=color=#fff:width=30" \
-  -o "$OUT/03-corgi-sticker.jpg" >/dev/null
-trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
+  -o "$WORK_STICKER/sticker.png" >/dev/null
+
+# Build a fine checkerboard the size of the sticker PNG and composite.
+magick \( -size 20x20 xc:'#cccccc' \) \( -size 20x20 xc:'#aaaaaa' \) +append "$WORK_STICKER/r1.png"
+magick \( -size 20x20 xc:'#aaaaaa' \) \( -size 20x20 xc:'#cccccc' \) +append "$WORK_STICKER/r2.png"
+magick "$WORK_STICKER/r1.png" "$WORK_STICKER/r2.png" -append "$WORK_STICKER/cb-tile.png"
+
+SW=$(magick identify -format '%w' "$WORK_STICKER/sticker.png")
+SH=$(magick identify -format '%h' "$WORK_STICKER/sticker.png")
+magick "$WORK_STICKER/cb-tile.png" -write mpr:cb +delete \
+  -size "${SW}x${SH}" tile:mpr:cb PNG24:"$WORK_STICKER/cb-bg.png"
+magick PNG24:"$WORK_STICKER/cb-bg.png" PNG32:"$WORK_STICKER/sticker.png" \
+  -composite PNG24:"$OUT/03-corgi-sticker.png"
+rm -rf "$WORK_STICKER"
+# Trash the stale .jpg (replaced by .png with checkerboard).
+trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.jpg"
 
 echo "-- showcase 4: motion-radial backdrop (woman-singer, bg gets zoom-blur from subject centre; subject stays sharp) --"
 # HYPOTHESIS: bg:zoom-blur radiates streaks outward from the chosen

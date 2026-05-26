@@ -117,39 +117,49 @@ bg() {
     echo "$dst"
 }
 
-# ---- 0) Red-panda in every output mode (single-fixture filmstrip) ----------
-# Same fixture, six modes side-by-side:
-#   src · cutout (transparent) · matte (alpha as grey) · on solid colour ·
-#   on universe (nebula) · sticker (hard white border)
-# Pairs with the README's "Red-panda in every output mode" section.
+# ---- 0) Red-panda in every output mode (one big image per mode) ------------
+# Same fixture, four standalone large images, one per README section:
+#   - red-panda-cutout.png   (transparent over a soft checkerboard, full size)
+#   - red-panda-matte.png    (alpha-as-grayscale silhouette)
+#   - red-panda-on-navy.jpg  (subject over solid navy bg)
+#   - red-panda-in-space.jpg (subject over nebula universe photo)
+# Each lands in docs/images/red-panda/<mode>.{png,jpg} and is paired
+# with its own README section (NOT a horizontal filmstrip).
 
-echo "==> red-panda-all-modes (single-fixture filmstrip)"
-mkdir -p "$WORK/all-modes"
+echo "==> red-panda single-mode demos (one big image per mode)"
+PANDA_OUT="$OUT/red-panda"
+mkdir -p "$PANDA_OUT"
 PANDA_SRC="$FX/red-panda.jpg"
 NEBULA="$FX/nebula-flaming-star.png"
 
-"$BGBGONE" "$PANDA_SRC" -o "$WORK/all-modes/cut.png" --quiet
-"$BGBGONE" "$PANDA_SRC" --channels alpha -o "$WORK/all-modes/matte.png" --quiet
-"$BGBGONE" "$PANDA_SRC" --bg color:#1a2233 --format jpg -o "$WORK/all-modes/on-navy.jpg" --quiet
-"$BGBGONE" "$PANDA_SRC" --bg "image:$NEBULA" --format jpg -o "$WORK/all-modes/in-space.jpg" --quiet
-"$BGBGONE" "$PANDA_SRC" --bg color:#1a2233 --filter "fg:outline=color=#fff:width=24" --format jpg -o "$WORK/all-modes/sticker.jpg" --quiet
+# 1. Transparent cutout — composite onto a fine checkerboard so the
+# transparency is visible against GitHub's white/dark theme.
+"$BGBGONE" "$PANDA_SRC" -o "$WORK/red-panda-cut.png" --quiet
+W=$(magick identify -format '%w' "$WORK/red-panda-cut.png")
+H=$(magick identify -format '%h' "$WORK/red-panda-cut.png")
+magick "$CB_TILE" -write mpr:cb +delete \
+    -size "${W}x${H}" tile:mpr:cb PNG24:"$WORK/red-panda-cb.png"
+magick PNG24:"$WORK/red-panda-cb.png" PNG32:"$WORK/red-panda-cut.png" \
+    -composite PNG24:"$PANDA_OUT/cutout.png"
+echo "    -> $PANDA_OUT/cutout.png"
 
-panel "$PANDA_SRC"                  "1. src · red-panda.jpg"            "$WORK/all-modes/p1.png" 340 380
-panel "$WORK/all-modes/cut.png"     "2. bgbgone (cutout, transparent)"  "$WORK/all-modes/p2.png" 340 380
-panel "$WORK/all-modes/matte.png"   "3. --channels alpha (matte)"       "$WORK/all-modes/p3.png" 340 380
-panel "$WORK/all-modes/on-navy.jpg" "4. --bg color:#1a2233"             "$WORK/all-modes/p4.png" 340 380
-panel "$WORK/all-modes/in-space.jpg" "5. --bg image:nebula-flaming-star.png" "$WORK/all-modes/p5.png" 340 380
-panel "$WORK/all-modes/sticker.jpg" "6. --filter fg:outline (sticker)"  "$WORK/all-modes/p6.png" 340 380
+# 2. Alpha matte — bgbgone --channels alpha emits a grayscale RGBA PNG
+# whose RGB channels are the alpha matte. Flatten to opaque so the
+# silhouette renders as solid white-on-black in any viewer.
+"$BGBGONE" "$PANDA_SRC" --channels alpha -o "$WORK/red-panda-matte-raw.png" --quiet
+magick "$WORK/red-panda-matte-raw.png" -background black -alpha remove -alpha off \
+    PNG24:"$PANDA_OUT/matte.png"
+echo "    -> $PANDA_OUT/matte.png"
 
-row "$WORK/all-modes/row.png" "Same red-panda.jpg, six output modes" \
-    "$WORK/all-modes/p1.png" \
-    "$WORK/all-modes/p2.png" \
-    "$WORK/all-modes/p3.png" \
-    "$WORK/all-modes/p4.png" \
-    "$WORK/all-modes/p5.png" \
-    "$WORK/all-modes/p6.png"
-cp "$WORK/all-modes/row.png" "$OUT/red-panda-all-modes.png"
-echo "    -> $OUT/red-panda-all-modes.png"
+# 3. Subject on solid colour.
+"$BGBGONE" "$PANDA_SRC" --bg color:#1a2233 --format jpg \
+    -o "$PANDA_OUT/on-navy.jpg" --quiet
+echo "    -> $PANDA_OUT/on-navy.jpg"
+
+# 4. Subject on a universe photo (nebula).
+"$BGBGONE" "$PANDA_SRC" --bg "image:$NEBULA" --format jpg \
+    -o "$PANDA_OUT/in-space.jpg" --quiet
+echo "    -> $PANDA_OUT/in-space.jpg"
 
 # ---- 1) Cutout grid: all 12 PD fixtures, source → transparent ---------------
 
@@ -381,10 +391,13 @@ stack "$OUT/showcase-edges.png" \
     "$WORK/edge/row-misc.png"
 echo "    -> $OUT/showcase-edges.png"
 
-# Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
+# Close-up around a foreground edge across THREE feather values, ending
+# with an extreme value so the impact is obvious. feather must soften
+# alpha only, not blur RGB.
 ZOOM_SUB="$FX/corgi-puppy.jpg"
 "$BGBGONE" "$ZOOM_SUB" -o "$WORK/edge/zoom-f0.png" --quiet
-"$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=8" -o "$WORK/edge/zoom-f8.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=24" -o "$WORK/edge/zoom-f24.png" --quiet
+"$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=80" -o "$WORK/edge/zoom-f80.png" --quiet
 
 zoom_panel() {
     local src="$1" label="$2" dst="$3"
@@ -403,15 +416,18 @@ zoom_panel() {
         -append PNG24:"$dst"
 }
 
-# Corgi-puppy is 3126x4682. The right ear / head boundary sits around
-# x=1500..2100, y=800..1400 - prime edge-detail territory between fur
-# and the blurred green background.
-CORGI_CROP="600x600+1450+800"
-zoom_panel "$WORK/edge/zoom-f0.png" "default (hard edge)" "$WORK/edge/zoom-f0-p.png" "$CORGI_CROP"
-zoom_panel "$WORK/edge/zoom-f8.png" "mask:feather=8 (soft matte)" "$WORK/edge/zoom-f8-p.png" "$CORGI_CROP"
-row "$WORK/edge/feather-zoom-row.png" "Edge refinement — mask:feather close-up around the subject outline" \
+# Corgi-puppy is 3126x4682. Centre the crop on the body / chest area
+# where there's the longest stretch of clean fur-vs-background edge.
+# 900x900 square at (1100, 1500) lands on the white chest meeting the
+# blurred green background.
+CORGI_CROP="900x900+1100+1500"
+zoom_panel "$WORK/edge/zoom-f0.png"  "default (hard edge)"                "$WORK/edge/zoom-f0-p.png"  "$CORGI_CROP"
+zoom_panel "$WORK/edge/zoom-f24.png" "mask:feather=24 (soft glow)"        "$WORK/edge/zoom-f24-p.png" "$CORGI_CROP"
+zoom_panel "$WORK/edge/zoom-f80.png" "mask:feather=80 (extreme — diffuse halo)" "$WORK/edge/zoom-f80-p.png" "$CORGI_CROP"
+row "$WORK/edge/feather-zoom-row.png" "Edge refinement — mask:feather close-up at three values (hard → soft → extreme)" \
     "$WORK/edge/zoom-f0-p.png" \
-    "$WORK/edge/zoom-f8-p.png"
+    "$WORK/edge/zoom-f24-p.png" \
+    "$WORK/edge/zoom-f80-p.png"
 cp "$WORK/edge/feather-zoom-row.png" "$OUT/feather-zoom.png"
 echo "    -> $OUT/feather-zoom.png"
 
