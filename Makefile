@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration lint lint-fixtures lint-readme lint-docs lint-contract performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -32,7 +32,7 @@ install: build
 
 # --- Tests ---
 
-test: lint-fixtures lint-readme lint-contract test-unit test-integration
+test: lint-fixtures lint-readme lint-contract test-unit test-integration test-doc-blocks
 
 test-unit: check-toolchain generate-build-info
 	swift run bgbgone-tests
@@ -42,6 +42,9 @@ test-integration: build
 
 lint-fixtures:
 	bash scripts/lint-fixtures.sh
+
+test-doc-blocks: build
+	BIN=.build/release/$(BINARY) bash scripts/test-doc-blocks.sh
 
 lint-readme:
 	bash scripts/lint-readme.sh
