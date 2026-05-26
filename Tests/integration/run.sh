@@ -1138,6 +1138,12 @@ echo "$out" | grep -q "^bgbgone v" && pass "binary starts after NetworkGuard ins
 # Sourced as a module so the RED batch is easy to find and isolated.
 source "$DIR/run-filters.sh"
 
+# --- Server-parity: every CLI e2e mirrored through HTTP /bgbgone ---
+# Parity contract from docs/design.md: "CLI and `--server` resolve to the
+# same Config and run the same pipeline." Every CLI test in this file has
+# a server equivalent in run-server-parity.sh.
+source "$DIR/run-server-parity.sh"
+
 # --- Summary ---
 echo ""
 echo "================================="
