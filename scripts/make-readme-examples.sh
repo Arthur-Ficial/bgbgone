@@ -186,9 +186,9 @@ color_strip() {
         "$WORK/colors/$base-green-p.png"
 }
 
-color_strip "$FX/07-einstein-1921.jpg" "$WORK/colors/row-einstein.png"
-color_strip "$FX/08-tesla-sarony.jpg"  "$WORK/colors/row-tesla.png"
-color_strip "$FX/02-nasa-mccandless-eva.jpg" "$WORK/colors/row-eva.png"
+color_strip "$FX/einstein.jpg" "$WORK/colors/row-einstein.png"
+color_strip "$FX/tesla.jpg"  "$WORK/colors/row-tesla.png"
+color_strip "$FX/astronaut-eva.jpg" "$WORK/colors/row-eva.png"
 
 magick -size "$(magick identify -format '%w' "$WORK/colors/row-einstein.png")x52" canvas:'#101820' \
     -gravity center -pointsize 22 -font "$FONT_BOLD" -fill white \
@@ -207,12 +207,12 @@ echo "==> image-backgrounds (fit modes)"
 mkdir -p "$WORK/imgbg"
 
 # Use NASA Earthrise as the "image background", Einstein as subject.
-BG_BEACH="$FX/03-nasa-earthrise.jpg"     # used as bg
-BG_NEBULA="$FX/04-nasa-hubble-ngc1300.jpg"
-BG_WAVE="$FX/11-great-wave-hokusai.jpg"
+BG_BEACH="$FX/earthrise.jpg"     # used as bg
+BG_NEBULA="$FX/galaxy-ngc1300.jpg"
+BG_WAVE="$FX/great-wave.jpg"
 
 # fit mode comparison (single subject + single bg)
-SUB="$FX/07-einstein-1921.jpg"
+SUB="$FX/einstein.jpg"
 panel "$SUB" "src" "$WORK/imgbg/0-src.png" 360 320
 panel "$BG_BEACH" "bg image" "$WORK/imgbg/0-bg.png" 360 320
 
@@ -232,7 +232,7 @@ row "$WORK/imgbg/row1.png" "" \
     "$WORK/imgbg/einstein-center-p.png"
 
 # Subject variation: same subject on three different bg images
-SUB2="$FX/02-nasa-mccandless-eva.jpg"
+SUB2="$FX/astronaut-eva.jpg"
 panel "$SUB2" "src" "$WORK/imgbg/2-src.png" 360 320
 
 "$BGBGONE" "$SUB2" --bg "image:$BG_NEBULA" -o "$WORK/imgbg/eva-nebula.png" --quiet
@@ -273,7 +273,7 @@ echo "    -> $OUT/showcase-image-bg.png"
 echo "==> edge-refinement"
 mkdir -p "$WORK/edge"
 
-ESUB="$FX/07-einstein-1921.jpg"
+ESUB="$FX/einstein.jpg"
 
 # Feather progression on white bg so edges are visible.
 for fpx in 0 1 4 8 16; do
@@ -335,7 +335,7 @@ stack "$OUT/showcase-edges.png" \
 echo "    -> $OUT/showcase-edges.png"
 
 # Close-up around a foreground edge: feather must soften alpha only, not blur RGB.
-ZOOM_SUB="$FX/02-nasa-mccandless-eva.jpg"
+ZOOM_SUB="$FX/astronaut-eva.jpg"
 "$BGBGONE" "$ZOOM_SUB" -o "$WORK/edge/zoom-f0.png" --quiet
 "$BGBGONE" "$ZOOM_SUB" --filter "mask:feather=8" -o "$WORK/edge/zoom-f8.png" --quiet
 
@@ -365,7 +365,7 @@ cp "$WORK/edge/feather-zoom-row.png" "$OUT/feather-zoom.png"
 echo "    -> $OUT/feather-zoom.png"
 
 # Mask breakdown: source → alpha matte → final transparent cutout.
-MB_SUB="$FX/02-nasa-mccandless-eva.jpg"
+MB_SUB="$FX/astronaut-eva.jpg"
 "$BGBGONE" "$MB_SUB" --channels alpha -o "$WORK/edge/mb-mask.png" --quiet
 "$BGBGONE" "$MB_SUB" -o "$WORK/edge/mb-cutout.png" --quiet
 panel "$MB_SUB" "src" "$WORK/edge/mb-src-p.png" 360 320
@@ -403,9 +403,9 @@ algo_row() {
         "$WORK/algo/$base-saliency-p.png"
 }
 
-algo_row "$FX/06-nasa-mars-curiosity-selfie.jpg" "$WORK/algo/row-mars.png"
-algo_row "$FX/09-wright-brothers-1910.jpg"       "$WORK/algo/row-wright.png"
-algo_row "$FX/10-mona-lisa.jpg"                  "$WORK/algo/row-mona.png"
+algo_row "$FX/mars-rover.jpg" "$WORK/algo/row-mars.png"
+algo_row "$FX/wright-brothers.jpg"       "$WORK/algo/row-wright.png"
+algo_row "$FX/mona-lisa.jpg"                  "$WORK/algo/row-mona.png"
 
 W=$(magick identify -format '%w' "$WORK/algo/row-mars.png")
 magick -size "${W}x52" canvas:'#101820' \
@@ -424,7 +424,7 @@ echo "    -> $OUT/showcase-algos.png"
 echo "==> mona-lisa-tour (PD-only backgrounds)"
 mkdir -p "$WORK/ml"
 
-ML="$FX/10-mona-lisa.jpg"
+ML="$FX/mona-lisa.jpg"
 
 panel "$ML" "src · mona lisa (da vinci, c.1503)" "$WORK/ml/src.png" 360 320
 
@@ -435,19 +435,19 @@ panel "$WORK/ml/white.png" "--bg color:white" "$WORK/ml/p1.png" 360 320
 panel "$WORK/ml/black.png" "--bg color:black" "$WORK/ml/p2.png" 360 320
 
 # Real PD bg images, each labelled with source fixture so claims are verifiable.
-"$BGBGONE" "$ML" --bg "image:$FX/04-nasa-hubble-ngc1300.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/galaxy-ngc1300.jpg" \
     -o "$WORK/ml/galaxy.png" --quiet
 panel "$WORK/ml/galaxy.png" "--bg image:hubble-ngc1300 (NASA, PD)" "$WORK/ml/p3.png" 360 320
 
-"$BGBGONE" "$ML" --bg "image:$FX/01-nasa-aldrin-moon.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/aldrin-on-moon.jpg" \
     -o "$WORK/ml/moon.png" --quiet
 panel "$WORK/ml/moon.png" "--bg image:aldrin-moon (NASA, PD)" "$WORK/ml/p4.png" 360 320
 
-"$BGBGONE" "$ML" --bg "image:$FX/11-great-wave-hokusai.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/great-wave.jpg" \
     -o "$WORK/ml/wave.png" --quiet
 panel "$WORK/ml/wave.png" "--bg image:great-wave (Hokusai, PD-old)" "$WORK/ml/p5.png" 360 320
 
-"$BGBGONE" "$ML" --bg "image:$FX/06-nasa-mars-curiosity-selfie.jpg" \
+"$BGBGONE" "$ML" --bg "image:$FX/mars-rover.jpg" \
     -o "$WORK/ml/mars.png" --quiet
 panel "$WORK/ml/mars.png" "--bg image:mars-curiosity (NASA, PD)" "$WORK/ml/p6.png" 360 320
 
@@ -473,7 +473,7 @@ echo "    -> $OUT/mona-lisa-tour.png"
 
 echo "==> pipeline (real auge classify output)"
 mkdir -p "$WORK/pipe"
-PSRC="$FX/06-nasa-mars-curiosity-selfie.jpg"
+PSRC="$FX/mars-rover.jpg"
 "$BGBGONE" "$PSRC" -o "$WORK/pipe/cut.png" --quiet
 "$BGBGONE" "$PSRC" --bg color:black --format jpg -o "$WORK/pipe/black.jpg" --quiet
 panel "$PSRC" "1. src · curiosity selfie" "$WORK/pipe/p1.png" 360 320
@@ -536,23 +536,23 @@ product_row() {
         "$WORK/prod/$base-new-p.png"
 }
 
-product_row "$FX/16-pierce-arrow-1909.jpg" \
-            "$FX/01-nasa-aldrin-moon.jpg" \
+product_row "$FX/car-ad.jpg" \
+            "$FX/aldrin-on-moon.jpg" \
             "--bg image:lunar surface" \
             "$WORK/prod/row-car.png"
 
-product_row "$FX/14-underwood-1909.jpg" \
-            "$FX/03-nasa-earthrise.jpg" \
+product_row "$FX/typewriter-ad.jpg" \
+            "$FX/earthrise.jpg" \
             "--bg image:earthrise" \
             "$WORK/prod/row-typewriter.png"
 
-product_row "$FX/15-edison-phonograph.jpg" \
-            "$FX/04-nasa-hubble-ngc1300.jpg" \
+product_row "$FX/phonograph.jpg" \
+            "$FX/galaxy-ngc1300.jpg" \
             "--bg image:hubble-ngc1300" \
             "$WORK/prod/row-edison.png"
 
-product_row "$FX/13-singer-1892.jpg" \
-            "$FX/11-great-wave-hokusai.jpg" \
+product_row "$FX/singer-ad.jpg" \
+            "$FX/great-wave.jpg" \
             "--bg image:great-wave" \
             "$WORK/prod/row-singer.png"
 

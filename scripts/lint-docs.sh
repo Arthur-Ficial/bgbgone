@@ -12,7 +12,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
-FIX="$ROOT/Tests/fixtures/01-nasa-aldrin-moon.jpg"
+FIX="$ROOT/Tests/fixtures/aldrin-on-moon.jpg"
 TMP_DIR="$(mktemp -d)"
 trap 'trash_path "$TMP_DIR"' EXIT
 

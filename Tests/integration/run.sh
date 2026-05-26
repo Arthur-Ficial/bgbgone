@@ -148,7 +148,7 @@ fi
 
 dst="$OUT/server-einstein.png"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=png" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "POST /bgbgone multipart image_file -> PNG" \
@@ -158,7 +158,7 @@ dst="$OUT/server-einstein-key-header.png"
 headers="$TMP/server-output.headers"
 out=$(curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
     -H "X-API-Key: placeholder-local-key" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=auto" \
     -F "size=preview" \
     -o "$dst" 2>&1) ; rc=$?
@@ -174,7 +174,7 @@ fi
 
 dst="$OUT/server-einstein-alpha.png"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "channels=alpha" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server channels=alpha emits matte PNG" \
@@ -182,7 +182,7 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
 
 dst="$OUT/server-einstein-white.jpg"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=jpg" \
     -F "bg=color:#ffffff" \
     -o "$dst" 2>&1) ; rc=$?
@@ -191,9 +191,9 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
 
 dst="$OUT/server-shared-controls.jpg"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=jpg" \
-    -F "bg=@$FIX/03-nasa-earthrise.jpg" \
+    -F "bg=@$FIX/earthrise.jpg" \
     -F "bg-fit=tile" \
     -F "filter=mask:feather=3,threshold=0.45" \
     -F "quality=70" \
@@ -203,7 +203,7 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
 
 json="$OUT/server-json-response.json"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=json" \
     -o "$json" 2>&1) ; rc=$?
 if [ $rc -eq 0 ]; then
@@ -220,7 +220,7 @@ else
     fail "server json response" "rc=$rc out=$out"
 fi
 
-python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-json-body.json" <<'PY'
+python3 - "$FIX/einstein.jpg" "$TMP/server-json-body.json" <<'PY'
 import base64, json, sys
 src, dst = sys.argv[1:3]
 payload = {
@@ -243,7 +243,7 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
 [ $rc -eq 0 ] && check_jpeg "$dst" && pass "server application/json image_file -> JPEG" \
     || fail "server json body" "rc=$rc out=$out"
 
-python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-urlencoded-body.txt" <<'PY'
+python3 - "$FIX/einstein.jpg" "$TMP/server-urlencoded-body.txt" <<'PY'
 import base64, sys, urllib.parse
 src, dst = sys.argv[1:3]
 payload = {
@@ -267,7 +267,7 @@ fi
 
 zip="$OUT/server-result.zip"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=zip" \
     -o "$zip" 2>&1) ; rc=$?
 if [ $rc -eq 0 ] && python3 - "$zip" <<'PY'
@@ -292,19 +292,19 @@ code=$(curl -sS -o "$TMP/server-image-url.json" -w "%{http_code}" -X POST "$SERV
     || fail "server image_url rejection" "code=$code body=$(cat "$TMP/server-image-url.json" 2>/dev/null)"
 
 code=$(curl -sS -o "$TMP/server-bg-url.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "bg_url=https://example.com/bg.jpg")
 [ "$code" = "400" ] && grep -q '"unknown_field"' "$TMP/server-bg-url.json" && pass "server rejects bg_url as unknown" \
     || fail "server bg_url rejection" "code=$code body=$(cat "$TMP/server-bg-url.json" 2>/dev/null)"
 
 code=$(curl -sS -o "$TMP/server-webp.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=webp")
 [ "$code" = "400" ] && grep -q '"invalid_format"' "$TMP/server-webp.json" && pass "server rejects webp as invalid format" \
     || fail "server webp invalid format" "code=$code body=$(cat "$TMP/server-webp.json" 2>/dev/null)"
 
 code=$(curl -sS -o "$TMP/server-improve.json" -w "%{http_code}" -X POST "$SERVER_BASE/improve" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg")
+    -F "image_file=@$FIX/einstein.jpg")
 [ "$code" = "404" ] && grep -q '"BGBG_PARSE_HTTP_ROUTE_UNKNOWN"' "$TMP/server-improve.json" && pass "server rejects /improve endpoint" \
     || fail "server improve rejection" "code=$code body=$(cat "$TMP/server-improve.json" 2>/dev/null)"
 
@@ -318,18 +318,18 @@ code=$(curl -sS -o "$TMP/server-v1-account.json" -w "%{http_code}" "$SERVER_BASE
     || fail "v1.0/account rejection" "code=$code body=$(cat "$TMP/server-v1-account.json" 2>/dev/null)"
 
 # Multi-source rejection: image_file plus image_file
-b64=$(python3 -c "import base64; print(base64.b64encode(open('$FIX/07-einstein-1921.jpg','rb').read()).decode())")
+b64=$(python3 -c "import base64; print(base64.b64encode(open('$FIX/einstein.jpg','rb').read()).decode())")
 code=$(curl -sS -o "$TMP/server-multi-source.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "image_file=$b64")
 [ "$code" = "400" ] && grep -q '"multiple_sources"' "$TMP/server-multi-source.json" && pass "server rejects multiple image sources" \
     || fail "multi source rejection" "code=$code body=$(cat "$TMP/server-multi-source.json" 2>/dev/null)"
 
 # Multi-bg-source rejection: bg + bg
 code=$(curl -sS -o "$TMP/server-multi-bg.json" -w "%{http_code}" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
 	    -F "bg=color:#ffffff" \
-    -F "bg=@$FIX/03-nasa-earthrise.jpg")
+    -F "bg=@$FIX/earthrise.jpg")
 [ "$code" = "400" ] && grep -q '"multiple_bg_sources"' "$TMP/server-multi-bg.json" && pass "server rejects multiple background sources" \
     || fail "multi bg rejection" "code=$code body=$(cat "$TMP/server-multi-bg.json" 2>/dev/null)"
 
@@ -343,7 +343,7 @@ code=$(curl -sS -o "$TMP/server-missing.json" -w "%{http_code}" -X POST "$SERVER
 headers="$TMP/server-xtype.headers"
 dst="$OUT/server-einstein-xtype.png"
 curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "type=person" \
     -o "$dst" >/dev/null 2>&1
 if grep -qi '^X-Type: person' "$headers"; then
@@ -356,7 +356,7 @@ fi
 headers="$TMP/server-xtype-none.headers"
 dst="$OUT/server-einstein-xtype-none.png"
 curl -fsS -D "$headers" -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "type=person" \
     -F "type-level=none" \
     -o "$dst" >/dev/null 2>&1
@@ -369,8 +369,8 @@ fi
 # bg (uploaded background) composes onto a real fixture
 dst="$OUT/server-einstein-on-earth.png"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
-    -F "bg=@$FIX/03-nasa-earthrise.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
+    -F "bg=@$FIX/earthrise.jpg" \
     -F "format=png" \
     -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "server bg uploads a background and composes the result" \
@@ -379,7 +379,7 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
 # bg color:rgb:r,g,b triple via multipart
 dst="$OUT/server-einstein-rgb.jpg"
 out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
-    -F "image_file=@$FIX/07-einstein-1921.jpg" \
+    -F "image_file=@$FIX/einstein.jpg" \
     -F "format=jpg" \
     -F "bg=color:rgb:0,128,255" \
     -o "$dst" 2>&1) ; rc=$?
@@ -387,7 +387,7 @@ out=$(curl -fsS -X POST "$SERVER_BASE/bgbgone" \
     || fail "server bg rgb triple" "rc=$rc out=$out"
 
 # scale + translate via the shared filter grammar in a JSON body
-python3 - "$FIX/07-einstein-1921.jpg" "$TMP/server-scale-pos.json" <<'PY'
+python3 - "$FIX/einstein.jpg" "$TMP/server-scale-pos.json" <<'PY'
 import base64, json, sys
 src, dst = sys.argv[1:3]
 payload = {
@@ -537,25 +537,25 @@ echo "Exit codes"
 "$BIN" /nonexistent/path/image.jpg -o /tmp/x.png >/dev/null 2>&1 ; rc=$?
 [ $rc -eq 1 ] && pass "nonexistent input -> exit 1" || fail "nonexistent input" "expected exit 1, got $rc"
 
-out=$("$BIN" "$FIX/07-einstein-1921.jpg" "$FIX/08-tesla-sarony.jpg" -o "$OUT/one.png" 2>&1) ; rc=$?
+out=$("$BIN" "$FIX/einstein.jpg" "$FIX/tesla.jpg" -o "$OUT/one.png" 2>&1) ; rc=$?
 [ $rc -eq 1 ] && echo "$out" | grep -q "multiple inputs" && pass "multiple inputs with -o -> exit 1 before processing" \
     || fail "multiple inputs with -o" "expected exit 1 and multiple-input message, got rc=$rc out=$out"
 
-out=$("$BIN" "$FIX/07-einstein-1921.jpg" -o "$OUT/one.png" --out-dir "$OUT/conflict" 2>&1) ; rc=$?
+out=$("$BIN" "$FIX/einstein.jpg" -o "$OUT/one.png" --out-dir "$OUT/conflict" 2>&1) ; rc=$?
 [ $rc -eq 1 ] && echo "$out" | grep -q -- "--out-dir" && pass "-o with --out-dir rejected" \
     || fail "-o with --out-dir" "expected exit 1, got rc=$rc out=$out"
 
-out=$(cat "$FIX/07-einstein-1921.jpg" | "$BIN" --out-dir "$OUT/stdin-outdir" 2>&1 >/dev/null) ; rc=$?
+out=$(cat "$FIX/einstein.jpg" | "$BIN" --out-dir "$OUT/stdin-outdir" 2>&1 >/dev/null) ; rc=$?
 [ $rc -eq 1 ] && echo "$out" | grep -q "stdin" && pass "stdin with --out-dir rejected" \
     || fail "stdin with --out-dir" "expected exit 1, got rc=$rc out=$out"
 
-out=$("$BIN" "$FIX/09-wright-brothers-1910.jpg" --multi -o "$OUT/person.png" 2>&1) ; rc=$?
+out=$("$BIN" "$FIX/wright-brothers.jpg" --multi -o "$OUT/person.png" 2>&1) ; rc=$?
 [ $rc -eq 1 ] && echo "$out" | grep -q -- "--multi" && pass "--multi with -o rejected" \
     || fail "--multi with -o" "expected exit 1, got rc=$rc out=$out"
 
 bad_parent="$TMP/not-a-directory"
 printf "not a directory" > "$bad_parent"
-out=$("$BIN" "$FIX/07-einstein-1921.jpg" -o "$bad_parent/out.png" 2>&1) ; rc=$?
+out=$("$BIN" "$FIX/einstein.jpg" -o "$bad_parent/out.png" 2>&1) ; rc=$?
 [ $rc -eq 1 ] && echo "$out" | grep -q "output parent" && pass "output parent path that is a file -> exit 1" \
     || fail "output parent path" "expected exit 1, got rc=$rc out=$out"
 
@@ -581,8 +581,13 @@ fi
 echo ""
 echo "e2e: background removal (12 fixtures)"
 
+# Background-plate fixtures (matterhorn, nebulae) are not subjects;
+# skip them from the subject-cutout loop.
+BG_PLATES_RE='^(matterhorn-sunset|nebula-flaming-star|nebula-flying-dragon)$'
+
 for src in "$FIX"/*.jpg; do
     base=$(basename "$src" .jpg)
+    if [[ "$base" =~ $BG_PLATES_RE ]]; then continue; fi
     dst="$OUT/${base}-cutout.png"
     out=$("$BIN" "$src" -o "$dst" 2>&1) ; rc=$?
     if [ $rc -ne 0 ]; then
@@ -603,7 +608,7 @@ done
 echo ""
 echo "e2e: --bg color replacement"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 dst="$OUT/einstein-on-white.jpg"
 out=$("$BIN" "$src" --bg "color:#ffffff" --format jpg -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--bg color:#fff (einstein)" || fail "--bg color" "rc=$rc out=$out"
@@ -612,7 +617,7 @@ out=$("$BIN" "$src" --bg "color:#ffffff" --format jpg -o "$dst" 2>&1) ; rc=$?
 echo ""
 echo "e2e: --json output"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 dst="$OUT/eva.png"
 out=$("$BIN" "$src" -o "$dst" --json 2>&1) ; rc=$?
 echo "$out" | grep -q '"output"' && pass "--json has output field" || fail "--json" "rc=$rc out=$out"
@@ -632,7 +637,7 @@ fi
 echo ""
 echo "e2e: output format inference"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 dst="$OUT/einstein-inferred.jpg"
 out=$("$BIN" "$src" -o "$dst" --quiet 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_jpeg "$dst" && pass "-o out.jpg infers JPEG and opaque background" \
@@ -648,8 +653,8 @@ echo ""
 echo "e2e: --bg image replacement"
 
 # Use a galaxy as the background, the astronaut as the foreground.
-src="$FIX/02-nasa-mccandless-eva.jpg"
-bg="$FIX/04-nasa-hubble-ngc1300.jpg"
+src="$FIX/astronaut-eva.jpg"
+bg="$FIX/galaxy-ngc1300.jpg"
 dst="$OUT/eva-on-galaxy.jpg"
 out=$("$BIN" "$src" --bg "image:$bg" --format jpg -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && [ -s "$dst" ] && pass "--bg image (eva on galaxy)" || fail "--bg image" "rc=$rc out=$out"
@@ -665,7 +670,7 @@ done
 echo ""
 echo "e2e: --format format conversions"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 for fmt in png jpg heic avif tiff; do
     dst="$OUT/einstein.$fmt"
     out=$("$BIN" "$src" --bg "color:white" --format "$fmt" -o "$dst" 2>&1) ; rc=$?
@@ -712,7 +717,7 @@ out=$("$BIN" "$src" --algo vn-mask -o "$OUT/dummy.png" 2>&1) ; rc=$?
 echo ""
 echo "e2e: --quality"
 
-src="$FIX/05-nasa-apollo11-crew.jpg"
+src="$FIX/apollo11-crew.jpg"
 d_low="$OUT/crew-q10.jpg"
 d_high="$OUT/crew-q95.jpg"
 "$BIN" "$src" --bg "color:black" --format jpg --quality 10 -o "$d_low" 2>/dev/null
@@ -733,7 +738,7 @@ fi
 echo ""
 echo "e2e: matte filter (replaces --mask-only)"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 dst="$OUT/eva-mask.png"
 out=$("$BIN" "$src" --filter "fg:matte" -o "$dst" 2>&1) ; rc=$?
 if [ $rc -eq 0 ] && [ -s "$dst" ]; then
@@ -748,7 +753,7 @@ echo ""
 echo "e2e: pipe in / pipe out"
 
 dst="$OUT/eva-via-pipe.png"
-cat "$FIX/02-nasa-mccandless-eva.jpg" | "$BIN" > "$dst" 2>/dev/null
+cat "$FIX/astronaut-eva.jpg" | "$BIN" > "$dst" 2>/dev/null
 rc=$?
 if [ $rc -eq 0 ] && [ -s "$dst" ]; then
     head -c 8 "$dst" | xxd -p | tr -d '\n' | grep -qi '^89504e470d0a1a0a' && pass "cat in.jpg | bgbgone > out.png" \
@@ -763,7 +768,7 @@ echo "e2e: batch --out-dir"
 
 BATCH_OUT="$OUT/batch"
 mkdir -p "$BATCH_OUT"
-"$BIN" "$FIX/01-nasa-aldrin-moon.jpg" "$FIX/02-nasa-mccandless-eva.jpg" "$FIX/03-nasa-earthrise.jpg" \
+"$BIN" "$FIX/aldrin-on-moon.jpg" "$FIX/astronaut-eva.jpg" "$FIX/earthrise.jpg" \
     --out-dir "$BATCH_OUT" 2>/dev/null
 rc=$?
 count=$(ls -1 "$BATCH_OUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
@@ -777,7 +782,7 @@ fi
 echo ""
 echo "e2e: feather filter (replaces --feather)"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" -o "$OUT/eva-f0.png" 2>/dev/null
 "$BIN" "$src" --filter "mask:feather=8" -o "$OUT/eva-f8.png" 2>/dev/null
 "$BIN" "$src" --filter "mask:feather=16" -o "$OUT/eva-f16.png" 2>/dev/null
@@ -814,7 +819,7 @@ done
 echo ""
 echo "e2e: shared advanced geometry/options"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 dst="$OUT/einstein-advanced.png"
 out=$("$BIN" "$src" \
     --size preview \
@@ -847,7 +852,7 @@ out=$("$BIN" "$src" --channels alpha --format png -o "$dst" 2>&1) ; rc=$?
 
 dst="$OUT/einstein-cli-bg-image.png"
 out=$("$BIN" "$src" \
-    --bg "image:$FIX/03-nasa-earthrise.jpg" \
+    --bg "image:$FIX/earthrise.jpg" \
     --bg-fit contain \
     --format png \
     -o "$dst" 2>&1) ; rc=$?
@@ -868,7 +873,7 @@ done
 echo ""
 echo "e2e: --shadow-type"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 "$BIN" "$src" --bg color:white --shadow-type drop --shadow-opacity 60 -o "$OUT/einstein-shadow-drop.png" 2>/dev/null
 "$BIN" "$src" --bg color:white --shadow-type none -o "$OUT/einstein-shadow-none.png" 2>/dev/null
 if [ -s "$OUT/einstein-shadow-drop.png" ] && [ -s "$OUT/einstein-shadow-none.png" ]; then
@@ -885,7 +890,7 @@ fi
 echo ""
 echo "e2e: fg:scale + fg:translate (replaces --scale + --position)"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 "$BIN" "$src" --bg color:white -o "$OUT/einstein-scale-base.png" 2>/dev/null
 "$BIN" "$src" --bg color:white --filter "fg:scale=0.5" -o "$OUT/einstein-scale-center.png" 2>/dev/null
 "$BIN" "$src" --bg color:white --filter "fg:scale=0.5,translate=-200,200" -o "$OUT/einstein-scale-corner.png" 2>/dev/null
@@ -905,7 +910,7 @@ fi
 echo ""
 echo "e2e: --size preview"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" --size preview -o "$OUT/eva-preview.png" 2>/dev/null
 "$BIN" "$src" --size full -o "$OUT/eva-full.png" 2>/dev/null
 if [ -s "$OUT/eva-preview.png" ] && [ -s "$OUT/eva-full.png" ]; then
@@ -925,7 +930,7 @@ fi
 echo ""
 echo "e2e: --semitransparency"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" --semitransparency true -o "$OUT/eva-semi-true.png" 2>/dev/null
 "$BIN" "$src" --semitransparency false -o "$OUT/eva-semi-false.png" 2>/dev/null
 if [ -s "$OUT/eva-semi-true.png" ] && [ -s "$OUT/eva-semi-false.png" ]; then
@@ -942,7 +947,7 @@ fi
 echo ""
 echo "e2e: --crop-margin variants"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 for margin in "5%" "10% 20%" "5% 10% 15% 20%"; do
     dst="$OUT/einstein-margin-${margin// /-}.png"
     dst="${dst//%/pct}"
@@ -955,7 +960,7 @@ done
 echo ""
 echo "e2e: --roi"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 dst="$OUT/eva-roi.png"
 out=$("$BIN" "$src" --roi "0% 0% 100% 50%" -o "$dst" 2>&1) ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$dst" && pass "--roi 0% 0% 100% 50% produces PNG" \
@@ -965,7 +970,7 @@ out=$("$BIN" "$src" --roi "0% 0% 100% 50%" -o "$dst" 2>&1) ; rc=$?
 echo ""
 echo "e2e: -o format inference"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 for ext in heic tiff avif; do
     dst="$OUT/einstein-inferred.$ext"
     out=$("$BIN" "$src" --bg color:white -o "$dst" 2>&1) ; rc=$?
@@ -977,7 +982,7 @@ done
 echo ""
 echo "e2e: --quiet vs --verbose"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 qerr=$("$BIN" "$src" -o "$OUT/quiet.png" --quiet 2>&1 >/dev/null)
 [ -z "$qerr" ] && pass "--quiet writes no stderr on success" \
     || fail "--quiet" "got stderr: $qerr"
@@ -990,7 +995,7 @@ verr=$("$BIN" "$src" -o "$OUT/verbose.png" --verbose 2>&1 >/dev/null)
 echo ""
 echo "e2e: mask:threshold (replaces --threshold)"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" --filter "mask:threshold=0.20" -o "$OUT/eva-threshold-020.png" 2>/dev/null
 "$BIN" "$src" --filter "mask:threshold=0.80" -o "$OUT/eva-threshold-080.png" 2>/dev/null
 if [ -s "$OUT/eva-threshold-020.png" ] && [ -s "$OUT/eva-threshold-080.png" ]; then
@@ -1007,7 +1012,7 @@ fi
 echo ""
 echo "e2e: --crop"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" -o "$OUT/eva-uncropped.png" 2>/dev/null
 "$BIN" "$src" --crop -o "$OUT/eva-cropped.png" 2>/dev/null
 if [ -s "$OUT/eva-uncropped.png" ] && [ -s "$OUT/eva-cropped.png" ]; then
@@ -1027,7 +1032,7 @@ fi
 echo ""
 echo "e2e: --crop-margin (uniform value, replaces --padding)"
 
-src="$FIX/02-nasa-mccandless-eva.jpg"
+src="$FIX/astronaut-eva.jpg"
 "$BIN" "$src" --crop -o "$OUT/eva-crop-only.png" 2>/dev/null
 "$BIN" "$src" --crop --crop-margin 10% -o "$OUT/eva-crop-padded.png" 2>/dev/null
 if [ -s "$OUT/eva-crop-only.png" ] && [ -s "$OUT/eva-crop-padded.png" ]; then
@@ -1047,7 +1052,7 @@ fi
 echo ""
 echo "e2e: --shadow-type drop"
 
-src="$FIX/07-einstein-1921.jpg"
+src="$FIX/einstein.jpg"
 "$BIN" "$src" --bg color:white -o "$OUT/einstein-no-shadow.png" 2>/dev/null
 "$BIN" "$src" --bg color:white --shadow-type drop -o "$OUT/einstein-shadow.png" 2>/dev/null
 if [ -s "$OUT/einstein-no-shadow.png" ] && [ -s "$OUT/einstein-shadow.png" ]; then
@@ -1064,8 +1069,8 @@ fi
 echo ""
 echo "e2e: --bg-fit tile"
 
-src="$FIX/07-einstein-1921.jpg"
-bg="$FIX/03-nasa-earthrise.jpg"
+src="$FIX/einstein.jpg"
+bg="$FIX/earthrise.jpg"
 "$BIN" "$src" --bg "image:$bg" --bg-fit cover -o "$OUT/einstein-cover.png" 2>/dev/null
 "$BIN" "$src" --bg "image:$bg" --bg-fit tile -o "$OUT/einstein-tile.png" 2>/dev/null
 if [ -s "$OUT/einstein-cover.png" ] && [ -s "$OUT/einstein-tile.png" ]; then
@@ -1086,12 +1091,12 @@ echo "e2e: --multi"
 # require: at least one file is produced AND its name follows the --instance-naming template
 # ({base}-{n}.{ext}). The "N instances = N files" semantic is covered by the unit-test
 # InstanceNaming.expand suite.
-src="$FIX/09-wright-brothers-1910.jpg"
+src="$FIX/wright-brothers.jpg"
 MULTI_OUT="$OUT/multi"
 mkdir -p "$MULTI_OUT"
 out=$("$BIN" "$src" --multi --out-dir "$MULTI_OUT" 2>&1) ; rc=$?
 count=$(ls -1 "$MULTI_OUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
-template_match=$(ls -1 "$MULTI_OUT" | grep -c -E '09-wright-brothers-1910-[0-9]+\.png$' || true)
+template_match=$(ls -1 "$MULTI_OUT" | grep -c -E 'wright-brothers-[0-9]+\.png$' || true)
 if [ $rc -eq 0 ] && [ "$count" -ge 1 ] && [ "$template_match" -ge 1 ]; then
     pass "--multi produced $count file(s) matching template"
 else

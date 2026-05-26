@@ -1,10 +1,10 @@
 #!/bin/bash
 # For every filter in the catalogue, render a bg:/fg:/all: 3-panel comparison
-# against the yoga photo (with --type person) and the Parastoo photo (with
+# against the yoga photo (with --type person) and the woman-singer photo (with
 # --type person) so the per-filter doc shows a real fg/bg split next to the
 # baseline.
 #
-# Output: docs/images/filters/panels/{yoga,parastoo}-<filter>.jpg
+# Output: docs/images/filters/panels/{yoga,woman-singer}-<filter>.jpg
 # (4-up strip: original | bg:X | fg:X | all:X)
 #
 # For mask-only filters, the panel just renders mask:X once.
@@ -17,8 +17,8 @@ source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
 FIX="$ROOT/Tests/fixtures/showcase"
 PANEL_OUT="$ROOT/docs/images/filters/panels"
-YOGA="$FIX/franz-yoga.jpg"
-PARASTOO="$FIX/Parastoo_Ahmadi.jpg"
+YOGA="$FIX/yoga.jpg"
+WOMAN_SINGER="$FIX/woman-singer.jpg"
 
 mkdir -p "$PANEL_OUT"
 
@@ -127,8 +127,8 @@ panel_for_subject() {
 
 echo "panels: yoga subject (--type person)"
 panel_for_subject "$YOGA" "yoga"
-echo "panels: Parastoo subject (--type person)"
-panel_for_subject "$PARASTOO" "parastoo"
+echo "panels: woman-singer subject (--type person)"
+panel_for_subject "$WOMAN_SINGER" "woman-singer"
 
 echo "done. $PANEL_OUT"
 ls -1 "$PANEL_OUT" | wc -l | awk '{print "  panels: " $1}'

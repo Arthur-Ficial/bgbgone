@@ -3,8 +3,8 @@
 # freshly-installed bgbgone binary. The README Filter Showcase section and
 # every per-filter doc reference these assets.
 #
-# CC0 / Franz CC-BY only - subjects in Tests/fixtures/showcase/, backgrounds
-# in Tests/fixtures/showcase/bg/. Sidecar JSONs travel with every fixture.
+# CC0 / Franz CC-BY only. All subjects + backgrounds live flat in
+# Tests/fixtures/. See Tests/fixtures/LICENSES.md for provenance.
 #
 # Classic colour-pop trick: use the source photo as BOTH the subject and the
 # background plate (--bg image:<self>). Then bg:grayscale turns the original
@@ -16,8 +16,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/trash.sh"
 BIN="${BIN:-$ROOT/.build/release/bgbgone}"
-FIX="$ROOT/Tests/fixtures/showcase"
-BG="$FIX/bg"
+FIX="$ROOT/Tests/fixtures"
+BG="$FIX"
 OUT="$ROOT/docs/images/showcase"
 FILT_OUT="$ROOT/docs/images/filters"
 
@@ -26,15 +26,15 @@ mkdir -p "$OUT" "$FILT_OUT"
 echo "regenerating filter showcase via $BIN"
 "$BIN" --version
 
-CORGI="$FIX/Fawn_and_white_Welsh_Corgi_puppy_standing_on_rear_legs_and_sticking_out_the_tongue.jpg"
-PANDA="$FIX/Red_Panda__24986761703_.jpg"
-YOGA="$FIX/franz-yoga.jpg"
-PIPEMAN="$FIX/Bearded_man_smoking_pipe-3013924.jpg"
-CAT="$FIX/Tabby_cat_with_blue_eyes-3336579.jpg"
-KINGFISHER="$FIX/Eisvogel_kingfisher.jpg"
-PARASTOO="$FIX/Parastoo_Ahmadi.jpg"
-MATTERHORN="$BG/Matterhorn_sunset_2016__Unsplash_.jpg"
-NEBULA="$BG/Flaming_Star_Nebula__IC_405.png"
+CORGI="$FIX/corgi-puppy.jpg"
+PANDA="$FIX/red-panda.jpg"
+YOGA="$FIX/yoga.jpg"
+PIPEMAN="$FIX/man-with-pipe.jpg"
+CAT="$FIX/tabby-cat.jpg"
+KINGFISHER="$FIX/kingfisher.jpg"
+WOMAN_SINGER="$FIX/woman-singer.jpg"
+MATTERHORN="$BG/matterhorn-sunset.jpg"
+NEBULA="$BG/nebula-flaming-star.png"
 
 # ============ 5 README showcase examples ============
 # All before/after pairs use the SOURCE photo as its own background plate so
@@ -71,15 +71,15 @@ cp "$CORGI" "$OUT/03-corgi-before.jpg"
   -o "$OUT/03-corgi-sticker.jpg" >/dev/null
 trash_path "$OUT/03-corgi-cutout.png" "$OUT/03-corgi-sticker.png"
 
-echo "-- showcase 4: vintage backdrop (Parastoo Ahmadi, library bookshelves go sepia; subject keeps colour) --"
+echo "-- showcase 4: vintage backdrop (woman-singer, library bookshelves go sepia; subject keeps colour) --"
 # HYPOTHESIS: library bookshelves with warm wooden light have rich detail.
-# --type person isolates Parastoo cleanly. bg gets sepia + slight darken +
+# --type person isolates the subject cleanly. bg gets sepia + slight darken +
 # desaturate (old-library backdrop); fg keeps original colour (floral dress,
 # red lipstick stay vivid). Vignette darkens corners for classic film look.
-cp "$PARASTOO" "$OUT/04-parastoo-before.jpg"
-"$BIN" "$PARASTOO" --type person \
+cp "$WOMAN_SINGER" "$OUT/04-woman-singer-before.jpg"
+"$BIN" "$WOMAN_SINGER" --type person \
   --filter "bg:sepia=1.0,adjust=brightness=-0.15:saturation=0.45; composite:vignette=1.8:1.1" \
-  -o "$OUT/04-parastoo-vintage.jpg" >/dev/null
+  -o "$OUT/04-woman-singer-vintage.jpg" >/dev/null
 trash_path "$OUT/04-kingfisher-before.jpg" "$OUT/04-kingfisher-vintage.jpg"
 
 # ============ feather progression panel + close-up (restored from removed --feather docs) ============

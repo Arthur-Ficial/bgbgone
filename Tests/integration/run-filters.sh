@@ -10,7 +10,7 @@
 # GitHub issue number (https://github.com/Arthur-Ficial/bgbgone/issues/M).
 
 # Default fixture for filter tests: easy person on lunar surface.
-RED_FIX="$FIX/01-nasa-aldrin-moon.jpg"
+RED_FIX="$FIX/aldrin-on-moon.jpg"
 
 # Helper: run a CLI invocation, assert exit 0 and a valid RGBA PNG.
 # Usage: red_filter <ticket-id> <issue#> <filter-string> <output-stem>
@@ -134,7 +134,7 @@ fi
 # Regression: bg-layer filters without an explicit --bg use the source image as
 # the background plate, so colour-pop docs and panels are not rendered over
 # blank white/transparent backgrounds.
-PANDA_FIX="$FIX/showcase/Red_Panda__24986761703_.jpg"
+PANDA_FIX="$FIX/red-panda.jpg"
 out=$("$BIN" "$PANDA_FIX" --filter "bg:grayscale" -o "$OUT/t3b-bg-autopromote.jpg" 2>&1); rc=$?
 if [ $rc -eq 0 ] && check_jpeg "$OUT/t3b-bg-autopromote.jpg" \
     && assert_grayscale_not_white_crop "$OUT/t3b-bg-autopromote.jpg" "80x80+20+20"; then
@@ -225,7 +225,7 @@ fi
 # the duotone on the FULL scene (so the centre-top crop is duotone-blue,
 # not the orange floor), while the same fixture under fg:duotone should
 # leave the top crop UNTOUCHED (still orange floor).
-YOGA_FIX="$FIX/showcase/franz-yoga.jpg"
+YOGA_FIX="$FIX/yoga.jpg"
 out=$("$BIN" "$YOGA_FIX" --type person --filter "bg:duotone=dark=#003366:light=#ffcc00" -o "$OUT/t4j-bgduo-aligned.jpg" 2>&1); rc=$?
 if [ $rc -eq 0 ]; then
     rgb=$(mean_rgb_crop "$OUT/t4j-bgduo-aligned.jpg" "200x200+1200+200") || rgb="255 255 255"
