@@ -1,6 +1,6 @@
 # bgbgone
 
-[![Version 1.2.11](https://img.shields.io/badge/version-1.2.11-blue)](https://github.com/Arthur-Ficial/bgbgone)
+[![Version 1.2.12](https://img.shields.io/badge/version-1.2.12-blue)](https://github.com/Arthur-Ficial/bgbgone)
 [![Swift 6.3+](https://img.shields.io/badge/Swift-6.3%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white)](https://developer.apple.com/macos/)
 [![100% on-device](https://img.shields.io/badge/privacy-100%25%20on--device-green)](https://developer.apple.com/documentation/vision)
@@ -98,14 +98,6 @@ bgbgone woman-singer.jpg --type person \
 ```
 
 ![woman-singer zoom-blur backdrop — bg radiates outward, subject razor-sharp](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
-
-## Edge refinement on corgi-puppy — `mask:feather`
-
-```bash
-bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
-```
-
-![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
 
 ## Pipelines on red-panda — compose with sibling Apple-framework CLIs
 
