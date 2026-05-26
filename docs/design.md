@@ -117,8 +117,8 @@ All green-or-fail in `make release`:
    row in `LICENSES.md`.
 2. **`lint-readme`** — README must not reference hard-removed v1.0 flags.
 3. **`lint-contract`** — SSOT contract checks on CLI/server flag aliases.
-4. **`lint-docs`** — every `--filter "..."` chain in every shipped .md
-   parses against the real binary.
+4. **`lint-docs`** — every `--filter` chain in every shipped .md parses
+   against the real binary.
 5. **`test-unit`** — pure Swift, no frameworks (~190 cases).
 6. **`test-integration`** — spawns the built binary; CLI flags + HTTP
    server scenarios + e2e against every fixture (232+ assertions).

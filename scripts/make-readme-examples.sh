@@ -33,6 +33,17 @@ FONT_BOLD="/System/Library/Fonts/Helvetica.ttc"
 
 mkdir -p "$OUT" "$WORK/panels"
 
+# The 16 core public-domain subject fixtures (renamed P1 from
+# 01-...-...jpg / 16-...-...jpg numeric prefixes to content-descriptive
+# names). All have a clear foreground subject. Order = README's natural
+# tour order (NASA spaceflight → portraits → paintings → ads).
+CORE_PD=(
+    aldrin-on-moon astronaut-eva earthrise galaxy-ngc1300 apollo11-crew mars-rover
+    einstein tesla wright-brothers
+    mona-lisa great-wave pearl-earring
+    singer-ad typewriter-ad phonograph car-ad
+)
+
 # ---- helpers ----------------------------------------------------------------
 
 # Render a panel: image (resized + checkerboard for transparency) + caption strip.
@@ -110,9 +121,10 @@ bg() {
 
 echo "==> cutout-grid (12 source → cutout pairs)"
 i=0
-for f in "$FX"/[0-9][0-9]-*.jpg; do
+for stem in "${CORE_PD[@]}"; do
+    f="$FX/${stem}.jpg"
     base=$(basename "$f" .jpg)
-    label_src=$(echo "$base" | sed -E 's/^[0-9]+-//; s/-/ /g')
+    label_src=$(echo "$base" | sed -E 's/-/ /g')
     cut="$WORK/$base-cut.png"
     "$BGBGONE" "$f" -o "$cut" --quiet
     panel "$f"  "src · $label_src"  "$WORK/panels/grid-$i-a.png" 360 300
@@ -123,7 +135,8 @@ done
 # 4 columns of (src, cutout) pairs = 8 cells per row. Rows scale with fixture count.
 rowtmp=()
 n=0
-for f in "$FX"/[0-9][0-9]-*.jpg; do
+for stem in "${CORE_PD[@]}"; do
+    f="$FX/${stem}.jpg"
     rowtmp+=("$WORK/panels/grid-$n-a.png" "$WORK/panels/grid-$n-b.png")
     n=$((n + 1))
 done

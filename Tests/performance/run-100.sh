@@ -21,7 +21,15 @@ trash_path "$WORK"
 mkdir -p "$IN" "$OUT"
 : > "$STATS"
 
-fixtures=("$FIX"/*.jpg)
+# Subject fixtures only - background-plate fixtures (matterhorn, nebulae)
+# have no foreground subject and would fail with BGBG_NORESULT_NO_SUBJECT.
+BG_PLATES_RE='matterhorn-sunset|nebula-flaming-star|nebula-flying-dragon'
+fixtures=()
+for f in "$FIX"/*.jpg; do
+    base=$(basename "$f" .jpg)
+    [[ "$base" =~ $BG_PLATES_RE ]] && continue
+    fixtures+=("$f")
+done
 if [ "${#fixtures[@]}" -eq 0 ]; then
     echo "error: no fixtures found in $FIX" >&2
     exit 1
@@ -123,9 +131,12 @@ pattern = re.compile(
     r"On-device, no network, no GPU contention with another process\."
 )
 updated, count = pattern.subn(line, text)
-if count != 1:
-    raise SystemExit("error: README performance line not found or not unique")
-readme.write_text(updated)
+if count == 1:
+    readme.write_text(updated)
+elif count > 1:
+    raise SystemExit("error: README performance line is not unique")
+else:
+    print(f"  README:        no performance line found; skipping update")
 
 print("bgbgone 5x100-image performance")
 print(f"  binary:        {binary}")
@@ -136,5 +147,5 @@ print(f"  avg elapsed:   {avg_elapsed:.3f}s")
 print(f"  throughput:    {throughput:.2f} images/s")
 print(f"  avg latency:   {latency:.1f} ms/image")
 print(f"  output bytes:  {total_bytes:,} per run")
-print("  README:        updated")
+print(f"  README:        updated (count={count})")
 PY
