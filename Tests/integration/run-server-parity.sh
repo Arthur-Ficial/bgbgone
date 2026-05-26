@@ -28,12 +28,23 @@ fi
 
 parity_post() {
     # parity_post <fixture> <out-path> [extra curl -F args...]
+    # Retries up to 3 times to ride out transient connection resets under
+    # parallel load (e.g. during `make deploy` when image-regen scripts
+    # and the test suite race for the same Vision/Core Image pipeline).
     local fixture="$1"; shift
     local dst="$1"; shift
-    curl -fsS -X POST "$PARITY_BASE/bgbgone" \
-        -F "image_file=@${fixture}" \
-        "$@" \
-        -o "$dst" 2>&1
+    local rc=1 attempt=0 last=""
+    while [ $attempt -lt 3 ]; do
+        last=$(curl -fsS --max-time 30 --retry 0 -X POST "$PARITY_BASE/bgbgone" \
+            -F "image_file=@${fixture}" \
+            "$@" \
+            -o "$dst" 2>&1) ; rc=$?
+        [ $rc -eq 0 ] && break
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    printf '%s' "$last"
+    return $rc
 }
 
 PFIX_PANDA="$FIX/red-panda.jpg"
@@ -151,12 +162,21 @@ else
     fail "P13 --format round trip" "format=$fmt produced no output"
 fi
 
-# P14 — --format zip yields a ZIP with color.jpg + alpha.png.
-parity_post "$PFIX_PANDA" "$OUT/p14.zip" -F "format=zip" >/dev/null
-if [ -s "$OUT/p14.zip" ] && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q color.jpg && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q alpha.png; then
+# P14 — --format zip yields a ZIP with color.jpg + alpha.png. Use the
+# raw curl path (no parity_post wrapper) so we can capture the HTTP
+# status separately from the body and emit it on failure.
+http=$(curl -sS --max-time 30 -o "$OUT/p14.zip" -w '%{http_code}' \
+    -X POST "$PARITY_BASE/bgbgone" \
+    -F "image_file=@$PFIX_PANDA" \
+    -F "format=zip" 2>/dev/null)
+zip_size=$(stat -f%z "$OUT/p14.zip" 2>/dev/null || echo 0)
+zip_kind=$(file -b "$OUT/p14.zip" 2>/dev/null | head -1)
+if [ "$http" = "200" ] && [ "$zip_size" -gt 0 ] \
+   && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q color.jpg \
+   && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q alpha.png; then
     pass "P14 --format zip contains color.jpg and alpha.png"
 else
-    fail "P14 --format zip" "missing color.jpg or alpha.png"
+    fail "P14 --format zip" "http=$http size=$zip_size kind=$zip_kind"
 fi
 
 # P15 — --roi clips processing to a rectangle, smaller output area.
