@@ -42,7 +42,11 @@ case .capabilityCheckRequested:
     CLI.printCheck()
     exit(0)
 case .filtersListRequested:
-    CLI.printFiltersList()
+    if cfg.outputMode == .json || cfg.outputMode == .ndjson {
+        CLI.printFiltersListJSON()
+    } else {
+        CLI.printFiltersList()
+    }
     exit(0)
 case .serverRequested:
     do {

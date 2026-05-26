@@ -140,6 +140,73 @@ enum CLI {
         }
     }
 
+    /// Machine-readable filter catalogue. Drives all auto-generated docs
+    /// (per-filter pages, README filter index) so the docs cannot drift from
+    /// the binary. Schema is stable and the array is sorted by `name` for
+    /// byte-deterministic output.
+    static func printFiltersListJSON() {
+        struct JSONArg: Encodable {
+            let key: String?
+            let kind: String
+            let `default`: String?
+            let min: Double?
+            let max: Double?
+            let choices: [String]?
+        }
+        struct JSONEntry: Encodable {
+            let name: String
+            let layers: [String]
+            let signature: String
+            let doc: String
+            let producesAlpha: Bool
+            let positional: [JSONArg]
+            let keyed: [JSONArg]
+            let examples: [String]
+        }
+        func argJSON(_ spec: FilterArgSchema) -> JSONArg {
+            let kindStr: String
+            var choices: [String]? = nil
+            switch spec.kind {
+            case .number: kindStr = "number"
+            case .color: kindStr = "color"
+            case .point: kindStr = "point"
+            case .choice(let ch): kindStr = "choice"; choices = ch
+            }
+            return JSONArg(
+                key: spec.key,
+                kind: kindStr,
+                default: spec.defaultValue,
+                min: spec.range?.lowerBound,
+                max: spec.range?.upperBound,
+                choices: choices
+            )
+        }
+        let entries = FilterRegistry.all
+            .sorted { $0.name < $1.name }
+            .map { entry -> JSONEntry in
+                let schema = FilterRegistry.schema(for: entry.name)
+                return JSONEntry(
+                    name: entry.name,
+                    layers: entry.validLayers.map { $0.rawValue }.sorted(),
+                    signature: entry.signature,
+                    doc: entry.doc,
+                    producesAlpha: entry.producesAlpha,
+                    positional: schema.positional.map(argJSON),
+                    keyed: schema.keyed.map(argJSON),
+                    examples: schema.examples
+                )
+            }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        do {
+            let data = try encoder.encode(entries)
+            if let s = String(data: data, encoding: .utf8) { print(s) }
+        } catch {
+            FileHandle.standardError.write(Data("bgbgone: failed to encode filter catalogue as JSON\n".utf8))
+            exit(3)
+        }
+    }
+
     static func printFilterHelp(name raw: String) {
         guard let entry = FilterRegistry.find(raw) else {
             print("bgbgone: unknown filter \(raw)")

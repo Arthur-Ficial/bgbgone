@@ -349,6 +349,19 @@ else
     fail "T58 #60 --filters-list" "rc=$rc"
 fi
 
+# T58a: --filters-list --json emits stable machine-readable catalogue.
+# Schema: [{ name, layers, signature, doc, producesAlpha, positional[],
+# keyed[], examples[] }]. Used by scripts/gen-docs.sh to render every
+# per-filter page from a single template.
+out=$("$BIN" --filters-list --json 2>&1); rc=$?
+count=$(printf '%s' "$out" | jq 'length' 2>/dev/null || echo "0")
+if [ "$rc" -eq 0 ] && [ "$count" -eq 49 ] \
+   && printf '%s' "$out" | jq -e '.[0] | has("name") and has("layers") and has("signature") and has("doc") and has("producesAlpha")' >/dev/null 2>&1; then
+    pass "T58a --filters-list --json emits 49-entry array with stable schema"
+else
+    fail "T58a --filters-list --json" "rc=$rc count=$count"
+fi
+
 # T59 #61: HTTP server accepts `filter` form field.
 # Start a temporary local server.
 PORT=18790
