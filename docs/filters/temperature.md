@@ -8,14 +8,14 @@
 | **Signature** | `temperature=K` |
 
 
-## Example — red-panda, `fg:temperature=6500` (subject filter, background preserved)
+## Example — red-panda, `fg:temperature=9000` (subject filter, background preserved)
 
 The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
 
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:temperature=6500" --size preview -o red-panda-temperature.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:temperature=9000" --size preview -o red-panda-temperature.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
@@ -24,22 +24,22 @@ bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:temperature=6500" 
 curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "image_file=@red-panda.jpg" \
   -F "bg=@red-panda.jpg" \
-  -F "filter=fg:temperature=6500" \
+  -F "filter=fg:temperature=9000" \
   -F "format=jpg" \
   -F "size=preview" \
   -o red-panda-temperature.jpg
 ```
 
-![red-panda after `fg:temperature=6500` — CLI render = server render (byte-identical)](../images/filters/temperature.jpg)
+![red-panda after `fg:temperature=9000` — CLI render = server render (byte-identical)](../images/filters/temperature.jpg)
 
 
 
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:temperature"
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:temperature"
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:temperature"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:temperature=3500"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:temperature=3500"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:temperature=3500"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -49,9 +49,9 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:temperature"
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:temperature"
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:temperature"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:temperature=3500"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:temperature=3500"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:temperature=3500"
 ```
 
 Panels (`original | bg | fg | all`):

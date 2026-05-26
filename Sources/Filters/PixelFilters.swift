@@ -251,17 +251,11 @@ public enum AdjustFilter: Filter {
     public static let name = "adjust"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var params: [String: Any] = [:]
-        for a in args {
-            if case .keyed(let k, let v) = a, let d = Double(v) {
-                switch k.lowercased() {
-                case "brightness": params["inputBrightness"] = d
-                case "contrast":   params["inputContrast"]   = d
-                case "saturation": params["inputSaturation"] = d
-                default: break
-                }
-            }
-        }
+        let params: [String: Any] = [
+            "inputBrightness": try FilterArgValue.keyedNumber(args, key: "brightness", default: 0.0, filter: name),
+            "inputContrast": try FilterArgValue.keyedNumber(args, key: "contrast", default: 1.0, filter: name),
+            "inputSaturation": try FilterArgValue.keyedNumber(args, key: "saturation", default: 1.0, filter: name),
+        ]
         return try PixelFilterHelper.applyCI(name: "CIColorControls", params: params, to: image, on: layer, humanName: name)
     }
 }

@@ -1,0 +1,50 @@
+# name|layer|background|min_changed_percent|example|hypothesis
+adjust|all|source|0.1|adjust=brightness=0.1:contrast=1.1:saturation=0.9|brightness, contrast, and saturation should shift most full-image tones.
+bloom|composite|source|0.1|bloom=intensity=0.5:radius=10|highlights should glow on the flattened composite.
+blur|all|source|0.1|blur=15|detail should soften across the full image.
+box-blur|all|source|0.1|box-blur=15|local detail should become block-averaged and visibly softer.
+colorize|all|source|0.1|colorize=color=#0066ff:amount=0.5|luminance should map toward blue monochrome tones.
+comic|all|source|0.1|comic|edges and flat tones should become comic-stylized.
+contract|mask|solid:#1a2233|0.1|contract=3|the matte should shrink, exposing more contrasting background around subject edges.
+crystallize|all|source|0.1|crystallize=20|image regions should become Voronoi crystal cells.
+cutout|fg|solid:#1a2233|0.1|cutout|the subject should become a hole showing the contrasting background.
+desaturate|all|source|0.1|desaturate=0.5|colour saturation should reduce without changing geometry.
+duotone|all|source|0.1|duotone=dark=#003366:light=#ffcc00|luminance should remap into the dark/light duotone palette.
+edge-work|all|source|0.1|edge-work=3|line-art edge structure should replace much of the photograph.
+edges|all|source|0.1|edges=2.5|edge detection should turn broad regions into high-contrast contours.
+emboss|all|source|0.1|emboss|a raised gray relief should replace normal photographic shading.
+expand|mask|solid:#1a2233|0.1|expand=3|the matte should grow, covering more contrasting background around subject edges.
+exposure|all|source|0.1|exposure=1.0|overall brightness should increase by one exposure stop.
+feather|mask|solid:#1a2233|0.1|feather=8|the matte edge should soften against the contrasting background.
+flip|fg|solid:#1a2233|0.1|flip=horizontal|the subject and matte should mirror horizontally while the background stays fixed.
+gamma|all|source|0.1|gamma=1.2|midtones should shift through a gamma curve.
+gloom|composite|source|0.1|gloom=intensity=0.5:radius=10|shadowy glow should alter the flattened composite.
+glow|fg|solid:#1a2233|0.1|glow=color=#ffe080:radius=10:intensity=0.6|a warm halo should appear around the subject edge.
+grayscale|all|source|0.1|grayscale|colour channels should converge toward monochrome.
+hue|all|source|0.1|hue=120|hues should rotate around the colour wheel.
+inner-shadow|fg|solid:#1a2233|0.1|inner-shadow=blur=12:offset=4,4:opacity=0.5:color=#000|shadowing should appear inside the subject matte.
+levels|all|source|0.1|levels=black=20:white=235:gamma=1.0|black and white points should remap tonal contrast.
+matte|fg|solid:#1a2233|0.1|matte|the output should become the visible grayscale matte instead of the subject photo.
+motion-blur|all|source|0.1|motion-blur=radius=10:angle=45|detail should smear along the requested angle.
+negate|all|source|0.1|negate|RGB values should invert across the image.
+noise|all|source|0.1|noise=0.1|film-grain noise should alter pixels across the image.
+opacity|all|source|0.1|opacity=0.7|alpha should reduce, changing the composited PNG pixels.
+outline|fg|solid:#1a2233|0.1|outline=color=#ffffff:width=3|a white band should appear immediately outside the subject matte.
+pixelate|all|source|0.1|pixelate=20|fine detail should collapse into large square pixels.
+pointillize|all|source|0.1|pointillize=5|the image should become dot-like pointillist cells.
+posterize|all|source|0.1|posterize=4|continuous colours should quantize into fewer levels.
+rotate|fg|solid:#1a2233|0.1|rotate=15|the subject and matte should rotate around their centre.
+scale|fg|solid:#1a2233|0.1|scale=0.75|the subject and matte should shrink around centre, revealing more background.
+sepia|all|source|0.1|sepia=0.8|the image should shift into warm sepia monochrome.
+shadow|fg|solid:#1a2233|0.1|shadow=blur=12:offset=4,4:opacity=0.5:color=#000|a soft offset shadow should appear behind the subject.
+sharpen|all|source|0.1|sharpen=0.5|edges should become crisper through luminance sharpening.
+silhouette|fg|solid:#1a2233|0.1|silhouette=color=#ff0000|the subject should fill with solid red while retaining its matte.
+temperature|all|source|0.1|temperature=9000|white balance should shift visibly away from the baseline.
+threshold|mask|solid:#1a2233|0.1|threshold=0.5|semi-transparent matte pixels should harden against the contrasting background.
+tint|all|source|0.1|tint=color=#0066ff:amount=0.5|the image should blend toward a blue tint.
+translate|fg|solid:#1a2233|0.1|translate=-200,200|the subject and matte should move while the background stays fixed.
+unsharp|all|source|0.1|unsharp=radius=2.5:intensity=0.5|local contrast around edges should increase.
+vibrance|all|source|0.1|vibrance=0.5|low-saturation colours should become more vivid.
+vignette|composite|source|0.1|vignette=intensity=0.5:radius=10|the flattened image edges should darken.
+vignette-effect|composite|source|0.1|vignette-effect=center=0.5,0.5:radius=1.5:intensity=1|a positioned vignette should darken pixels away from the centre.
+zoom-blur|all|source|0.1|zoom-blur=center=0.5,0.5:amount=20|pixels should streak radially from the requested centre.

@@ -6,13 +6,8 @@ import BgBgOneCore
 /// to derive its effect (outline, glow, shadow, silhouette, cutout, matte,
 /// inner-shadow). All reject layers other than `.fg`.
 
-private func parseRGBAColor(_ args: [FilterArg], default def: RGBA) -> RGBA {
-    for a in args {
-        if case .keyed(let k, let v) = a, k.lowercased() == "color" {
-            return (try? ColourParser.parse(v)) ?? def
-        }
-    }
-    return def
+private func parseRGBAColor(_ args: [FilterArg], default def: RGBA, filter: String) throws -> RGBA {
+    try FilterArgValue.keyedColor(args, default: def, filter: filter)
 }
 
 private func ciColor(_ rgba: RGBA, alpha: CGFloat = 1) -> CIColor {
@@ -60,7 +55,7 @@ public enum SilhouetteFilter: Filter {
     public static let name = "silhouette"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        let color = parseRGBAColor(args, default: RGBA(r: 0, g: 0, b: 0, a: 1))
+        let color = try parseRGBAColor(args, default: RGBA(r: 0, g: 0, b: 0, a: 1), filter: name)
         let extent = image.foreground.extent
         let plane = try solidPlane(color, extent: extent)
         // Replace fg pixels with solid colour; mask still controls compositing in flatten.
@@ -109,17 +104,8 @@ public enum OutlineFilter: Filter {
     public static let name = "outline"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var width = 3.0
-        var color = RGBA(r: 1, g: 1, b: 1, a: 1)
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "width": if let d = Double(v) { width = d }
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                default: break
-                }
-            }
-        }
+        let width = try FilterArgValue.keyedNumber(args, key: "width", default: 3.0, filter: name)
+        let color = try parseRGBAColor(args, default: RGBA(r: 1, g: 1, b: 1, a: 1), filter: name)
         let extent = image.foreground.extent
         // Dilate mask by `width` pixels, subtract original mask -> ring shape.
         guard let dilate = CIFilter(name: "CIMorphologyMaximum") else {
@@ -158,18 +144,9 @@ public enum GlowFilter: Filter {
     public static let name = "glow"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var radius = 10.0, intensity = 0.5
-        var color = RGBA(r: 1, g: 1, b: 0.5, a: 1)
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "radius": if let d = Double(v) { radius = d }
-                case "intensity": if let d = Double(v) { intensity = d }
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                default: break
-                }
-            }
-        }
+        let radius = try FilterArgValue.keyedNumber(args, key: "radius", default: 10.0, filter: name)
+        let intensity = try FilterArgValue.keyedNumber(args, key: "intensity", default: 0.5, filter: name)
+        let color = try parseRGBAColor(args, default: RGBA(r: 1, g: 1, b: 0.5, a: 1), filter: name)
         let extent = image.foreground.extent
         guard let blur = CIFilter(name: "CIGaussianBlur") else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkCIBlurUnavailable, "CIGaussianBlur unavailable")
@@ -190,7 +167,9 @@ public enum GlowFilter: Filter {
         }
         alpha.setValue(glowPlane, forKey: kCIInputImageKey)
         alpha.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(intensity)), forKey: "inputAVector")
-        let tunedPlane = alpha.outputImage?.cropped(to: extent) ?? glowPlane
+        guard let tunedPlane = alpha.outputImage?.cropped(to: extent) else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "glow: alpha tune failed")
+        }
         var r = image
         r.foreground = try blendWithMask(image.foreground, background: tunedPlane, mask: image.foregroundMask, extent: extent)
         r.foregroundMask = blurred
@@ -202,21 +181,10 @@ public enum ShadowFilter: Filter {
     public static let name = "shadow"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var blur = 12.0, dx = 0.0, dy = 0.0, opacity = 0.5
-        var color = RGBA(r: 0, g: 0, b: 0, a: 1)
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "blur": if let d = Double(v) { blur = d }
-                case "offset":
-                    let parts = v.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-                    if parts.count == 2 { dx = parts[0]; dy = parts[1] }
-                case "opacity": if let d = Double(v) { opacity = d }
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                default: break
-                }
-            }
-        }
+        let blur = try FilterArgValue.keyedNumber(args, key: "blur", default: 12.0, filter: name)
+        let (dx, dy) = try FilterArgValue.keyedPoint(args, key: "offset", default: (0.0, 0.0), filter: name)
+        let opacity = try FilterArgValue.keyedNumber(args, key: "opacity", default: 0.5, filter: name)
+        let color = try parseRGBAColor(args, default: RGBA(r: 0, g: 0, b: 0, a: 1), filter: name)
         let extent = image.foreground.extent
         // Translate the mask by (dx, dy), then blur, then tint.
         let translated = image.foregroundMask.transformed(by: CGAffineTransform(translationX: dx, y: -dy))
@@ -235,7 +203,9 @@ public enum ShadowFilter: Filter {
         }
         union.setValue(image.foregroundMask, forKey: kCIInputImageKey)
         union.setValue(shadowMask, forKey: kCIInputBackgroundImageKey)
-        let unionMask = union.outputImage?.cropped(to: extent) ?? shadowMask
+        guard let unionMask = union.outputImage?.cropped(to: extent) else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "shadow: union mask failed")
+        }
         // Tune shadow plane alpha by opacity * blurred mask value.
         let shadowPlane = try solidPlane(color, extent: extent)
         guard let alpha = CIFilter(name: "CIColorMatrix") else {
@@ -243,7 +213,9 @@ public enum ShadowFilter: Filter {
         }
         alpha.setValue(shadowPlane, forKey: kCIInputImageKey)
         alpha.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity)), forKey: "inputAVector")
-        let tunedShadow = alpha.outputImage?.cropped(to: extent) ?? shadowPlane
+        guard let tunedShadow = alpha.outputImage?.cropped(to: extent) else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "shadow: alpha tune failed")
+        }
         // Foreground = subject where original mask=1, tuned shadow where mask=0.
         var r = image
         r.foreground = try blendWithMask(image.foreground, background: tunedShadow, mask: image.foregroundMask, extent: extent)
@@ -256,21 +228,10 @@ public enum InnerShadowFilter: Filter {
     public static let name = "inner-shadow"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var blur = 6.0, dx = 0.0, dy = 0.0, opacity = 0.5
-        var color = RGBA(r: 0, g: 0, b: 0, a: 1)
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "blur": if let d = Double(v) { blur = d }
-                case "offset":
-                    let parts = v.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-                    if parts.count == 2 { dx = parts[0]; dy = parts[1] }
-                case "opacity": if let d = Double(v) { opacity = d }
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                default: break
-                }
-            }
-        }
+        let blur = try FilterArgValue.keyedNumber(args, key: "blur", default: 6.0, filter: name)
+        let (dx, dy) = try FilterArgValue.keyedPoint(args, key: "offset", default: (0.0, 0.0), filter: name)
+        let opacity = try FilterArgValue.keyedNumber(args, key: "opacity", default: 0.5, filter: name)
+        let color = try parseRGBAColor(args, default: RGBA(r: 0, g: 0, b: 0, a: 1), filter: name)
         let extent = image.foreground.extent
         guard let invert = CIFilter(name: "CIColorInvert") else {
             throw BgBgOneError.frameworkError(ErrorCodes.frameworkVisionFail, "CIColorInvert unavailable")
@@ -304,7 +265,9 @@ public enum InnerShadowFilter: Filter {
         }
         alpha.setValue(tinted, forKey: kCIInputImageKey)
         alpha.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity)), forKey: "inputAVector")
-        let inner = alpha.outputImage?.cropped(to: extent) ?? tinted
+        guard let inner = alpha.outputImage?.cropped(to: extent) else {
+            throw BgBgOneError.frameworkError(ErrorCodes.frameworkComposeFail, "inner-shadow: alpha tune failed")
+        }
         var r = image
         r.foreground = try compositeOver(inner, on: image.foreground, extent: extent)
         return r

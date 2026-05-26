@@ -111,7 +111,7 @@ public enum FilterRegistry {
         case "tint", "colorize":
             return FilterSchema(keyed: [colour, amount], examples: ["\(n)=color=#0066ff:amount=0.5"])
         case "temperature":
-            return FilterSchema(positional: [.init(kind: .number, defaultValue: "6500", range: 1000.0...40000.0)], keyed: [.init(key: "kelvin", kind: .number, defaultValue: "6500", range: 1000.0...40000.0)], examples: ["temperature=6500"])
+            return FilterSchema(positional: [.init(kind: .number, defaultValue: "6500", range: 1000.0...40000.0)], keyed: [.init(key: "kelvin", kind: .number, defaultValue: "6500", range: 1000.0...40000.0)], examples: ["temperature=9000"])
         case "levels":
             return FilterSchema(keyed: [
                 .init(key: "black", kind: .number, defaultValue: "0", range: 0.0...255.0),

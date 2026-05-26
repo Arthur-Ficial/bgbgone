@@ -21,25 +21,9 @@ public enum MotionBlurFilter: Filter {
     public static let name = "motion-blur"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var radius = 20.0, angle = 0.0
-        var positional = 0
-        for a in args {
-            switch a {
-            case .value(let v):
-                if let d = Double(v) {
-                    if positional == 0 { radius = d } else if positional == 1 { angle = d * .pi / 180 }
-                    positional += 1
-                }
-            case .keyed(let k, let v):
-                if let d = Double(v) {
-                    switch k.lowercased() {
-                    case "radius": radius = d
-                    case "angle":  angle = d * .pi / 180
-                    default: break
-                    }
-                }
-            }
-        }
+        let positional = try FilterArgValue.positionalNumbers(args, defaults: [20.0, 0.0], filter: name)
+        let radius = try FilterArgValue.keyedNumber(args, key: "radius", default: positional[0], filter: name)
+        let angle = try FilterArgValue.keyedNumber(args, key: "angle", default: positional[1], filter: name) * .pi / 180
         return try PixelFilterHelper.applyCI(name: "CIMotionBlur", params: ["inputRadius": radius, "inputAngle": angle], to: image, on: layer, humanName: name)
     }
 }
@@ -48,19 +32,8 @@ public enum ZoomBlurFilter: Filter {
     public static let name = "zoom-blur"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var cx = 0.5, cy = 0.5, amount = 20.0
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "center":
-                    let parts = v.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-                    if parts.count == 2 { cx = parts[0]; cy = parts[1] }
-                case "amount":
-                    if let d = Double(v) { amount = d }
-                default: break
-                }
-            }
-        }
+        let (cx, cy) = try FilterArgValue.keyedPoint(args, key: "center", default: (0.5, 0.5), filter: name)
+        let amount = try FilterArgValue.keyedNumber(args, key: "amount", default: 20.0, filter: name)
         let target = image.foreground.extent
         let center = CIVector(x: target.width * cx, y: target.height * (1 - cy))
         return try PixelFilterHelper.applyCI(name: "CIZoomBlur", params: ["inputCenter": center, "inputAmount": amount], to: image, on: layer, humanName: name)
@@ -71,20 +44,9 @@ public enum UnsharpFilter: Filter {
     public static let name = "unsharp"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var radius = 2.5, intensity = 0.5
-        var positional = 0
-        for a in args {
-            if case .keyed(let k, let v) = a, let d = Double(v) {
-                switch k.lowercased() {
-                case "radius": radius = d
-                case "intensity": intensity = d
-                default: break
-                }
-            } else if case .value(let v) = a, let d = Double(v) {
-                if positional == 0 { radius = d } else if positional == 1 { intensity = d }
-                positional += 1
-            }
-        }
+        let positional = try FilterArgValue.positionalNumbers(args, defaults: [2.5, 0.5], filter: name)
+        let radius = try FilterArgValue.keyedNumber(args, key: "radius", default: positional[0], filter: name)
+        let intensity = try FilterArgValue.keyedNumber(args, key: "intensity", default: positional[1], filter: name)
         return try PixelFilterHelper.applyCI(name: "CIUnsharpMask", params: ["inputRadius": radius, "inputIntensity": intensity], to: image, on: layer, humanName: name)
     }
 }
@@ -147,17 +109,8 @@ public enum TintFilter: Filter {
     public static let name = "tint"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var color = RGBA(r: 1, g: 1, b: 1, a: 1)
-        var amount = 0.5
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                case "amount": amount = Double(v) ?? amount
-                default: break
-                }
-            }
-        }
+        let color = try FilterArgValue.keyedColor(args, default: RGBA(r: 1, g: 1, b: 1, a: 1), filter: name)
+        let amount = try FilterArgValue.keyedNumber(args, key: "amount", default: 0.5, filter: name)
         // Use CIColorMonochrome at lower intensity for the tint effect.
         let ci = CIColor(red: CGFloat(color.r), green: CGFloat(color.g), blue: CGFloat(color.b))
         return try PixelFilterHelper.applyCI(name: "CIColorMonochrome", params: ["inputColor": ci, "inputIntensity": amount], to: image, on: layer, humanName: name)
@@ -168,17 +121,8 @@ public enum ColorizeFilter: Filter {
     public static let name = "colorize"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var color = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1)
-        var amount = 1.0
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "color": color = (try? ColourParser.parse(v)) ?? color
-                case "amount": amount = Double(v) ?? amount
-                default: break
-                }
-            }
-        }
+        let color = try FilterArgValue.keyedColor(args, default: RGBA(r: 0.5, g: 0.5, b: 0.5, a: 1), filter: name)
+        let amount = try FilterArgValue.keyedNumber(args, key: "amount", default: 1.0, filter: name)
         let ci = CIColor(red: CGFloat(color.r), green: CGFloat(color.g), blue: CGFloat(color.b))
         return try PixelFilterHelper.applyCI(name: "CIColorMonochrome", params: ["inputColor": ci, "inputIntensity": amount], to: image, on: layer, humanName: name)
     }
@@ -189,17 +133,9 @@ public enum LevelsFilter: Filter {
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
         // Maps black->0, white->1, with gamma midpoint. Use CIGammaAdjust + CIColorClamp for a simple, working levels.
-        var black = 0.0, white = 1.0, gamma = 1.0
-        for a in args {
-            if case .keyed(let k, let v) = a, let d = Double(v) {
-                switch k.lowercased() {
-                case "black": black = d
-                case "white": white = d
-                case "gamma": gamma = d
-                default: break
-                }
-            }
-        }
+        var black = try FilterArgValue.keyedNumber(args, key: "black", default: 0.0, filter: name)
+        var white = try FilterArgValue.keyedNumber(args, key: "white", default: 1.0, filter: name)
+        let gamma = try FilterArgValue.keyedNumber(args, key: "gamma", default: 1.0, filter: name)
         black = try normalizedLevelEndpoint(black, name: "black")
         white = try normalizedLevelEndpoint(white, name: "white")
         // Apply a CIColorMatrix that maps [black, white] -> [0, 1], then gamma.
@@ -237,17 +173,8 @@ public enum DuotoneFilter: Filter {
     public static let name = "duotone"
     public static let validLayers: Set<FilterLayer> = [.fg, .bg, .all]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var dark = RGBA(r: 0, g: 0, b: 0, a: 1)
-        var light = RGBA(r: 1, g: 1, b: 1, a: 1)
-        for a in args {
-            if case .keyed(let k, let v) = a {
-                switch k.lowercased() {
-                case "dark": dark = (try? ColourParser.parse(v)) ?? dark
-                case "light": light = (try? ColourParser.parse(v)) ?? light
-                default: break
-                }
-            }
-        }
+        let dark = try FilterArgValue.keyedColor(args, key: "dark", default: RGBA(r: 0, g: 0, b: 0, a: 1), filter: name)
+        let light = try FilterArgValue.keyedColor(args, key: "light", default: RGBA(r: 1, g: 1, b: 1, a: 1), filter: name)
         // Implement duotone as: grayscale, then map black->dark and white->light via CIColorMatrix.
         var step = try GrayscaleFilter.apply(args: [], to: image, on: layer)
         let dr = CGFloat(light.r - dark.r), dg = CGFloat(light.g - dark.g), db = CGFloat(light.b - dark.b)

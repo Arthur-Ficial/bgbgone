@@ -22,11 +22,13 @@ OUT_DIR="$ROOT/docs/filters"
 IMG_DIR="$ROOT/docs/images/filters"
 PANELS_DIR="$IMG_DIR/panels"
 FIX_DIR="$ROOT/Tests/fixtures"
+PANEL_EXAMPLES="$ROOT/scripts/filter-panel-examples.txt"
 
 [ -x "$BIN" ] || { echo "gen-docs: missing binary $BIN; run 'make build' first"; exit 1; }
 command -v jq   >/dev/null || { echo "gen-docs: requires jq"; exit 1; }
 command -v perl >/dev/null || { echo "gen-docs: requires perl"; exit 1; }
 command -v curl >/dev/null || { echo "gen-docs: requires curl"; exit 1; }
+[ -f "$PANEL_EXAMPLES" ] || { echo "gen-docs: missing $PANEL_EXAMPLES"; exit 1; }
 
 mkdir -p "$OUT_DIR" "$IMG_DIR"
 
@@ -149,6 +151,8 @@ subject_section() {
   local subject="$1" name="$2" entry="$3"
   local panel="$PANELS_DIR/${subject}-${name}.jpg"
   [ -f "$panel" ] || { printf ''; return; }
+  local args
+  args=$(awk -F'|' -v n="$name" '$1 == n { print $3; found=1 } END { if (!found) exit 1 }' "$PANEL_EXAMPLES")
 
   # Emit invocations in the EXACT order the panel image displays them:
   # original | bg | fg | all  (and composite / mask for those filters).
@@ -162,10 +166,10 @@ subject_section() {
     case ",${layers_csv}," in *,${layer},*) ;; *) continue ;; esac
     case "$layer" in
       composite|fg|mask)
-        lines+="bgbgone ${subject}.jpg --type person --bg color:#1a2233 --filter \"${layer}:${name}\""$'\n'
+        lines+="bgbgone ${subject}.jpg --type person --bg color:#1a2233 --filter \"${layer}:${name}${args}\""$'\n'
         ;;
       bg|all)
-        lines+="bgbgone ${subject}.jpg --type person --bg \"image:${subject}.jpg\" --filter \"${layer}:${name}\""$'\n'
+        lines+="bgbgone ${subject}.jpg --type person --bg \"image:${subject}.jpg\" --filter \"${layer}:${name}${args}\""$'\n'
         ;;
     esac
   done

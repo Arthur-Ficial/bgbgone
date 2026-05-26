@@ -33,14 +33,7 @@ public enum TranslateFilter: Filter {
     public static let name = "translate"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var dx = 0.0, dy = 0.0
-        for a in args {
-            switch a {
-            case .value(let v), .keyed(_, let v):
-                let parts = v.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-                if parts.count == 2 { dx = parts[0]; dy = parts[1] }
-            }
-        }
+        let (dx, dy) = try FilterArgValue.firstPoint(args, default: (0.0, 0.0), filter: name)
         // Apply translation without the centre-pivot (translation has no fixed point).
         var r = image
         let extent = image.foreground.extent
@@ -65,23 +58,15 @@ public enum FlipFilter: Filter {
     public static let name = "flip"
     public static let validLayers: Set<FilterLayer> = [.fg]
     public static func apply(args: [FilterArg], to image: LayeredImage, on layer: FilterLayer) throws -> LayeredImage {
-        var axis = "horizontal"
-        for a in args {
-            switch a {
-            case .value(let v), .keyed(_, let v):
-                axis = v.lowercased()
-            }
-        }
+        let axis = try FilterArgValue.choice(args, default: "horizontal", choices: ["horizontal", "vertical"], filter: name)
         let t: CGAffineTransform
         switch axis {
         case "horizontal": t = CGAffineTransform(scaleX: -1, y: 1)
         case "vertical":   t = CGAffineTransform(scaleX: 1, y: -1)
         default:
-            throw BgBgOneError.parser(
-                ErrorCodes.parseFlagValueInvalid,
-                "filter flip: axis must be horizontal or vertical, got \(axis)",
-                origin: "--filter",
-                context: ["axis": axis]
+            throw BgBgOneError.frameworkError(
+                ErrorCodes.frameworkInternalInvariant,
+                "validated flip axis escaped FilterArgValue.choice"
             )
         }
         return applyAffine(image, t)

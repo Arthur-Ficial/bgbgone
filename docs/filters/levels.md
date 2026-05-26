@@ -37,9 +37,9 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:levels"
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:levels"
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:levels"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:levels=black=0.1:white=0.9:gamma=1.2"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:levels=black=0.1:white=0.9:gamma=1.2"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:levels=black=0.1:white=0.9:gamma=1.2"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -49,9 +49,9 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:levels"
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:levels"
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:levels"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:levels=black=0.1:white=0.9:gamma=1.2"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:levels=black=0.1:white=0.9:gamma=1.2"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:levels=black=0.1:white=0.9:gamma=1.2"
 ```
 
 Panels (`original | bg | fg | all`):

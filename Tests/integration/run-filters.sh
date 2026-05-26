@@ -191,6 +191,14 @@ else
     fail "T4f levels 0..255 black/white" "rc=$rc out=$(echo "$out" | head -1)"
 fi
 
+out=$("$BIN" "$PANDA_FIX" --bg color:#1a2233 --filter "fg:outline=color=ff0000:width=8" -o "$OUT/t4fa-outline-barehex.png" 2>&1); rc1=$?
+out2=$("$BIN" "$PANDA_FIX" --bg color:#1a2233 --filter "fg:outline=color=#ff0000:width=8" -o "$OUT/t4fa-outline-prefixedhex.png" 2>&1); rc2=$?
+if [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ] && assert_nearly_same_image "$OUT/t4fa-outline-barehex.png" "$OUT/t4fa-outline-prefixedhex.png"; then
+    pass "T4fa bare hex filter colour maps to the same runtime value as #hex"
+else
+    fail "T4fa bare hex filter colour" "rc1=$rc1 rc2=$rc2 delta=$(changed_pixel_percent "$OUT/t4fa-outline-barehex.png" "$OUT/t4fa-outline-prefixedhex.png" 2>/dev/null || echo n/a)"
+fi
+
 out=$("$BIN" "$PANDA_FIX" --filter "all:edge-work=3" -o "$OUT/t4g-edge-work.jpg" 2>&1); rc=$?
 if [ $rc -eq 0 ] && assert_image_stddev_above "$OUT/t4g-edge-work.jpg" 10; then
     pass "T4g edge-work JPEG keeps opaque line-art pixels"
@@ -256,7 +264,7 @@ red_filter "T11" "13" "bg:exposure=1.0"                                     "t11
 red_filter "T12" "14" "bg:hue=120"                                          "t12-hue"
 red_filter "T13" "15" "bg:tint=color=#0066ff:amount=0.3"                    "t13-tint"
 red_filter "T14" "16" "bg:colorize=color=#ff0000:amount=0.5"                "t14-colorize"
-red_filter "T15" "17" "bg:temperature=6500"                                 "t15-temperature"
+red_filter "T15" "17" "bg:temperature=9000"                                 "t15-temperature"
 red_filter "T16" "18" "bg:levels=black=20:white=235:gamma=1.0"              "t16-levels"
 red_filter "T17" "19" "bg:vibrance=0.5"                                     "t17-vibrance"
 red_filter "T18" "20" "fg:opacity=0.7"                                      "t18-opacity"

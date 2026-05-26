@@ -37,9 +37,9 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:edges"
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:edges"
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:edges"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:edges=2.5"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:edges=2.5"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:edges=2.5"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -49,9 +49,9 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:edges"
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:edges"
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:edges"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:edges=2.5"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:edges=2.5"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:edges=2.5"
 ```
 
 Panels (`original | bg | fg | all`):

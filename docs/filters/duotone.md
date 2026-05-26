@@ -37,9 +37,9 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:duotone"
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:duotone"
-bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:duotone"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "bg:duotone=dark=#003366:light=#ffcc00"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:duotone=dark=#003366:light=#ffcc00"
+bgbgone yoga.jpg --type person --bg "image:yoga.jpg" --filter "all:duotone=dark=#003366:light=#ffcc00"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -49,9 +49,9 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:duotone"
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:duotone"
-bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:duotone"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "bg:duotone=dark=#003366:light=#ffcc00"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:duotone=dark=#003366:light=#ffcc00"
+bgbgone woman-singer.jpg --type person --bg "image:woman-singer.jpg" --filter "all:duotone=dark=#003366:light=#ffcc00"
 ```
 
 Panels (`original | bg | fg | all`):

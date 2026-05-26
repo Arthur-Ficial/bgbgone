@@ -37,7 +37,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:glow"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "fg:glow=color=#ffff80:radius=25:intensity=0.8"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -47,7 +47,7 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:glow"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "fg:glow=color=#ffff80:radius=25:intensity=0.8"
 ```
 
 Panels (`original | bg | fg | all`):

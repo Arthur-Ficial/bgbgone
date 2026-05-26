@@ -37,7 +37,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 ## Per-layer panels — yoga (`--type person`)
 
 ```bash
-bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "composite:vignette-effect"
+bgbgone yoga.jpg --type person --bg color:#1a2233 --filter "composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5"
 ```
 
 Panels (`original | bg | fg | all`):
@@ -47,7 +47,7 @@ Panels (`original | bg | fg | all`):
 ## Per-layer panels — woman-singer (`--type person`)
 
 ```bash
-bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "composite:vignette-effect"
+bgbgone woman-singer.jpg --type person --bg color:#1a2233 --filter "composite:vignette-effect=center=0.5,0.5:radius=1.2:intensity=1.5"
 ```
 
 Panels (`original | bg | fg | all`):

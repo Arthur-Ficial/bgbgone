@@ -18,6 +18,7 @@ source "$PROJECT_ROOT/scripts/trash.sh"
 FIX="$ROOT/fixtures"
 OUT="$DIR/_out"
 TMP="$DIR/_tmp"
+FILTER_DELTA_OUT="$TMP/filter-delta-audit"
 
 trash_path "$OUT" "$TMP"
 mkdir -p "$OUT" "$TMP"
@@ -1137,6 +1138,14 @@ echo "$out" | grep -q "^bgbgone v" && pass "binary starts after NetworkGuard ins
 # All tests in this section are expected to FAIL until each ticket lands.
 # Sourced as a module so the RED batch is easy to find and isolated.
 source "$DIR/run-filters.sh"
+
+echo ""
+echo "filter full-image delta audit"
+if bash "$DIR/run-filter-delta-audit.sh" "$BIN" "$FILTER_DELTA_OUT"; then
+    pass "every shipped filter changes the full image against its hypothesis"
+else
+    fail "every shipped filter changes the full image against its hypothesis" "see $FILTER_DELTA_OUT"
+fi
 
 # --- Server-parity: every CLI e2e mirrored through HTTP /bgbgone ---
 # Parity contract from docs/design.md: "CLI and `--server` resolve to the
