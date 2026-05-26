@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -14,10 +14,12 @@ check-toolchain:
 		exit 1; \
 	fi
 
-# --- Build (auto-bumps patch) ---
+# --- Build ---
+# `build` does NOT bump the version. Version bumping is a release decision
+# and lives only in the `release` / `deploy` chain. `make test`, `make
+# build`, and `make install` are side-effect-free with respect to .version.
 
 build: check-toolchain
-	$(MAKE) bump-patch
 	$(MAKE) generate-build-info
 	$(MAKE) update-readme
 	swift build -c release
@@ -29,6 +31,12 @@ install: build
 		sudo install .build/release/$(BINARY) $(PREFIX)/bin/$(BINARY); \
 	fi
 	@echo "installed: $$($(PREFIX)/bin/$(BINARY) --version)"
+
+# Docs-only / scripts-only / fixture-only changes: lint + test the docs
+# harness without bumping the version or cutting a release. Use this
+# instead of `make deploy` for README updates, doc fixes, asset regens.
+docs: lint-fixtures lint-readme lint-contract lint-doc-images lint-block-pairing test-doc-blocks
+	@echo "docs: OK - no version bump, no release. Commit + push when ready."
 
 # --- Tests ---
 
@@ -202,9 +210,10 @@ filter-docs: build
 all-images: filter-images panel-images filter-docs readme-images
 	@echo "all-images: 49 per-filter + 96 panels + 49 docs + README composites regenerated"
 
-# Full release gate: bump → test → install → regenerate EVERY image →
-# package. Use this for every public release; never tag without it.
-release: lint test install all-images performance-100 package-release-asset
+# Full release gate: bump (deliberate, only here) → test → install →
+# regenerate EVERY image → package. Use this for every public release;
+# never tag without it. `make test`/`make build` no longer auto-bump.
+release: bump-patch lint test install all-images performance-100 package-release-asset
 	@v=$$(cat $(VERSION_FILE)); \
 	asset="bgbgone-$$v-arm64-macos.tar.gz"; \
 	echo ""; \

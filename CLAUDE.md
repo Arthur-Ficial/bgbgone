@@ -32,6 +32,21 @@ that still require a human in the loop are:
 Everything else — including `make deploy` — is yours to execute the moment
 the quality bar below is green.
 
+## When to release vs. when to just commit
+
+**Match the workflow to the change. A doc fix is not a release.**
+
+| Change | Workflow |
+|---|---|
+| README / docs / script / fixture / asset regen / lint config | `make docs` (verifies, no version bump) → `git commit` → `git push`. **No tag, no GitHub release, no Homebrew tap bump.** |
+| Swift source / CLI surface / binary behaviour / new feature | `make deploy` (bump-patch → full release gate → tag → GitHub release → tap bump) |
+| Breaking change / new public surface (`--filters-list --json`, new flag) | Bump minor manually via `make bump-minor`, then `make deploy`. |
+
+The Makefile enforces this: `make build` / `make install` / `make test` /
+`make docs` do **not** bump `.version`. Only `make release` (called by
+`make deploy`) bumps. Each release on GitHub must reflect a real binary
+change — never burn a version number on a typo fix.
+
 Quality bar (all must be green before pushing to `main` or tagging a release):
 
 - `make release` passes. That target runs the full gate: tests, install,
