@@ -10,15 +10,15 @@
 
 ## Example — red-panda, `fg:emboss` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:emboss" -o red-panda-emboss.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:emboss" --size preview -o red-panda-emboss.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
-
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -26,10 +26,11 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "bg=@red-panda.jpg" \
   -F "filter=fg:emboss" \
   -F "format=jpg" \
+  -F "size=preview" \
   -o red-panda-emboss.jpg
 ```
 
-![red-panda after `fg:emboss`](../images/filters/emboss.jpg)
+![red-panda after `fg:emboss` — CLI render = server render (byte-identical)](../images/filters/emboss.jpg)
 
 
 

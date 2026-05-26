@@ -10,15 +10,15 @@
 
 ## Example — red-panda, `mask:expand=3` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:expand=3" -o red-panda-expand.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "mask:expand=3" --size preview -o red-panda-expand.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
-
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -26,10 +26,11 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "bg=@red-panda.jpg" \
   -F "filter=mask:expand=3" \
   -F "format=jpg" \
+  -F "size=preview" \
   -o red-panda-expand.jpg
 ```
 
-![red-panda after `mask:expand=3`](../images/filters/expand.jpg)
+![red-panda after `mask:expand=3` — CLI render = server render (byte-identical)](../images/filters/expand.jpg)
 
 
 

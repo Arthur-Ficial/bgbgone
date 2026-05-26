@@ -10,6 +10,8 @@
 
 ## Example — red-panda, `{{EXAMPLE_CHAIN}}` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
@@ -18,13 +20,11 @@
 
 ### Via HTTP server (`bgbgone --server`)
 
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
-
 ```bash
 {{EXAMPLE_SERVER}}
 ```
 
-![red-panda after `{{EXAMPLE_CHAIN}}`](../images/filters/{{NAME}}.jpg)
+![red-panda after `{{EXAMPLE_CHAIN}}` — CLI render = server render (byte-identical)](../images/filters/{{NAME}}.jpg)
 
 {{YOGA_SECTION}}{{WOMAN_SINGER_SECTION}}
 

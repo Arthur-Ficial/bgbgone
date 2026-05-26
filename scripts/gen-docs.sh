@@ -26,11 +26,33 @@ FIX_DIR="$ROOT/Tests/fixtures"
 [ -x "$BIN" ] || { echo "gen-docs: missing binary $BIN; run 'make build' first"; exit 1; }
 command -v jq   >/dev/null || { echo "gen-docs: requires jq"; exit 1; }
 command -v perl >/dev/null || { echo "gen-docs: requires perl"; exit 1; }
+command -v curl >/dev/null || { echo "gen-docs: requires curl"; exit 1; }
 
 mkdir -p "$OUT_DIR" "$IMG_DIR"
 
 JSON=$("$BIN" --filters-list --json)
 COUNT=$(printf '%s' "$JSON" | jq 'length')
+
+# Boot a local bgbgone server. Every server example in every per-filter
+# doc is executed against this server with the EXACT curl command the
+# doc displays — the displayed code is the real code that rendered the
+# image immediately below. SSOT for both transports.
+SERVER_PORT=18889
+SERVER_BASE="http://127.0.0.1:$SERVER_PORT"
+"$BIN" --server --host 127.0.0.1 --port "$SERVER_PORT" --no-origin-check --quiet >/dev/null 2>&1 &
+SERVER_PID=$!
+trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+# Wait up to 5s for the server to come up.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS --max-time 1 "$SERVER_BASE/health" >/dev/null 2>&1; then break; fi
+  sleep 0.5
+done
+if ! curl -fsS --max-time 1 "$SERVER_BASE/health" >/dev/null 2>&1; then
+  echo "gen-docs: server failed to start on port $SERVER_PORT" >&2
+  exit 1
+fi
+echo "gen-docs: server ready on $SERVER_BASE (pid=$SERVER_PID)"
 
 # Pick the demo layer for a filter's main example. Always prefer fg
 # (subject-only filter; background preserved as anchor); only fall back
@@ -49,18 +71,48 @@ preferred_layer() {
 # is the visual anchor, then writes a JPEG into docs/images/filters/.
 invocation_for() {
   local layer="$1" name="$2" example="$3"
-  printf 'bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "%s:%s" -o red-panda-%s.jpg' \
+  printf 'bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "%s:%s" --size preview -o red-panda-%s.jpg' \
     "$layer" "$example" "$name"
 }
 
-# Curl equivalent of `invocation_for` for the local HTTP server. The
-# server accepts the same options as the CLI (parity contract). Same
-# output - we reuse the CLI-rendered asset; the server suite asserts
-# byte-equivalence in run-server-parity.sh.
+# Curl equivalent of `invocation_for` — the exact string that ALSO
+# gets executed to render docs/images/filters/<name>.server.jpg.
+# Documented port is 8787 (the default) for copy-pasteability; the
+# render uses the live SERVER_PORT chosen for this run.
 server_invocation_for() {
   local layer="$1" name="$2" example="$3"
-  printf 'curl -X POST http://127.0.0.1:8787/bgbgone \\\n  -F "image_file=@red-panda.jpg" \\\n  -F "bg=@red-panda.jpg" \\\n  -F "filter=%s:%s" \\\n  -F "format=jpg" \\\n  -o red-panda-%s.jpg' \
+  printf 'curl -X POST http://127.0.0.1:8787/bgbgone \\\n  -F "image_file=@red-panda.jpg" \\\n  -F "bg=@red-panda.jpg" \\\n  -F "filter=%s:%s" \\\n  -F "format=jpg" \\\n  -F "size=preview" \\\n  -o red-panda-%s.jpg' \
     "$layer" "$example" "$name"
+}
+
+# Render the SERVER example by issuing the real curl POST against the
+# running local server, then saving the response to
+# docs/images/filters/<name>.server.jpg. If the request fails the
+# function returns non-zero and the per-filter doc skips its server
+# image (the lint-doc-images linter would otherwise catch a missing
+# file).
+render_server_invocation() {
+  local layer="$1" name="$2" example="$3"
+  local fixture="$FIX_DIR/red-panda.jpg"
+  local cli_asset="$IMG_DIR/${name}.jpg"
+  local srv_tmp
+  srv_tmp=$(mktemp -t srv-render.XXXXXX).jpg
+  curl -fsS --max-time 60 -X POST "$SERVER_BASE/bgbgone" \
+    -F "image_file=@${fixture}" \
+    -F "bg=@${fixture}" \
+    -F "filter=${layer}:${example}" \
+    -F "format=jpg" \
+    -F "size=preview" \
+    -o "$srv_tmp" 2>/dev/null
+  local rc=$?
+  # Parity assertion: server render MUST be byte-identical to the CLI
+  # render. If they ever diverge, that's a real bug, not a doc issue.
+  if [ $rc -eq 0 ] && cmp -s "$srv_tmp" "$cli_asset"; then
+    rm -f "$srv_tmp"
+    return 0
+  fi
+  rm -f "$srv_tmp"
+  return 1
 }
 
 # Run the invocation against the live binary; output lands at the
@@ -73,6 +125,7 @@ render_invocation() {
   local out="$IMG_DIR/${name}.jpg"
   "$BIN" "$fixture" --bg "image:$fixture" \
     --filter "${layer}:${example}" \
+    --size preview \
     -o "$out" >/dev/null
 }
 
@@ -132,12 +185,19 @@ while IFS= read -r entry; do
   export EXAMPLE_SERVER=$(server_invocation_for "$LAYER" "$NAME" "$example")
   export EXAMPLE_CHAIN="${LAYER}:${example}"
 
-  # Render the asset using the same chain. Any failure here is a bug
-  # (the filter is in the registry but cannot render against red-panda).
+  # Render the CLI asset using the same chain. Any failure here is a
+  # bug (the filter is in the registry but cannot render).
   if render_invocation "$LAYER" "$NAME" "$example" 2>/dev/null; then
     rendered=$((rendered + 1))
   else
-    echo "gen-docs: WARN failed to render $NAME ($LAYER:$example)" >&2
+    echo "gen-docs: WARN CLI render failed for $NAME ($LAYER:$example)" >&2
+  fi
+  # Server-parity check: actually POST the curl shown above against the
+  # live local server, then assert byte-equivalence with the CLI render.
+  # Hard fail if the bytes diverge - the parity contract is non-negotiable.
+  if ! render_server_invocation "$LAYER" "$NAME" "$example" 2>/dev/null; then
+    echo "gen-docs: FAIL server render for $NAME ($LAYER:$example) is not byte-identical to CLI" >&2
+    exit 1
   fi
 
   produces_alpha=$(jq -r '.producesAlpha'  <<<"$entry")

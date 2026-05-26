@@ -10,15 +10,15 @@
 
 ## Example — red-panda, `fg:silhouette=color=#ff0000` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:silhouette=color=#ff0000" -o red-panda-silhouette.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:silhouette=color=#ff0000" --size preview -o red-panda-silhouette.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
-
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -26,10 +26,11 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "bg=@red-panda.jpg" \
   -F "filter=fg:silhouette=color=#ff0000" \
   -F "format=jpg" \
+  -F "size=preview" \
   -o red-panda-silhouette.jpg
 ```
 
-![red-panda after `fg:silhouette=color=#ff0000`](../images/filters/silhouette.jpg)
+![red-panda after `fg:silhouette=color=#ff0000` — CLI render = server render (byte-identical)](../images/filters/silhouette.jpg)
 
 
 

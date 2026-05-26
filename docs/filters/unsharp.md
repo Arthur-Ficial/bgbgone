@@ -10,15 +10,15 @@
 
 ## Example — red-panda, `fg:unsharp=radius=2.5:intensity=0.5` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:unsharp=radius=2.5:intensity=0.5" -o red-panda-unsharp.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "fg:unsharp=radius=2.5:intensity=0.5" --size preview -o red-panda-unsharp.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
-
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -26,10 +26,11 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "bg=@red-panda.jpg" \
   -F "filter=fg:unsharp=radius=2.5:intensity=0.5" \
   -F "format=jpg" \
+  -F "size=preview" \
   -o red-panda-unsharp.jpg
 ```
 
-![red-panda after `fg:unsharp=radius=2.5:intensity=0.5`](../images/filters/unsharp.jpg)
+![red-panda after `fg:unsharp=radius=2.5:intensity=0.5` — CLI render = server render (byte-identical)](../images/filters/unsharp.jpg)
 
 
 

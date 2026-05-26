@@ -10,15 +10,15 @@
 
 ## Example — red-panda, `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1` (subject filter, background preserved)
 
+The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+
 ### Via CLI
 
 ```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1" -o red-panda-vignette-effect.jpg
+bgbgone red-panda.jpg --bg "image:red-panda.jpg" --filter "composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1" --size preview -o red-panda-vignette-effect.jpg
 ```
 
 ### Via HTTP server (`bgbgone --server`)
-
-Same operation, same output (parity verified in `Tests/integration/run-server-parity.sh`):
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -26,10 +26,11 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
   -F "bg=@red-panda.jpg" \
   -F "filter=composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1" \
   -F "format=jpg" \
+  -F "size=preview" \
   -o red-panda-vignette-effect.jpg
 ```
 
-![red-panda after `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1`](../images/filters/vignette-effect.jpg)
+![red-panda after `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1` — CLI render = server render (byte-identical)](../images/filters/vignette-effect.jpg)
 
 
 
