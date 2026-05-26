@@ -1,244 +1,143 @@
 # bgbgone — design
 
-Date: 2026-05-22
-Status: approved (in implementation)
-Sibling references: [apfel](https://github.com/Arthur-Ficial/apfel), [auge](https://github.com/Arthur-Ficial/auge)
+Internal architecture + invariants. User-facing usage lives in [README.md](../README.md).
+For the live CLI surface run `bgbgone --help` or `bgbgone --check`.
 
-## Goal
-
-Ultimate UNIX-style background remover for macOS. Image in, transformed image out. AI-driven via Apple Vision. 100% on-device, no deps, single binary, brew-installable. 100% scriptable — no GUI side-effects, ever.
-
-## CLI surface
+## Layers
 
 ```
-bgbgone [OPTIONS] [INPUT...]
+                main.swift                ← install NetworkGuard, parse args, exit
+                    │
+              ConfigParser                ← pure Swift, no Apple deps
+                    │
+                BgBgOne                   ← pipeline orchestrator
+                    │
+       ┌────────────┼─────────────┬─────────────┐
+       ▼            ▼             ▼             ▼
+   Algorithms/   FilterPipeline   Compositor    Output
+   Vision masks  49 Core Image    mask + bg     ImageIO / CGImageDestination
+                 filters          → CIImage     (PNG / JPG / HEIC / AVIF / TIFF / ZIP)
+                                      ▲
+                                      │
+                              NetworkGuard (URLProtocol shim, hard-blocks at runtime)
 
-# zero-config defaults
-bgbgone in.jpg                          # creates in_bgbgone.png when stdout is a TTY
-bgbgone in.jpg > out.png                # transparent PNG to stdout
-bgbgone in.jpg > out.jpg                # JPEG if macOS exposes the stdout path
-bgbgone in.jpg -o out.png               # to file
-bgbgone in.jpg -o out.jpg               # infer JPEG from extension
-bgbgone *.jpg --out-dir ./cutouts       # batch
-cat in.png | bgbgone > out.png          # pipe
-bgbgone --server                        # local HTTP API on 127.0.0.1:8787
-
-# background replacement
---bg color:<spec>                       # solid colour: #fff | white | rgb:255,0,0
---bg image:<path>                       # image background
---bg-fit cover|contain|tile|center      # how the bg fits the canvas
-
-# matte / edge tuning
---channels rgba|alpha                   # finalized image or alpha mask
---crop                                  # tight-crop to subject bbox
---crop-margin <1|2|4 px or %>           # margins around the crop
---roi "x1 y1 x2 y2"                     # region of interest, px or %
---filter "mask:feather=<N>"             # matte edge softening
---filter "mask:threshold=<N>"           # mask binarisation threshold
---filter "fg:scale=<F>,translate=<X>,<Y>"   # subject geometry
---semitransparency true|false           # keep or harden semi-transparent matte pixels
---shadow-type auto|drop|3D|car|none     # shadow preset (none = no shadow)
---shadow-opacity <0..100|auto>          # shadow darkness
-
-# algorithm (single canonical selector, same name on the CLI and server)
---type auto|person|product|car|animal|graphic|transportation|saliency|vn-mask
-                                        # default: auto (VNGenerateForegroundInstanceMaskRequest)
-
-# multi-instance
---multi                                 # one output per detected subject
---instance-naming "{base}-{n}.{ext}"
-
-# output
---format png|jpg|zip|heic|avif|tiff            (default: png)
---size preview|full|50MP|auto
---quality 1..100             (default: 92 for lossy)
--o, --output <path>
---out-dir <dir>
-
-# meta
---json | --ndjson | --quiet | --verbose
---version | --help
---check                                 # capability report
-
-# server
---server                                # run local HTTP API
---host <addr>                           # default 127.0.0.1
---port <n>                              # default 8787
---cors                                  # CORS headers for allowed origins
---allowed-origins <csv>                 # additive browser origin allowlist
---no-origin-check | --footgun           # disable browser origin checks
---token <secret> | --token-auto         # Bearer token auth
---public-health                         # unauthenticated health on exposed binds
---max-body-mb <n>                       # request body limit
+HTTP /bgbgone  ── resolved through the same ConfigParser + same pipeline ──┘
 ```
 
-Routing constraints are enforced before image processing starts:
+- `BgBgOneCore` library — pure Swift. Parses args, holds `Config`,
+  `BgBgOneError`, colour parser, output-name math, server request parsing,
+  security policy. Unit-testable without frameworks.
+- `bgbgone` executable target — depends on `BgBgOneCore` + Vision +
+  CoreImage + ImageIO. Wires the pipeline, ships the HTTP server.
+- `bgbgone-tests` executable target — pure Swift test runner, no XCTest.
 
-- `-o` and `--out-dir` are mutually exclusive.
-- Multiple file inputs cannot use `-o`; use `--out-dir` or let bgbgone write beside each input.
-- Stdin input has no stable filename, so `--out-dir` is rejected; use stdout or `-o`.
-- `--multi` always writes files, requires a file input stem, and cannot combine with `-o` or `--channels alpha`.
-
-## Defaults
-
-- Output: PNG with alpha to stdout when stdout is redirected; `<stem>_bgbgone.png` when stdout is a terminal and input is a file.
-- Output path inference: `-o out.jpg` selects JPEG; `> out.jpg` selects JPEG when macOS exposes the stdout file path. Opaque-only formats use white unless `--bg` is set.
-- Algorithm `auto`: `VNGenerateForegroundInstanceMaskRequest`. No hidden fallback after a user explicitly chooses an unavailable algorithm.
-- Single instance: cutout = union of all detected subjects (use `--multi` for one-per-instance).
-- Format: PNG by default; ZIP is a stored package containing `color.jpg` and `alpha.png`.
-- Quality: 92 for lossy formats (JPEG, HEIC, AVIF).
-- Matte edge: hard by default; soften via `--filter "mask:feather=<N>"`.
-- Colour space: pass through input.
-- Shadow / crop / crop-margin: off until explicitly enabled.
-- Server: binds to `127.0.0.1:8787`, accepts local uploads only, and uses the same processing pipeline as the CLI.
-
-## Exit codes
-
-- `0` success
-- `1` user error (bad input file, unreadable arg)
-- `2` parser error (bad flag) or no result (no subject detected; can be relaxed with `--allow-empty`)
-- `3` framework error (Vision unavailable or returned an error)
-
-## `--filter` chain (in progress, epic #1)
-
-bgbgone v0.3.0+ adds an FFmpeg-style `--filter` flag (repeatable) for per-layer effects. The grammar is locked:
+## Filter chain grammar
 
 ```
 chain  := stage (";" stage)*
 stage  := [layer ":"] filter ("," filter)*
-layer  := fg | bg | all | mask    (default: all)
+layer  := bg | fg | all | mask | composite     (default: all)
 filter := name ("=" arg (":" arg)*)?
 arg    := value | key "=" value
 ```
 
-Examples:
+Composite-only filters (`vignette`, `vignette-effect`, `bloom`, `gloom`)
+must appear in a trailing `composite:` stage — they run after the
+foreground/background split is flattened. The parser rejects any
+fg/bg/all/mask stage placed after a composite stage.
 
-```
---filter "bg:grayscale"
---filter "bg:blur=20"
---filter "fg:outline=color=#fff:width=3,shadow=blur=12:opacity=0.5:offset=4,4"
-```
-
-Out-of-scope filter ideas are catalogued in [`filters-out-of-scope.md`](filters-out-of-scope.md). Per-filter deep-dives land in [`filters/`](filters/) as each filter ships.
+Filter registry is the single SSOT, emitted by
+`bgbgone --filters-list --json`. Used by `scripts/gen-docs.sh` to render
+every per-filter page from one template. Docs cannot drift from the
+binary.
 
 ## Error model
 
-Every error path emits a structured `BgBgOneError` (`Sources/Core/BgBgOneError.swift`). Single source of truth for rendering: `Sources/Core/ErrorRenderer.swift`. Stable code list: `Sources/Core/ErrorCodes.swift`.
+Every error path is a structured `BgBgOneError`
+(`Sources/Core/BgBgOneError.swift`). Renderer + stable codes:
+`Sources/Core/ErrorRenderer.swift`, `Sources/Core/ErrorCodes.swift`.
 
-Fields:
-
-| Field      | Meaning                                                    |
-|------------|------------------------------------------------------------|
+| Field      | Meaning                                                      |
+|------------|--------------------------------------------------------------|
 | `code`     | Stable machine-readable id, e.g. `BGBG_USER_INPUT_NOT_FOUND` |
-| `category` | `parser` / `user` / `no_result` / `framework`              |
-| `exit`     | UNIX exit code (`0/1/2/3`) derived from `category`         |
-| `message`  | Short human sentence                                       |
-| `where`    | Origin pointer (flag name, file path)                      |
-| `context`  | Map of key/value extras                                    |
-| `hint`     | Optional suggested fix                                     |
+| `category` | `parser` / `user` / `no_result` / `framework`                |
+| `exit`     | UNIX exit code (`0/1/2/3`) derived from `category`           |
+| `message`  | Short human sentence                                         |
+| `where`    | Origin (flag name, file path)                                |
+| `context`  | key/value extras                                             |
+| `hint`     | Optional suggested fix                                       |
 
 Wire formats:
 
-- **stderr (default):** multi-line. Honours `NO_COLOR` (no ANSI today; future) and `--quiet` (single-line message only).
-- **`--json`:** stable envelope `{"ok":false,"schema":"bgbgone.run.v1","error":{...}}`. Sibling of the success body.
-- **HTTP `/bgbgone`:** same JSON envelope. Status code: `parser` / `user` -> `400`; `no_result` -> `422`; `framework` -> `500`.
+- **stderr (default):** multi-line. `--quiet` collapses to single-line.
+- **`--json`:** stable envelope `{"ok":false,"schema":"bgbgone.run.v1","error":{...}}`.
+- **HTTP `/bgbgone`:** same envelope. Status: parser/user → `400`,
+  no_result → `422`, framework → `500`.
 
-Adding a new code: append to `ErrorCodes.swift` (alphabetised) and use it at the throw site. Never invent ad-hoc codes inline.
-
-## Architecture
-
-```
-                    main.swift
-                        │
-              CLI.swift (parse args)
-                        │
-                BgBgOne.swift
-              orchestrates pipeline
-                        │
-       ┌────────────────┼────────────────┐
-       ▼                ▼                ▼
-   Algorithms/      Backgrounds/      Output/
-   pick + run       fetch / render    encode + write
-       │                │                │
-       ▼                ▼                ▼
- Vision/CoreImage  CIImage           ImageIO
-                                     CGImageDestination
-
-HTTP Server (/bgbgone) ──────────────┘
-  multipart/JSON/form uploads, optional JSON/base64 response, same Config pipeline
-```
-
-- `BgBgOneCore` library — pure Swift. No Vision / Core Image deps. Contains:
-  - `Config` struct (parsed CLI state)
-  - `BgBgOneError` enum
-  - Argument parser (text → Config) — unit-testable without frameworks
-  - Naming math (output path templates, batch fan-out)
-  - Colour parsing (`#fff`, `rgb:r,g,b`, named colours)
-  - Server request parsing, security policy, multipart/JSON/form parsing
-- `bgbgone` executable target — depends on `BgBgOneCore` + Apple frameworks. Contains:
-  - `main.swift` — install NetworkGuard, parse args, run, exit with code
-  - `CLI.swift` — `--help`, `--version`, `--check` dispatch
-  - `BgBgOne.swift` — pipeline orchestration
-  - `Server.swift` — zero-dependency HTTP/1.1 server for local uploads
-  - `Algorithms/` — one file per algorithm, conforming to `BgRemovalAlgo` protocol
-  - `Compositor.swift` — mask + background (solid colour / image) → final CIImage
-  - `Output.swift` — encode + write
-  - `NetworkGuard.swift` — URLProtocol shim backed by the core `NetworkPolicy`
-  - `BuildInfo.swift` — auto-generated by Make
-- `bgbgone-tests` executable target — pure Swift test runner, no XCTest.
-
-## Server API
-
-`--server` exposes the same Config + pipeline as the CLI over local HTTP. Two routes (`GET /health`, `POST /bgbgone`); every HTTP field is just the long-form CLI flag name (`format`, `bg`, `bg-fit`, `filter`, `channels`, `crop`, `crop-margin`, `padding`, `roi`, `quality`, `size`, `type`, `type-level`, `shadow-type`, `shadow-opacity`, `semitransparency`). One canonical spelling per concept; unknown fields and unknown routes return `400` / `404` with the standard JSON envelope. No remote URL fetching, no duplicate aliases.
-
-Full wire contract, response shapes, and security matrix: [`docs/server/`](server/).
+Never invent ad-hoc codes inline — append to `ErrorCodes.swift` and use
+it at the throw site.
 
 ## Algorithms
 
-Underlying Vision requests, selected via `--type` (CLI) / `type` (server).
-
-| Internal | `--type` values that resolve to it | Vision API | macOS floor |
-| --- | --- | --- | --- |
+| Internal | `--type` selectors that resolve to it | Vision API | macOS floor |
+|----------|---------------------------------------|------------|-------------|
 | `vn-mask` | `auto`, `vn-mask`, `product`, `car`, `animal`, `graphic`, `transportation` | `VNGenerateForegroundInstanceMaskRequest` | 14+ |
-| `person` | `person` | `VNGeneratePersonSegmentationRequest` | 12+ |
-| `saliency` | `saliency` | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ |
+| `person`  | `person`                              | `VNGeneratePersonSegmentationRequest`       | 12+ |
+| `saliency`| `saliency`                            | `VNGenerateObjectnessBasedSaliencyImageRequest` | 10.15+ |
 
-`--type auto` resolves to `vn-mask` (the public foreground-instance mask API). Subject hints `product`, `car`, `animal`, `graphic`, `transportation` also resolve to `vn-mask`. `--type person` uses person segmentation; `--type saliency` uses objectness saliency. Any other value is rejected by the parser with exit code 2 — there is no hidden fallback.
+No hidden fallback after a user explicitly chooses an unavailable
+algorithm. Any other value is rejected by the parser with exit 2.
 
 ## Backgrounds
 
-| Type | Spec syntax | Implementation |
-| ---- | ----------- | -------------- |
-| Solid colour | `color:#hex`, `color:named`, `color:rgb:r,g,b` | CIConstantColorGenerator |
-| Image | `image:./path.jpg` | Load → fit (cover/contain/tile/centre) → composite |
+| Type   | Spec                                      | Implementation                         |
+|--------|-------------------------------------------|----------------------------------------|
+| Solid  | `color:#hex` / `color:named` / `color:rgb:r,g,b` | CIConstantColorGenerator               |
+| Image  | `image:./path.jpg`                         | Load → fit (cover / contain / tile / center) → composite |
 
-Backgrounds are deliberately UNIX-shaped: the spec is a short string the shell
-can construct, and the result is always a single image. To use a generated or
-hand-painted background, run the generator separately, save the PNG, and pass
-it via `--bg image:<path>`.
+UNIX-shaped: a short shell-constructible spec, output is always a single
+image. Generated backgrounds: produce the PNG separately, then pass via
+`--bg image:<path>`.
 
-## Testing
+## Routing constraints
 
-Four layers, all green-or-fail in `make release`:
+Enforced before image processing starts:
 
-1. **Unit** (`Tests/bgbgoneTests/`, pure Swift runner) — arg parsing for every CLI flag (~190 cases), colour parsing, output naming, format inference, JSON escaping, routing validation, server request parsing, server-side security policy (origin/Bearer/X-API-Key/loopback), geometry / size / shadow / type / channels config mapping, NetworkPolicy.
-2. **Integration** (`Tests/integration/run.sh`) — spawns the built binary; pipe in / pipe out / file in / file out; CLI invocations across every shared flag (`--type`, `--shadow-type`, `--filter fg:scale`, `--filter fg:translate`, `--size`, `--semitransparency`, `--crop-margin` variants, `--roi`, all output formats, `--bg color:...`, `--bg image:...`); live HTTP server scenarios — CORS preflight, multi-source rejection, body limit `413`, `--no-origin-check`, `--footgun`, Bearer/X-API-Key auth, `X-Type` header policy, JSON/form/multipart bodies, ZIP output, and unknown-field rejection.
-3. **README image regeneration** (`scripts/make-readme-examples.sh`) — visual regression surface generated from the freshly installed binary.
-4. **Performance** (`Tests/performance/run-100.sh`) — stages 100 fixture-backed inputs, runs five batch processes, verifies 100 outputs per run, updates the README average, and reports throughput.
+- `-o` and `--out-dir` are mutually exclusive.
+- Multiple file inputs cannot use `-o` (use `--out-dir` or default beside-input).
+- Stdin input has no stable filename → `--out-dir` rejected.
+- `--multi` always writes files; requires a file input stem; cannot combine
+  with `-o` or `--channels alpha`.
 
-Current local measurement: 100 images in 8.075s, 12.38 images/s, 80.7 ms/image.
+## Testing layers
 
-**Fixtures:** `Tests/fixtures/` holds 16 strict public-domain images from Wikimedia (PD-NASA, PD-USGov, PD-old, PD-self, PD-Art, and pre-1929 American advertisements — never CC). The 16 break down as: 6 NASA spaceflight, 3 19th-c paintings, 3 19th/early-20th-c studio portraits, and 4 vintage product ads. `LICENSES.md` documents every fixture with source URL, PD tag, and attribution. Fixtures are checked into git for reproducible offline tests.
+All green-or-fail in `make release`:
 
-**Reproducible README assets:** `scripts/make-readme-examples.sh` regenerates every showcase strip in `docs/images/` from real bgbgone invocations against the PD fixtures. CI doesn't run this (it's slow); the script is the audit trail for "every README image is real."
+1. **`lint-fixtures`** — every image in `Tests/fixtures/` has exactly one
+   row in `LICENSES.md`.
+2. **`lint-readme`** — README must not reference hard-removed v1.0 flags.
+3. **`lint-contract`** — SSOT contract checks on CLI/server flag aliases.
+4. **`lint-docs`** — every `--filter "..."` chain in every shipped .md
+   parses against the real binary.
+5. **`test-unit`** — pure Swift, no frameworks (~190 cases).
+6. **`test-integration`** — spawns the built binary; CLI flags + HTTP
+   server scenarios + e2e against every fixture (232+ assertions).
+7. **`test-doc-blocks`** — every fenced ```bash block in every shipped
+   .md is executed against the installed binary in a scratch dir with
+   fixture symlinks. Exit 0 required.
+8. **`performance-100`** — 5 × 100-image batches, throughput reported.
 
-## TDD discipline
+`make all-images` regenerates every shipped image asset
+(`docs/images/**`, per-filter showcase, per-filter panels) from the
+freshly-installed binary so README assets cannot diverge from output.
 
-- RED → verify failure → GREEN → verify pass → REFACTOR.
-- Every new function gets a failing test first.
-- Pure Swift test runner (apfel/auge pattern) — no XCTest, no Testing framework.
-- `swift run bgbgone-tests` is the unit test entry point.
-- Pre-commit: `make test` must be green.
+## Pipe contract with sibling tools
+
+```bash
+bgbgone in.jpg | auge --classify                   # classify the cutout
+bgbgone in.jpg | kern --embed-image                # cleaner embeddings
+find ~/photos -name '*.heic' | bgbgone --bg color:white --format jpg --out-dir ./catalog
+```
 
 ## Out of scope (v1)
 
@@ -246,21 +145,11 @@ Current local measurement: 100 images in 8.075s, 12.38 images/s, 80.7 ms/image.
 - Photos.app library round-trip.
 - UI-bound APIs (VisionKit subject lifting, document camera).
 - Bundled third-party models.
-- General image-editing app surface (filters / colour grading — that's `arbeit` if we ever build it).
+- General image-editing app surface (colour grading beyond the 49
+  shipped filters — see [filters-out-of-scope.md](filters-out-of-scope.md)).
 
-## Pipe contract with sibling tools
+## Release
 
-```bash
-bgbgone in.jpg | auge --classify                   # classify the cutout (cleaner result, no bg distractors)
-bgbgone in.jpg | kern --embed-image                # cleaner embeddings
-find ~/photos -name '*.heic' | bgbgone --bg color:white --format jpg --out-dir ./catalog
-```
-
-## Release process
-
-1. `make install` (auto-bumps patch, builds release, installs to `/usr/local/bin`).
-2. `make package-release-asset` → `bgbgone-<v>-arm64-macos.tar.gz`.
-3. `gh release create` with the asset.
-4. Update Homebrew tap formula.
-
-(Identical to the auge release process — see `auge`'s Makefile for the canonical recipe.)
+`make deploy` chains: bump patch → release gate (every lint + every
+test + every-image regen) → tag → push → GitHub release → Homebrew tap
+bump. Never tag without it.
