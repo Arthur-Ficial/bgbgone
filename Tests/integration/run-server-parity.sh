@@ -55,6 +55,50 @@ PFIX_EINSTEIN="$FIX/einstein.jpg"
 echo ""
 echo "server-parity: every CLI e2e mirrored through HTTP /bgbgone"
 
+# ---- Image upload methods (U1-U4) ----------------------------------------
+# Four supported transports for the source image. Documented in
+# SERVER-README.md. Each must round-trip a real fixture to a valid PNG.
+
+# U1 — multipart file part (curl -F @path).
+out=$(parity_post "$PFIX_PANDA" "$OUT/u1.png" -F "format=png") ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$OUT/u1.png" \
+    && pass "U1 multipart file part (image_file=@...)" \
+    || fail "U1 multipart @file" "rc=$rc"
+
+# U2 — multipart base64 text part. Use a small fixture so the inline
+# base64 fits within shell argv limits.
+SMALL_FIX="$FIX/typewriter-ad.jpg"
+U2_B64=$(base64 -i "$SMALL_FIX")
+out=$(curl -fsS --max-time 30 -X POST "$PARITY_BASE/bgbgone" \
+    -F "image_file=$U2_B64" -F "format=png" -o "$OUT/u2.png" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$OUT/u2.png" \
+    && pass "U2 multipart base64 text part" \
+    || fail "U2 multipart text base64" "rc=$rc"
+
+# U3 — application/json with base64.
+python3 -c "import json,base64,sys; print(json.dumps({'image_file': base64.b64encode(open(sys.argv[1],'rb').read()).decode(), 'format': 'png'}))" "$PFIX_PANDA" > "$OUT/u3.json"
+out=$(curl -fsS --max-time 30 -X POST "$PARITY_BASE/bgbgone" \
+    -H "Content-Type: application/json" \
+    --data-binary "@$OUT/u3.json" -o "$OUT/u3.png" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$OUT/u3.png" \
+    && pass "U3 application/json with base64 image_file" \
+    || fail "U3 JSON base64" "rc=$rc"
+
+# U4 — application/x-www-form-urlencoded with base64. Test the wrapped
+# (with newlines) base64 to exercise the .ignoreUnknownCharacters path
+# in the decoder.
+base64 -i "$SMALL_FIX" > "$OUT/u4.b64"
+out=$(curl -fsS --max-time 30 -X POST "$PARITY_BASE/bgbgone" \
+    --data-urlencode "image_file@$OUT/u4.b64" \
+    --data-urlencode "format=png" \
+    -o "$OUT/u4.png" 2>&1) ; rc=$?
+[ $rc -eq 0 ] && check_png_rgba "$OUT/u4.png" \
+    && pass "U4 application/x-www-form-urlencoded with wrapped base64" \
+    || fail "U4 URL-encoded base64" "rc=$rc"
+
+echo ""
+echo "server-parity: CLI flag mirroring (P01-P19)"
+
 # P01 — background removal default → transparent PNG.
 out=$(parity_post "$PFIX_PANDA" "$OUT/p01.png" -F "format=png") ; rc=$?
 [ $rc -eq 0 ] && check_png_rgba "$OUT/p01.png" \

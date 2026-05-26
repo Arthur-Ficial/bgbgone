@@ -273,7 +273,11 @@ private final class ServerConnection: @unchecked Sendable {
         if let file = form.files["image_file"] {
             return try writeFile(data: file.data, filename: file.filename, tempDir: tempDir, fallbackName: "input")
         }
-        if let encoded = form.fields["image_file"], let data = Data(base64Encoded: encoded) {
+        // .ignoreUnknownCharacters so wrapped base64 (`base64 -i file`
+        // default, 76-char lines) decodes without the caller having to
+        // strip newlines. Matches the validator in ServerRemovalRequest.
+        if let encoded = form.fields["image_file"],
+           let data = Data(base64Encoded: encoded, options: .ignoreUnknownCharacters) {
             return try writeFile(data: data, filename: "input", tempDir: tempDir, fallbackName: "input")
         }
         return tempDir.appendingPathComponent("missing-input-placeholder.img")

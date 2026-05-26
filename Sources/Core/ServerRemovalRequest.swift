@@ -152,7 +152,12 @@ public struct ServerRemovalRequest: Sendable, Equatable {
             return .uploaded(file.data, filename: file.filename.isEmpty ? "image" : file.filename)
         }
         if let encoded = form.fields["image_file"], !encoded.isEmpty {
-            guard let data = Data(base64Encoded: encoded), !data.isEmpty else {
+            // .ignoreUnknownCharacters so `base64 -i file` output (which
+            // wraps at 76 chars by default) round-trips without the user
+            // having to `tr -d '\n'` it. Without this, valid base64 with
+            // embedded newlines returns nil and the request is rejected
+            // even though the bytes are well-formed.
+            guard let data = Data(base64Encoded: encoded, options: .ignoreUnknownCharacters), !data.isEmpty else {
                 throw ParameterParseError.invalid("invalid_file", "image_file is not valid base64 image data")
             }
             return .uploaded(data, filename: "image")

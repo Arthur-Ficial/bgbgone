@@ -40,6 +40,58 @@ bgbgone --server --host 127.0.0.1 --port 8787
 
 Every example below assumes `http://127.0.0.1:8787` as the base URL.
 
+## Image upload — every supported method
+
+`POST /bgbgone` accepts the source image in **four** transports. All four are tested in [`Tests/integration/run-server-parity.sh`](Tests/integration/run-server-parity.sh) (cases `U1`–`U4`) and exit with the same byte-identical PNG/JPEG response.
+
+### U1 — multipart file part (most common)
+
+```bash
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  -F "image_file=@red-panda.jpg" \
+  -F "format=png" \
+  -o cutout.png
+```
+
+The `@` prefix tells curl to upload the file's bytes as a multipart binary part. Equivalent to remove.bg's primary intake form.
+
+### U2 — multipart base64 text part
+
+```bash
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  -F "image_file=$(base64 -i red-panda.jpg)" \
+  -F "format=png" \
+  -o cutout.png
+```
+
+For SDKs that can't stream binary multipart parts. The server decodes the base64 text on the wire (wrapped 76-char output is accepted — newlines ignored).
+
+### U3 — application/json with base64
+
+```bash
+python3 -c "import json,base64,sys; print(json.dumps({'image_file': base64.b64encode(open('red-panda.jpg','rb').read()).decode(), 'format': 'png'}))" \
+  | curl -X POST http://127.0.0.1:8787/bgbgone \
+      -H "Content-Type: application/json" \
+      --data-binary @- \
+      -o cutout.png
+```
+
+For JSON-native callers. Body is `{"image_file": "<base64>", "format": "png", ...}`. Same field names as multipart.
+
+### U4 — application/x-www-form-urlencoded with base64
+
+```bash
+base64 -i red-panda.jpg > /tmp/img.b64
+curl -X POST http://127.0.0.1:8787/bgbgone \
+  --data-urlencode "image_file@/tmp/img.b64" \
+  --data-urlencode "format=png" \
+  -o cutout.png
+```
+
+For shell pipelines and clients without multipart support. `--data-urlencode "key@file"` reads the value from a file and percent-encodes it.
+
+> **Field names are identical across transports.** `image_file` is the source. `bg` is the background (text spec or file part in multipart). `filter`, `format`, `type`, `crop`, `crop-margin`, etc. take the same string values as the CLI flag of the same name (drop the `--`).
+
 ## Inputs used in this README
 
 Three originals drive every example below. Each is shown once here.
