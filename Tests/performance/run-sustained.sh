@@ -54,7 +54,15 @@ trash_path "$WORK"
 mkdir -p "$IN" "$OUT"
 : > "$STATS"
 
-fixtures=("$FIX"/*.jpg)
+# Subject fixtures only - background-plate fixtures have no foreground
+# subject and would fail with BGBG_NORESULT_NO_SUBJECT.
+BG_PLATES_RE='matterhorn-sunset|nebula-flaming-star|nebula-flying-dragon'
+fixtures=()
+for f in "$FIX"/*.jpg; do
+    base=$(basename "$f" .jpg)
+    [[ "$base" =~ $BG_PLATES_RE ]] && continue
+    fixtures+=("$f")
+done
 if [ "${#fixtures[@]}" -eq 0 ]; then
     echo "error: no fixtures found in $FIX" >&2
     exit 1
@@ -121,7 +129,7 @@ print(f"  invocation {run:0{width}d}/{invocations}: {elapsed:.3f}s, {batch / ela
 PY
 done
 
-python3 - "$BIN" "$OUT" "$STATS" "$README" "$INVOCATIONS" "$BATCH" "$TOTAL" <<'PY'
+python3 - "$BIN" "$OUT" "$STATS" "$README" "$INVOCATIONS" "$BATCH" "$TOTAL" "${README_UPDATE:-1}" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -133,6 +141,7 @@ readme = Path(sys.argv[4])
 invocations = int(sys.argv[5])
 batch = int(sys.argv[6])
 total = int(sys.argv[7])
+readme_update = sys.argv[8] != "0"
 
 rows = []
 for line in stats_path.read_text().splitlines():
@@ -160,17 +169,18 @@ line = (
     "no network, no GPU contention with another process."
 )
 
-text = readme.read_text()
-pattern = re.compile(
-    rf"Average over {invocations} release-binary invocations of {batch}: "
-    rf"\*\*{total} image operations in [^*]+\*\* with [^.]+ output bytes "
-    r"verified per invocation\. On-device, no network, no GPU contention "
-    r"with another process\."
-)
-updated, replaced = pattern.subn(line, text)
-if replaced != 1:
-    raise SystemExit(f"error: README sustained-throughput line for {invocations}x{batch} not found or not unique")
-readme.write_text(updated)
+if readme_update:
+    text = readme.read_text()
+    pattern = re.compile(
+        rf"Average over {invocations} release-binary invocations of {batch}: "
+        rf"\*\*{total} image operations in [^*]+\*\* with [^.]+ output bytes "
+        r"verified per invocation\. On-device, no network, no GPU contention "
+        r"with another process\."
+    )
+    updated, replaced = pattern.subn(line, text)
+    if replaced != 1:
+        raise SystemExit(f"error: README sustained-throughput line for {invocations}x{batch} not found or not unique")
+    readme.write_text(updated)
 
 print(f"bgbgone {invocations} x {batch} = {total} sustained image operations")
 print(f"  binary:        {binary}")

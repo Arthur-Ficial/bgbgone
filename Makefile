@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINARY = bgbgone
 VERSION_FILE = .version
 
-.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing lint-version-policy docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
+.PHONY: check-toolchain build install uninstall clean bump-patch bump-minor bump-major generate-build-info update-readme version test test-unit test-integration test-doc-blocks lint lint-fixtures lint-readme lint-docs lint-contract lint-doc-images lint-block-pairing lint-version-policy docs performance-100 test-performance-100 perf-100 performance-1000 test-performance-1000 perf-1000 performance-10000 test-performance-10000 perf-10000 perf-10k load-test-table fixtures package-release-asset print-release-asset print-release-sha256 readme-images filter-images panel-images filter-docs all-images release deploy
 
 # --- Environment ---
 
@@ -94,6 +94,11 @@ performance-10000:
 	bash Tests/performance/run-sustained.sh .build/release/$(BINARY) 100
 
 test-performance-10000 perf-10000 perf-10k: build performance-10000
+
+# Run the industry-scale load tests (100, 1000, 10000 image operations)
+# and refresh the README table.
+load-test-table: build performance-100 performance-1000 performance-10000
+	bash scripts/update-load-test-table.sh
 
 fixtures:
 	bash scripts/fetch-fixtures.sh

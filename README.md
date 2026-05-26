@@ -40,6 +40,20 @@
 
 Run `brew install Arthur-Ficial/tap/bgbgone` (macOS 26+, ~3 MB binary, no Xcode needed). From source: `make install` writes to `/usr/local/bin`.
 
+## Industry-scale load test
+
+Real measurements from `make load-test-table` against the installed release binary on this machine. On-device, no network, single bgbgone process per batch of 100 inputs. Inputs are strict-PD Wikimedia fixtures (JPG, 95 KB - 665 KB each) cycled into batches. Output bytes are verified identical across every invocation, so timings reflect real work — not caching, not no-ops.
+
+<!-- LOAD-TEST-TABLE-START -->
+| Images | Total time | Per image | Throughput |
+|-------:|-----------:|----------:|-----------:|
+| 100 | 2.75 s | 27.5 ms | 36.30 img/s |
+| 1 000 | 28.82 s | 28.8 ms | 34.69 img/s |
+| 10 000 | 4 min 54 s | 29.4 ms | 34.01 img/s |
+<!-- LOAD-TEST-TABLE-END -->
+
+Reproduce: `make load-test-table`. Or per scale: `make perf-100`, `make perf-1000`, `make perf-10000`.
+
 ## Inputs used in this README
 
 Three originals drive every example below. Each is shown once here; later sections reference the same fixtures without repeating the big preview.
