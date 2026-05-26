@@ -22,46 +22,6 @@ Three originals drive every example below. Each is shown once here; later sectio
 |---|---|---|
 | ![red-panda original](docs/images/showcase/01-panda-before.jpg) | ![corgi-puppy original](docs/images/showcase/03-corgi-before.jpg) | ![woman-singer original](docs/images/showcase/04-woman-singer-before.jpg) |
 
-## Quickstart — transparent cutout
-
-The simplest case: drop the background entirely. Default output is a 32-bit PNG with alpha.
-
-```bash
-bgbgone red-panda.jpg -o red-panda-cutout.png
-```
-
-![transparent cutouts across subject types — red-panda, corgi, woman-singer](docs/images/showcase-cutouts.png)
-
-## Solid colour background — `--bg color:#...`
-
-Swap the cutout onto a flat colour. JPEG output works because alpha is composited away.
-
-```bash
-bgbgone red-panda.jpg --bg color:#1a2233 -o red-panda-navy.jpg
-```
-
-![cutouts composited onto solid colours](docs/images/showcase-colors.png)
-
-## Image background — `--bg "image:other.jpg"`
-
-Reuse the same fixture as backdrop (so the foreground stays geometrically aligned) or drop in any image.
-
-```bash
-bgbgone red-panda.jpg --bg "image:red-panda.jpg" -o red-panda-self.jpg
-```
-
-![cutouts composited onto image backgrounds](docs/images/showcase-image-bg.png)
-
-## Mask refinement — `mask:feather`
-
-`feather=N` softens the cutout edge by N pixels. Razor edge vs softened, same input.
-
-```bash
-bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
-```
-
-![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
-
 ## Colour-pop on red-panda — bg goes B&W, subject keeps its colour
 
 ```bash
@@ -98,6 +58,14 @@ bgbgone woman-singer.jpg --type person \
 ```
 
 ![woman-singer zoom-blur backdrop — bg radiates outward, subject razor-sharp](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
+
+## Edge refinement on corgi-puppy — `mask:feather`
+
+```bash
+bgbgone corgi-puppy.jpg --filter "mask:feather=16" --bg color:#1a2233 -o corgi-feather16.jpg
+```
+
+![corgi-puppy feather=0 (razor edge) vs feather=16 (softened) close-up](docs/images/feather-zoom.png)
 
 ## Pipelines on red-panda — compose with sibling Apple-framework CLIs
 
