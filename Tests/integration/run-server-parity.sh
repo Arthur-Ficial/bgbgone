@@ -162,21 +162,21 @@ else
     fail "P13 --format round trip" "format=$fmt produced no output"
 fi
 
-# P14 — --format zip yields a ZIP with color.jpg + alpha.png. Use the
-# raw curl path (no parity_post wrapper) so we can capture the HTTP
-# status separately from the body and emit it on failure.
+# P14 — --format zip yields a ZIP with color.jpg + alpha.png. Use
+# Python's zipfile (always installed on macOS, deterministic) instead
+# of unzip-l-then-grep which flakes under parallel make-deploy load.
 http=$(curl -sS --max-time 30 -o "$OUT/p14.zip" -w '%{http_code}' \
     -X POST "$PARITY_BASE/bgbgone" \
     -F "image_file=@$PFIX_PANDA" \
     -F "format=zip" 2>/dev/null)
 zip_size=$(stat -f%z "$OUT/p14.zip" 2>/dev/null || echo 0)
-zip_kind=$(file -b "$OUT/p14.zip" 2>/dev/null | head -1)
+zip_names=$(python3 -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(' '.join(sorted(z.namelist())))" "$OUT/p14.zip" 2>/dev/null || echo "")
 if [ "$http" = "200" ] && [ "$zip_size" -gt 0 ] \
-   && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q color.jpg \
-   && unzip -l "$OUT/p14.zip" 2>/dev/null | grep -q alpha.png; then
+   && printf '%s' "$zip_names" | grep -q 'color.jpg' \
+   && printf '%s' "$zip_names" | grep -q 'alpha.png'; then
     pass "P14 --format zip contains color.jpg and alpha.png"
 else
-    fail "P14 --format zip" "http=$http size=$zip_size kind=$zip_kind"
+    fail "P14 --format zip" "http=$http size=$zip_size names='$zip_names'"
 fi
 
 # P15 — --roi clips processing to a rectangle, smaller output area.
