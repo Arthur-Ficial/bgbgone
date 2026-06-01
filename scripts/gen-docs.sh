@@ -16,7 +16,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${BIN:-$ROOT/.build/release/bgbgone}"
+BIN="${BIN:-$( [ -x "$ROOT/build/release/bgbgone" ] && echo "$ROOT/build/release/bgbgone" || echo "$ROOT/.build/release/bgbgone" )}"
 TMPL_DIR="$ROOT/scripts/templates"
 OUT_DIR="$ROOT/docs/filters"
 IMG_DIR="$ROOT/docs/images/filters"

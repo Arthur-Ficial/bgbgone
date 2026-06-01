@@ -64,7 +64,7 @@ lint-version-policy:
 	bash scripts/lint-version-policy.sh
 
 test-doc-blocks: build
-	BIN=.build/release/$(BINARY) bash scripts/test-doc-blocks.sh
+	BIN=$(BUILD_DIR)/release/$(BINARY) bash scripts/test-doc-blocks.sh
 
 lint-readme:
 	bash scripts/lint-readme.sh
@@ -73,7 +73,7 @@ lint-contract:
 	bash scripts/lint-contract.sh
 
 lint-docs: check-toolchain generate-build-info
-	swift build -c release
+	swift build -c release $(SCRATCH)
 	bash scripts/lint-docs.sh
 
 lint: lint-fixtures lint-readme lint-contract lint-docs lint-doc-images lint-block-pairing lint-version-policy
@@ -88,13 +88,13 @@ test-performance-100 perf-100: build performance-100
 # invocation counts (batch stays 100). Each re-writes its own README
 # result line on every run so the numbers stay current.
 performance-1000:
-	bash Tests/performance/run-sustained.sh .build/release/$(BINARY) 10
+	bash Tests/performance/run-sustained.sh $(BUILD_DIR)/release/$(BINARY) 10
 
 test-performance-1000 perf-1000: build performance-1000
 
 # 100 x 100 = 10,000 image operations.
 performance-10000:
-	bash Tests/performance/run-sustained.sh .build/release/$(BINARY) 100
+	bash Tests/performance/run-sustained.sh $(BUILD_DIR)/release/$(BINARY) 100
 
 test-performance-10000 perf-10000 perf-10k: build performance-10000
 
@@ -214,7 +214,7 @@ panel-images: install
 # Regenerate the 49 per-filter markdown pages (docs/filters/*.md).
 filter-docs: build
 	BIN=$(PREFIX)/bin/$(BINARY) bash scripts/gen-docs.sh || \
-	  BIN=.build/release/$(BINARY) bash scripts/gen-docs.sh
+	  BIN=$(BUILD_DIR)/release/$(BINARY) bash scripts/gen-docs.sh
 
 # Regenerate EVERY shipped image: filter showcase, per-filter panels,
 # per-filter docs, README examples. Required after every change per

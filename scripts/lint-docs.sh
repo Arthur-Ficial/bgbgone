@@ -11,7 +11,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/trash.sh"
-BIN="${BIN:-$ROOT/.build/release/bgbgone}"
+BIN="${BIN:-$( [ -x "$ROOT/build/release/bgbgone" ] && echo "$ROOT/build/release/bgbgone" || echo "$ROOT/.build/release/bgbgone" )}"
 FIX="$ROOT/Tests/fixtures/aldrin-on-moon.jpg"
 TMP_DIR="$(mktemp -d)"
 trap 'trash_path "$TMP_DIR"' EXIT
@@ -25,7 +25,7 @@ if [ ! -f "$FIX" ]; then
     exit 1
 fi
 
-MD_FILES=$(find "$ROOT" \( -name README.md -o -name DEVELOPMENT.md -o -path "*/docs/*.md" -o -path "*/docs/filters/*.md" \) -not -path "*/.build/*")
+MD_FILES=$(find "$ROOT" \( -name README.md -o -name DEVELOPMENT.md -o -path "*/docs/*.md" -o -path "*/docs/filters/*.md" \) -not -path "*/.build/*" -not -path "*/build/*")
 FILE_COUNT=$(echo "$MD_FILES" | wc -l | tr -d ' ')
 
 echo "lint-docs: validating --filter chains in $FILE_COUNT markdown files ..."

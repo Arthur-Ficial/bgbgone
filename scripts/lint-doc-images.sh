@@ -12,7 +12,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 FILES=$(find "$ROOT" -type f -name '*.md' \
-  ! -path '*/.build/*' ! -path '*/node_modules/*' \
+  ! -path '*/.build/*' ! -path '*/build/*' ! -path '*/node_modules/*' \
   ! -path '*/docs/archive/*' \
   | sort)
 

@@ -16,7 +16,11 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${BIN:-$ROOT/.build/release/bgbgone}"
+BIN="${BIN:-$( [ -x "$ROOT/build/release/bgbgone" ] && echo "$ROOT/build/release/bgbgone" || echo "$ROOT/.build/release/bgbgone" )}"
+# Blocks execute inside a scratch cwd, so BIN must be absolute. A relative
+# path (e.g. the Makefile's `build/release/bgbgone`) is taken relative to
+# the repo root, which is where `make` invokes this from.
+case "$BIN" in /*) ;; *) BIN="$ROOT/$BIN" ;; esac
 [ -x "$BIN" ] || { echo "test-doc-blocks: missing $BIN"; exit 1; }
 
 TMP=$(mktemp -d -t bgbgone-doc-blocks.XXXXXX)
@@ -52,10 +56,12 @@ run_block() {
     return
   fi
 
-  # Replace the literal `bgbgone` with the actual binary path. Single-word
-  # boundary so we don't rewrite `bgbgone.jpg` (none exist but defensive).
+  # Replace the literal `bgbgone` command with the actual binary path.
+  # Use perl (not sed): BSD/macOS sed does not support the `\b` word
+  # boundary, so a sed-based substitution silently no-ops here and the
+  # block would run against whatever `bgbgone` is on PATH instead of $BIN.
   local code_real
-  code_real=$(printf '%s' "$code" | sed "s|\\bbgbgone\\b|\"$BIN\"|g")
+  code_real=$(BGBGONE_BIN="$BIN" perl -pe 'BEGIN{$b=$ENV{BGBGONE_BIN}} s/\bbgbgone\b/"$b"/g' <<<"$code")
 
   # Run inside the scratch dir so `red-panda.jpg` resolves to the symlink.
   local out_log err_log rc

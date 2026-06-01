@@ -37,7 +37,7 @@ is_exempt() {
 }
 
 FILES=$(find "$ROOT" -type f -name '*.md' \
-  ! -path '*/.build/*' ! -path '*/node_modules/*' \
+  ! -path '*/.build/*' ! -path '*/build/*' ! -path '*/node_modules/*' \
   ! -path '*/docs/archive/*' \
   | sort)
 
