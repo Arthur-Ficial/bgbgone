@@ -8,9 +8,9 @@
 | **Signature** | `adjust=brightness=B:contrast=C:saturation=S` |
 
 
-## Example — red-panda, `fg:adjust=brightness=0.1:contrast=1.1:saturation=0.9` (subject filter, background preserved)
+## Example — `fg:adjust=brightness=0.1:contrast=1.1:saturation=0.9`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 

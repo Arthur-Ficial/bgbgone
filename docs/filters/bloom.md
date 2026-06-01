@@ -8,9 +8,9 @@
 | **Signature** | `bloom=intensity:radius` |
 
 
-## Example — red-panda, `composite:bloom=intensity=0.5:radius=10` (subject filter, background preserved)
+## Example — `composite:bloom=intensity=0.5:radius=10`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 

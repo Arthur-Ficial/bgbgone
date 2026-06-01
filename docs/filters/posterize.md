@@ -8,9 +8,9 @@
 | **Signature** | `posterize=levels` |
 
 
-## Example — red-panda, `fg:posterize=4` (subject filter, background preserved)
+## Example — `fg:posterize=4`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 

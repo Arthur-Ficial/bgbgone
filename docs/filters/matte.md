@@ -8,9 +8,9 @@
 | **Signature** | `matte` |
 | **Note** | introduces alpha — output here is JPEG over the source bg; use `-o out.png` for true transparent output |
 
-## Example — red-panda, `fg:matte` (subject filter, background preserved)
+## Example — `fg:matte`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 

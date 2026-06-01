@@ -8,9 +8,9 @@
 | **Signature** | `motion-blur=radius:angle` |
 
 
-## Example — red-panda, `fg:motion-blur=radius=10:angle=45` (subject filter, background preserved)
+## Example — `fg:motion-blur=radius=10:angle=45`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 

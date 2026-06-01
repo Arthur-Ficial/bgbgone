@@ -13,18 +13,19 @@
 ## Contents
 
 - [Start the server](#start-the-server)
-- [Inputs used in this README](#inputs-used-in-this-readme)
-- **Output modes — red-panda**
-  - [Transparent cutout](#transparent-cutout-on-red-panda)
-  - [Alpha matte (`channels=alpha`)](#alpha-matte-on-red-panda-channelsalpha)
-  - [Solid-colour background](#solid-colour-background-on-red-panda)
-  - [Universe-photo background](#universe-photo-background-on-red-panda)
-- **Filter chain — single-fixture demos**
-  - [Colour-pop on red-panda](#colour-pop-on-red-panda)
-  - [Portrait mode on red-panda](#portrait-mode-on-red-panda)
-  - [Die-cut sticker on corgi-puppy](#die-cut-sticker-on-corgi-puppy)
-  - [Motion-radial backdrop on woman-singer](#motion-radial-backdrop-on-woman-singer)
-  - [Edge refinement on corgi-puppy](#edge-refinement-on-corgi-puppy-maskfeather)
+- [Image upload methods](#image-upload-methods)
+- [Inputs](#inputs)
+- **Output modes**
+  - [Transparent cutout](#transparent-cutout)
+  - [Alpha matte](#alpha-matte)
+  - [Solid-colour background](#solid-colour-background)
+  - [Image background](#image-background)
+- **Filter recipes**
+  - [Colour-pop](#colour-pop)
+  - [Portrait blur](#portrait-blur)
+  - [Die-cut sticker](#die-cut-sticker)
+  - [Motion-radial backdrop](#motion-radial-backdrop)
+  - [Edge feathering](#edge-feathering)
 - [Endpoints + wire contract](#endpoints--wire-contract)
 - [Security](#security)
 - [Server flags](#server-flags)
@@ -40,7 +41,7 @@ bgbgone --server --host 127.0.0.1 --port 8787
 
 Every example below assumes `http://127.0.0.1:8787` as the base URL.
 
-## Image upload — every supported method
+## Image upload methods
 
 `POST /bgbgone` accepts the source image in **four** transports. All four are tested in [`Tests/integration/run-server-parity.sh`](Tests/integration/run-server-parity.sh) (cases `U1`–`U4`) and exit with the same byte-identical PNG/JPEG response.
 
@@ -92,7 +93,7 @@ For shell pipelines and clients without multipart support. `--data-urlencode "ke
 
 > **Field names are identical across transports.** `image_file` is the source. `bg` is the background (text spec or file part in multipart). `filter`, `format`, `type`, `crop`, `crop-margin`, etc. take the same string values as the CLI flag of the same name (drop the `--`).
 
-## Inputs used in this README
+## Inputs
 
 Three originals drive every example below. Each is shown once here.
 
@@ -100,7 +101,7 @@ Three originals drive every example below. Each is shown once here.
 |---|---|---|
 | ![red-panda original](docs/images/showcase/01-panda-before.jpg) | ![corgi-puppy original](docs/images/showcase/03-corgi-before.jpg) | ![woman-singer original](docs/images/showcase/04-woman-singer-before.jpg) |
 
-## Transparent cutout on red-panda
+## Transparent cutout
 
 Default: bgbgone removes the background and returns a PNG with alpha. Equivalent to `bgbgone red-panda.jpg -o red-panda-cutout.png`.
 
@@ -113,7 +114,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda transparent cutout (checkerboard shows alpha)](docs/images/red-panda/cutout.png)
 
-## Alpha matte on red-panda (`channels=alpha`)
+## Alpha matte
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -125,7 +126,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda alpha matte — silhouette as grayscale](docs/images/red-panda/matte.png)
 
-## Solid-colour background on red-panda
+## Solid-colour background
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -137,7 +138,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda on a solid navy background](docs/images/red-panda/on-navy.jpg)
 
-## Universe-photo background on red-panda
+## Image background
 
 Multipart upload accepts a `bg=@<path>` form field for the background image.
 
@@ -151,7 +152,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda composited onto the Flaming Star Nebula](docs/images/red-panda/in-space.jpg)
 
-## Colour-pop on red-panda
+## Colour-pop
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -164,7 +165,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda colour-pop](docs/images/showcase/01-panda-colourpop.jpg)
 
-## Portrait mode on red-panda
+## Portrait blur
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -177,7 +178,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![red-panda portrait-mode blur](docs/images/showcase/02-panda-portraitmode.jpg)
 
-## Die-cut sticker on corgi-puppy
+## Die-cut sticker
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -191,7 +192,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![corgi-puppy die-cut sticker — hard solid white border, transparent background](docs/images/showcase/03-corgi-sticker.png)
 
-## Motion-radial backdrop on woman-singer
+## Motion-radial backdrop
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \
@@ -205,7 +206,7 @@ curl -X POST http://127.0.0.1:8787/bgbgone \
 
 ![woman-singer zoom-blur backdrop](docs/images/showcase/04-woman-singer-zoom-blur.jpg)
 
-## Edge refinement on corgi-puppy (`mask:feather`)
+## Edge feathering
 
 ```bash
 curl -X POST http://127.0.0.1:8787/bgbgone \

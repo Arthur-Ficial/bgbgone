@@ -8,9 +8,9 @@
 | **Signature** | `vignette-effect=center=X,Y:radius=R:intensity=I` |
 
 
-## Example — red-panda, `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1` (subject filter, background preserved)
+## Example — `composite:vignette-effect=center=0.5,0.5:radius=1.5:intensity=1`
 
-The same operation through both transports. `scripts/gen-docs.sh` executes BOTH commands on every regen and asserts the outputs are byte-identical (parity contract). The image below is the result.
+The same operation through both transports. `scripts/gen-docs.sh` runs BOTH commands on every regen and asserts byte-identical output (parity contract). The result is shown below.
 
 ### Via CLI
 
