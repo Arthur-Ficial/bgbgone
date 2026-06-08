@@ -244,3 +244,7 @@ All 26 test fixtures are public-domain or CC0, plus one CC BY 4.0 own-work portr
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Made by
+
+A project by **[Franz Enzenhofer](https://github.com/franzenzenhofer)** ([Full Stack Optimization](https://www.fullstackoptimization.com)), built by his AI assistant **[Arthur Ficial](https://github.com/Arthur-Ficial)**.
